@@ -103,6 +103,7 @@ The host is responsible for applying the exported Drizzle schema and running the
 The package provides the following CLI commands for consuming projects:
 
 ```bash
+npm install github:zaengit/zadm
 npx zadm config    # Generate .env and astro.config.mjs
 npx zadm example   # Copy example web components, pages, and skills
 npx zadm migrate   # Apply SQLite schema
