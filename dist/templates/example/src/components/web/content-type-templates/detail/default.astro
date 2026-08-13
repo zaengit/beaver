@@ -1,0 +1,61 @@
+---
+import { parseGallery, type DetailProps } from "../types";
+import ResponsiveImage from "@/components/web/responsive-image.astro";
+import TagLinks from "@/components/web/tag-links.astro";
+const { contentType, post } = Astro.props as DetailProps;
+const gallery = parseGallery(post.gallery);
+---
+
+<main class="mx-auto max-w-6xl px-6 py-16 sm:py-20">
+  <a
+    href={`/${contentType.slug}`}
+    class="text-sm font-semibold text-slate-600 hover:text-slate-950"
+    >← All {contentType.label}</a
+  ><article class="mt-8">
+    <header class="max-w-3xl">
+      <p
+        class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500"
+      >
+        {contentType.label}
+      </p><h1
+        class="mt-3 text-4xl font-semibold tracking-tight text-slate-950 sm:text-6xl"
+      >
+        {post.title}
+      </h1>{
+        post.excerpt && (
+          <p class="mt-5 text-lg leading-8 text-slate-600">{post.excerpt}</p>
+        )
+      }
+    </header><TagLinks tags={post.tags} />{
+      post.featuredImage && (
+        <ResponsiveImage
+          src={post.featuredImage}
+          alt={post.title}
+          class="mt-10 max-h-[32rem] w-full object-cover"
+          priority
+        />
+      )
+    }{
+      post.description && (
+        <div
+          id="details"
+          class="prose prose-slate mt-10 max-w-none"
+          set:html={post.description}
+        />
+      )
+    }{
+      gallery.length > 0 && (
+        <div class="mt-10 grid gap-4 sm:grid-cols-2">
+          {gallery.map((image) => (
+            <ResponsiveImage
+              src={image}
+              alt=""
+              class="w-full object-cover"
+              sizes="(min-width: 640px) 50vw, 100vw"
+            />
+          ))}
+        </div>
+      )
+    }
+  </article>
+</main>

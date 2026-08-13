@@ -1,0 +1,22 @@
+---
+import ContentTypeDetail from "@/components/web/content-type-detail.astro"
+import PublicLayout from "@/layouts/PublicLayout.astro"
+import registry from "@content-type-registry"
+import { getPublishedPostByType } from "zadm/server"
+
+const { type, slug } = Astro.params
+const contentType = type ? registry.contentTypes.find((candidate) => candidate.slug === type) ?? null : null
+
+if (!contentType || !slug) {
+  return new Response("Content type not found", { status: 404 })
+}
+
+const postResult = getPublishedPostByType(contentType.slug, slug)
+if (!postResult.success) {
+  return new Response("Post not found", { status: 404 })
+}
+---
+
+<PublicLayout title={postResult.data.metaTitle || postResult.data.title}>
+  <ContentTypeDetail contentType={contentType} post={postResult.data} />
+</PublicLayout>

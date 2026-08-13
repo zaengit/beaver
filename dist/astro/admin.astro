@@ -1,0 +1,15 @@
+---
+import AdminLayout from "../ui/admin-layout.astro"
+import { AdminApp } from "zadm/ui"
+import contentTypeRegistry from "@content-type-registry"
+import sectionRegistry from "@section-registry"
+import menuGroupRegistry from "@menu-group-registry"
+
+const pathname = Astro.url.searchParams.get("pathname") ?? "/"
+const adminPath = typeof __ADMIN_PATH__ === "string" ? __ADMIN_PATH__ : "/admin"
+---
+
+<AdminLayout title="Admin">
+  <script define:vars={{ adminPath, contentTypeRegistry, sectionRegistry, menuGroupRegistry }}>globalThis.__CMS_ADMIN_PATH__ = adminPath; globalThis.__CMS_CONTENT_TYPE_REGISTRY__ = contentTypeRegistry; globalThis.__CMS_SECTION_REGISTRY__ = sectionRegistry; globalThis.__CMS_MENU_GROUP_REGISTRY__ = menuGroupRegistry</script>
+  <AdminApp pathname={pathname} client:only="react" />
+</AdminLayout>

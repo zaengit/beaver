@@ -11,7 +11,13 @@ npm run build --workspace zadm
 npm pack --workspace zadm
 ```
 
-The generated tarball is the installable artifact. Do not publish before the package build succeeds.
+This outputs `zadm-<version>.tgz` in the package directory. The generated tarball is the installable artifact, and can be installed locally:
+
+```bash
+npm install ./path/to/zadm-0.1.0.tgz
+```
+
+Do not publish before the package build succeeds.
 
 ## Install
 
@@ -128,19 +134,3 @@ Loads `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the current project's `.env`,
 updates the matching `super-admin` user, and revokes that user's active refresh
 sessions. The password must be at least 12 characters. It never creates a user;
 run `seed` first if the super-admin account does not exist.
-
-## Build to tarball (.tgz)
-
-To produce an installable tarball:
-
-```bash
-npm run build --workspace zadm
-npm pack --workspace zadm
-```
-
-This outputs `zadm-<version>.tgz` in the package directory. The tarball can be installed locally:
-
-```bash
-npm install ./path/to/zadm-0.1.0.tgz
-```
-# zadm

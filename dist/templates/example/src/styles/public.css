@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #fafaf9;
+  color: #0f172a;
+}
+
+::selection {
+  background: #0f172a;
+  color: #fff;
+}

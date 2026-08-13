@@ -1,0 +1,19 @@
+---
+import type { PublicPost } from "@/shared/types/posts"
+import type { PaginationMeta } from "@/shared/types"
+import type { PublicArchiveFilterOptions, PublicArchiveFilters } from "@/shared/types/posts"
+import { getArchiveTemplateComponent } from "@/components/web/content-type-templates/component-resolver"
+
+interface Props {
+  contentType: { label: string; description: string | null; slug: string; archiveTemplate: string }
+  posts: PublicPost[]
+  filterOptions: PublicArchiveFilterOptions
+  filters: PublicArchiveFilters
+  pagination: PaginationMeta
+}
+
+const { contentType, posts, filterOptions, filters, pagination } = Astro.props
+const Template = getArchiveTemplateComponent(contentType.archiveTemplate) as any
+---
+
+<Template {contentType} {posts} {filterOptions} {filters} {pagination} />

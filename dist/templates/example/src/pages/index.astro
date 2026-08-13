@@ -1,0 +1,16 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro"
+import PublicPage from "@/components/web/public-page.astro"
+import { getPublishedPostByType } from "zadm/server"
+
+const homeResult = getPublishedPostByType("page", "home")
+const home = homeResult.success ? homeResult.data : null
+
+if (!home) {
+  return new Response("Home page not found", { status: 404 })
+}
+---
+
+<PublicLayout title={home.metaTitle || home.title} description={home.metaDescription}>
+  <PublicPage page={home} />
+</PublicLayout>

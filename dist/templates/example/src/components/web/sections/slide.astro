@@ -1,0 +1,23 @@
+---
+import { getSectionStyle, type Section } from "./shared/types"
+import ResponsiveImage from "@/components/web/responsive-image.astro"
+import SectionHeading from "./shared/section-heading.astro"
+
+interface Props { section: Section }
+const { section } = Astro.props
+---
+
+<section id={section.style_id || undefined} class:list={["overflow-x-auto bg-slate-950", section.style_css]} aria-label="Slides">
+  <div class="flex snap-x snap-mandatory">
+    {(section.item ?? []).map((item) => (
+      <article class="relative isolate min-h-[32rem] min-w-full snap-start overflow-hidden px-6 py-20 text-white sm:min-h-[40rem] sm:py-28" style={getSectionStyle({ ...section, bg_color: item.bg_color || section.bg_color, bg_image: item.bg_image || section.bg_image })}>
+        {item.image && <ResponsiveImage src={item.image} alt={item.alt_image || item.title || ""} class="absolute inset-0 -z-20 h-full w-full object-cover opacity-45" />}
+        <div class="absolute inset-0 -z-10 bg-slate-950/60" />
+        <div class:list={["mx-auto max-w-7xl", section.alignment === "center" && "text-center", section.alignment === "right" && "text-right"]}>
+          <SectionHeading content={item} />
+          {item.links?.length ? <div class="mt-8 flex flex-wrap gap-3">{item.links.filter((link) => link.label && link.url).map((link) => <a href={link.url} class="rounded-sm bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-slate-200">{link.label}</a>)}</div> : null}
+        </div>
+      </article>
+    ))}
+  </div>
+</section>

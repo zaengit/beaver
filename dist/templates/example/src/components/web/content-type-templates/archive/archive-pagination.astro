@@ -1,0 +1,31 @@
+---
+import type { PublicArchiveFilters } from "@/shared/types/posts";
+
+const { filters, pagination } = Astro.props as {
+  filters: PublicArchiveFilters;
+  pagination: { currentPage: number; lastPage: number };
+};
+
+function pageUrl(page: number) {
+  const query = new URLSearchParams();
+  if (page > 1) query.set("page", String(page));
+  if (filters.search) query.set("search", filters.search);
+  if (filters.category) query.set("category", filters.category);
+  if (filters.tag) query.set("tag", filters.tag);
+  for (const [name, value] of Object.entries(filters.customFields ?? {})) {
+    query.set(`field_${name}`, value);
+  }
+  const search = query.toString();
+  return search ? `?${search}` : "?";
+}
+---
+
+{
+  pagination.lastPage > 1 && (
+    <nav class="mt-12 flex items-center justify-center gap-3" aria-label="Archive pagination">
+      {pagination.currentPage > 1 && <a href={pageUrl(pagination.currentPage - 1)} class="border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-950 hover:text-slate-950">Previous</a>}
+      <span class="text-sm text-slate-600">Page {pagination.currentPage} of {pagination.lastPage}</span>
+      {pagination.currentPage < pagination.lastPage && <a href={pageUrl(pagination.currentPage + 1)} class="border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-950 hover:text-slate-950">Next</a>}
+    </nav>
+  )
+}

@@ -1,0 +1,15 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@content-type-registry": ["./src/components/web/content-type-templates/registry.json"],
+      "@menu-group-registry": ["./src/components/web/menus/registry.json"],
+      "@section-registry": ["./src/components/web/sections/registry.json"]
+    }
+  },
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}
