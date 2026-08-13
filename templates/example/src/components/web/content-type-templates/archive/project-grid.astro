@@ -1,0 +1,65 @@
+---
+import type { ArchiveProps } from "../types";
+import ResponsiveImage from "@/components/web/responsive-image.astro";
+import ArchiveFilters from "./archive-filters.astro";
+import ArchivePagination from "./archive-pagination.astro";
+const { contentType, posts, filterOptions, filters, pagination } = Astro.props as ArchiveProps;
+---
+
+<main class="mx-auto max-w-7xl px-6 py-16 sm:py-20">
+  <header class="max-w-3xl">
+    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+      {contentType.slug}
+    </p><h1
+      class="mt-3 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl"
+    >
+      {contentType.label}
+    </h1>{
+      contentType.description && (
+        <p class="mt-5 text-lg leading-8 text-slate-600">
+          {contentType.description}
+        </p>
+      )
+    }
+  </header><ArchiveFilters {contentType} {filterOptions} {filters} /><div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {
+      posts.map((post) => (
+        <article class="overflow-hidden border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          {post.featuredImage && (
+            <ResponsiveImage
+              src={post.featuredImage}
+              alt={post.title}
+              class="aspect-[4/3] w-full object-cover"
+              loading="lazy"
+            />
+          )}
+          <div class="space-y-3 p-5">
+            <h2 class="text-xl font-semibold tracking-tight text-slate-950">
+              <a
+                href={`/${contentType.slug}/${post.slug}`}
+                class="hover:underline"
+              >
+                {post.title}
+              </a>
+            </h2>
+            {post.excerpt && (
+              <p class="text-sm leading-6 text-slate-600">{post.excerpt}</p>
+            )}
+            <a
+              href={`/${contentType.slug}/${post.slug}`}
+              class="inline-flex text-sm font-semibold text-slate-900 underline-offset-4 hover:underline"
+            >
+              View project
+            </a>
+          </div>
+        </article>
+      ))
+    }
+  </div>{
+    posts.length === 0 && (
+      <p class="mt-12 text-slate-600">
+        No published {contentType.label.toLowerCase()} yet.
+      </p>
+    )
+  }<ArchivePagination {filters} {pagination} />
+</main>

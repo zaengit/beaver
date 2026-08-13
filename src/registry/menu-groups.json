@@ -1,0 +1,5 @@
+[
+  { "type": "navbar", "label": "Navbar", "description": "Primary site navigation." },
+  { "type": "footer", "label": "Footer", "description": "Footer navigation." },
+  { "type": "sidebar", "label": "Sidebar", "description": "Sidebar navigation." }
+]

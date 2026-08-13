@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "declaration": true,
+    "noCheck": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "types": ["vite/client"],
+    "paths": {
+      "zadm/*": ["./src/*"],
+      "@content-type-registry": ["./src/registry/content-types.json"],
+      "@menu-group-registry": ["./src/registry/menu-groups.json"],
+      "@section-registry": ["./src/registry/sections.json"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test-setup.ts"]
+}
