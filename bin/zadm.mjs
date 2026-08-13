@@ -13,7 +13,7 @@ const target = process.argv[3]
 
 const usage = `Usage: zadm <install|migrate|seed|reset superadmin|config|example>`
 
-const installDepsList = ["astro", "zadm", "@astrojs/react", "@astrojs/node", "react", "react-dom", "@tailwindcss/vite"]
+const installDepsList = ["astro", "@astrojs/react", "@astrojs/node", "react", "react-dom", "@tailwindcss/vite"]
 
 function loadDotEnv() {
   const envPath = resolve(process.cwd(), ".env")
@@ -60,8 +60,11 @@ function installDeps() {
   const cwd = process.cwd()
   const pm = detectPm()
   const installCmd = pm === "npm" ? "install" : "add"
+  const packageDependencies = existsSync(resolve(cwd, "node_modules", "zadm", "package.json"))
+    ? installDepsList
+    : ["zadm", ...installDepsList]
   console.log(`Installing dependencies with ${pm}...`)
-  execSync(`${pm} ${installCmd} ${installDepsList.join(" ")}`, { cwd, stdio: "inherit" })
+  execSync(`${pm} ${installCmd} ${packageDependencies.join(" ")}`, { cwd, stdio: "inherit" })
   console.log("Dependencies installed.")
   ensureScripts()
 }

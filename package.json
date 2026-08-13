@@ -6,7 +6,8 @@
   "types": "./dist/server.d.ts",
   "scripts": {
     "build": "node ./scripts/build.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "prepare": "npm run build"
   },
   "files": [
     "dist",
