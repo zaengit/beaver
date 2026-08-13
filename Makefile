@@ -43,5 +43,5 @@ commit:
 
 update:
 	git add .
-	git commit -m "update"
+	git diff --cached --quiet || git commit -m "update"
 	git push -u origin main
