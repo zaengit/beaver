@@ -1,5 +1,5 @@
 import { defineMiddleware } from "astro:middleware"
-import { ADMIN_PATH } from "zadm/server"
+import { ADMIN_PATH } from "@zaenpm/zadm/server"
 
 const INTERNAL_REWRITE = "__zadmInternalRewrite"
 

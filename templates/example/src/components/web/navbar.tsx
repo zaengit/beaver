@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { MenuTree } from "zadm/server"
+import type { MenuTree } from "@zaenpm/zadm/server"
 
 interface NavbarProps {
   items: MenuTree[]

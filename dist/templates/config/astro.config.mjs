@@ -5,7 +5,7 @@ import react from "@astrojs/react"
 import node from "@astrojs/node"
 import tailwindcss from "@tailwindcss/vite"
 import { loadEnv } from "vite"
-import zadm from "zadm"
+import zadm from "@zaenpm/zadm"
 
 function normalizePath(value, fallback, envName) {
   const segment = value?.trim().replace(/^\/+|\/+$/g, "") || fallback

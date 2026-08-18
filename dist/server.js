@@ -86,7 +86,7 @@ function zadm(options = {}) {
               ]
             },
             define: { __ADMIN_PATH__: JSON.stringify(adminPath) },
-            ssr: { noExternal: ["zadm"] },
+            ssr: { noExternal: ["@zaenpm/zadm"] },
             optimizeDeps: {
               include: [
                 "highlight.js/lib/core"

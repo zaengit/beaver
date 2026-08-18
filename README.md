@@ -11,10 +11,10 @@ npm run build --workspace zadm
 npm pack --workspace zadm
 ```
 
-This outputs `zadm-<version>.tgz` in the package directory. The generated tarball is the installable artifact, and can be installed locally:
+This outputs `zaenpm-zadm-<version>.tgz` in the package directory. The generated tarball is the installable artifact, and can be installed locally:
 
 ```bash
-npm install ./path/to/zadm-0.1.0.tgz
+npm install ./path/to/zaenpm-zadm-0.1.0.tgz
 ```
 
 Do not publish before the package build succeeds.
@@ -25,7 +25,7 @@ Do not publish before the package build succeeds.
 npx zadm install
 ```
 
-This installs Astro, `zadm`, and its required integrations, generates
+This installs Astro, `@zaenpm/zadm`, and its required integrations, generates
 missing config/example files, migrates the database, and seeds the initial
 Super Admin. For a new `.env`, the installer generates a unique local admin
 email, a strong random password, and the session/JWT secrets, displays the
@@ -40,7 +40,7 @@ The CMS owns its own React UI, Tailwind plugin, and default registries. A host d
 import { defineConfig } from "astro/config"
 import node from "@astrojs/node"
 import react from "@astrojs/react"
-import zadm from "zadm"
+import zadm from "@zaenpm/zadm"
 
 export default defineConfig({
   output: "server",

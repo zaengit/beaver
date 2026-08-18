@@ -2,6 +2,6 @@
 
 declare namespace App {
   interface Locals {
-    session?: Awaited<ReturnType<typeof import("zadm/server").validateSession>>
+    session?: Awaited<ReturnType<typeof import("@zaenpm/zadm/server").validateSession>>
   }
 }

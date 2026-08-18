@@ -1,4 +1,4 @@
-import type { MenuTree } from "zadm/server"
+import type { MenuTree } from "@zaenpm/zadm/server"
 
 interface FooterProps {
   items: MenuTree[]

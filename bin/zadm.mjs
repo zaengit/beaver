@@ -60,9 +60,9 @@ function installDeps() {
   const cwd = process.cwd()
   const pm = detectPm()
   const installCmd = pm === "npm" ? "install" : "add"
-  const packageDependencies = existsSync(resolve(cwd, "node_modules", "zadm", "package.json"))
+  const packageDependencies = existsSync(resolve(cwd, "node_modules", "@zaenpm", "zadm", "package.json"))
     ? installDepsList
-    : ["zadm", ...installDepsList]
+    : ["@zaenpm/zadm", ...installDepsList]
   console.log(`Installing dependencies with ${pm}...`)
   execSync(`${pm} ${installCmd} ${packageDependencies.join(" ")}`, { cwd, stdio: "inherit" })
   console.log("Dependencies installed.")

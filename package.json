@@ -1,5 +1,5 @@
 {
-  "name": "zadm",
+  "name": "@zaenpm/zadm",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/server.js",
@@ -15,8 +15,8 @@
     "README.md"
   ],
   "bin": {
-    "cms": "./bin/zadm.mjs",
-    "zadm": "./bin/zadm.mjs"
+    "cms": "bin/zadm.mjs",
+    "zadm": "bin/zadm.mjs"
   },
   "exports": {
     ".": {

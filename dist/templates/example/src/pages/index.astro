@@ -1,7 +1,7 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro"
 import PublicPage from "@/components/web/public-page.astro"
-import { getPublishedPostByType } from "zadm/server"
+import { getPublishedPostByType } from "@zaenpm/zadm/server"
 
 const homeResult = getPublishedPostByType("page", "home")
 const home = homeResult.success ? homeResult.data : null

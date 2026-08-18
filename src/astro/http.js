@@ -1,4 +1,4 @@
-import { apiApp } from "zadm/server"
+import { apiApp } from "@zaenpm/zadm/server"
 
 export const prerender = false
 

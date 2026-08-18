@@ -1,6 +1,6 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro"
-import { searchPublishedPosts } from "zadm/server"
+import { searchPublishedPosts } from "@zaenpm/zadm/server"
 
 const query = (Astro.url.searchParams.get("q") ?? "").trim().slice(0, 100)
 const result = query ? searchPublishedPosts(query, 1, 24) : null

@@ -3,7 +3,7 @@ import ContentTypeArchive from "@/components/web/content-type-archive.astro"
 import PublicPage from "@/components/web/public-page.astro"
 import PublicLayout from "@/layouts/PublicLayout.astro"
 import registry from "@content-type-registry"
-import { getPublishedArchiveFilterOptions, getPublishedPostByType, getPublicCustomFieldFiltersFromSearchParams, listPublishedPostsByType } from "zadm/server"
+import { getPublishedArchiveFilterOptions, getPublishedPostByType, getPublicCustomFieldFiltersFromSearchParams, listPublishedPostsByType } from "@zaenpm/zadm/server"
 
 const { type } = Astro.params
 const contentType = type ? registry.contentTypes.find((candidate) => candidate.slug === type) ?? null : null
