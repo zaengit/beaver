@@ -1,31 +1,25 @@
-# zadm
+# @zbeaver/beaver
 
 CMS admin, API, and middleware for Astro SSR projects.
 
+[![npm version](https://img.shields.io/npm/v/@zbeaver/beaver)](https://www.npmjs.com/package/@zbeaver/beaver)
+[![license](https://img.shields.io/npm/l/@zbeaver/beaver)](./LICENSE)
+
 The published artifact contains `dist/**` only: compiled JavaScript, declarations, and the minimal Astro/CSS/JSON runtime assets. Source TypeScript and tests are not published.
-
-## Build and publish
-
-```bash
-npm run build --workspace zadm
-npm pack --workspace zadm
-```
-
-This outputs `zaenpm-zadm-<version>.tgz` in the package directory. The generated tarball is the installable artifact, and can be installed locally:
-
-```bash
-npm install ./path/to/zaenpm-zadm-0.1.0.tgz
-```
-
-Do not publish before the package build succeeds.
 
 ## Install
 
 ```bash
-npx zadm install
+npm install @zbeaver/beaver
 ```
 
-This installs Astro, `@zaenpm/zadm`, and its required integrations, generates
+Or use the CLI installer to scaffold a new project:
+
+```bash
+npx @zbeaver/beaver install flowstack
+```
+
+This installs Astro, `@zbeaver/beaver`, and its required integrations, generates
 missing config/example files, migrates the database, and seeds the initial
 Super Admin. For a new `.env`, the installer generates a unique local admin
 email, a strong random password, and the session/JWT secrets, displays the
@@ -40,12 +34,12 @@ The CMS owns its own React UI, Tailwind plugin, and default registries. A host d
 import { defineConfig } from "astro/config"
 import node from "@astrojs/node"
 import react from "@astrojs/react"
-import zadm from "@zaenpm/zadm"
+import beaver from "@zbeaver/beaver"
 
 export default defineConfig({
   output: "server",
   adapter: node({ mode: "standalone" }),
-  integrations: [react(), zadm()],
+  integrations: [react(), beaver()],
 })
 ```
 
@@ -56,7 +50,7 @@ This mounts the admin at `/admin`, API at `/api`, and keeps implementation route
 The defaults provide built-in posts/pages, no page sections, and navbar/footer/sidebar menu groups. Pass JSON files only when the host needs custom content types, section templates, or menu groups:
 
 ```js
-zadm({
+beaver({
   adminPath: "control-panel",
   contentTypeRegistry: new URL("./src/cms/content-types.json", import.meta.url),
   sectionRegistry: new URL("./src/cms/sections.json", import.meta.url),
@@ -103,31 +97,30 @@ The host is responsible for applying the exported Drizzle schema and running the
 The package provides the following CLI commands for consuming projects:
 
 ```bash
-npm install github:zaengit/zadm
-npx zadm config    # Generate .env and astro.config.mjs
-npx zadm example   # Copy example web components, pages, and skills
-npx zadm migrate   # Apply SQLite schema
-npx zadm seed      # Create default roles, permissions, and admin user
-npx --no-install zadm reset superadmin # Reset super-admin password from .env
-npx zadm install   # Run config, example, dependency install, migrate, and seed
+npx @zbeaver/beaver config                  # Generate .env and astro.config.mjs
+npx @zbeaver/beaver example flowstack       # Copy the Flowstack public template and skill
+npx @zbeaver/beaver migrate                 # Apply SQLite schema
+npx @zbeaver/beaver seed flowstack          # Create base data and import Flowstack demo data
+npx @zbeaver/beaver reset superadmin        # Reset super-admin password from .env
+npx @zbeaver/beaver install flowstack       # Configure, copy, migrate, and seed Flowstack
 ```
 
 ### `config`
 
 Generates `.env` and `astro.config.mjs` from bundled templates. Skips existing files to avoid overwriting customizations.
 
-### `example`
+### `example [template]`
 
-Copies example files into the consuming project:
+Copies a template profile into the consuming project. `flowstack` is the bundled profile:
 - `src/components/web/` — all web components (sections, templates, navbar, footer)
 - `src/pages/` — `index.astro`, `search.astro`, `tag/[tag].astro`, `system/*`, `[type]/*`
 - `skills/design-web-components/` — skill definition and references
 
 Existing files are never overwritten.
 
-### `migrate` / `seed`
+### `migrate` / `seed [template]`
 
-`migrate` applies the SQLite schema bundled with the package and records it in Drizzle's migration table. Run it before starting the application on each deployment. `seed` creates the default roles, permissions, and administrator from the required environment variables.
+`migrate` applies the SQLite schema bundled with the package and records it in Drizzle's migration table. Run it before starting the application on each deployment. `seed` creates the default roles, permissions, and administrator from the required environment variables. Adding `flowstack` imports its idempotent content data after the base seed.
 
 ### `reset superadmin`
 
@@ -135,3 +128,7 @@ Loads `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the current project's `.env`,
 updates the matching `super-admin` user, and revokes that user's active refresh
 sessions. The password must be at least 12 characters. It never creates a user;
 run `seed` first if the super-admin account does not exist.
+
+## License
+
+[MIT](./LICENSE) © 2026 zaen3
