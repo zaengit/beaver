@@ -1,7 +1,7 @@
-import type { AdminRoute } from "zadm/router/route"
-import type { MediaFilters } from "zadm/pkg/types/media"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { MediaFilters } from "@zaenpm/beaver/pkg/types/media"
 
-import { handleListMedia, handleUploadMedia } from "zadm/app/handlers"
+import { handleListMedia, handleUploadMedia } from "@zaenpm/beaver/app/handlers"
 
 const VALID_SORT_BY = new Set(["name", "createdAt", "size"])
 const VALID_SORT_ORDER = new Set(["asc", "desc"])

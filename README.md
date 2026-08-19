@@ -5,7 +5,7 @@ CMS admin, API, and middleware for Astro SSR projects.
 [![npm version](https://img.shields.io/npm/v/@zbeaver/beaver)](https://www.npmjs.com/package/@zbeaver/beaver)
 [![license](https://img.shields.io/npm/l/@zbeaver/beaver)](./LICENSE)
 
-![Beaver admin panel](https://raw.githubusercontent.com/zaengit/beaver/main/.github/screenshot.png)
+![Beaver admin panel](./screenshot.png)
 
 The published artifact contains `dist/**` only: compiled JavaScript, declarations, and the minimal Astro/CSS/JSON runtime assets. Source TypeScript and tests are not published.
 

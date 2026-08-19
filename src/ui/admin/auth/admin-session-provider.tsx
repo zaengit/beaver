@@ -1,8 +1,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 
-import { fetchAdminSession } from "zadm/ui/admin/auth/auth-client"
-import { setAdminUnauthorizedHandler } from "zadm/ui/admin/shared/api-client"
+import { fetchAdminSession } from "@zaenpm/beaver/ui/admin/auth/auth-client"
+import { setAdminUnauthorizedHandler } from "@zaenpm/beaver/ui/admin/shared/api-client"
 
 interface AdminSession {
   user: {

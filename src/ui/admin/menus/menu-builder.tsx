@@ -22,14 +22,14 @@ import {
   adminApiDelete,
   adminApiPost,
   adminApiPut,
-} from "zadm/ui/admin/shared/api-client"
-import { SortableMenuItem } from "zadm/ui/admin/menus/sortable-menu-item"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { Badge } from "zadm/ui/admin/components/ui/badge"
-import { adminToast } from "zadm/ui/admin/shared/admin-toast"
-import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "zadm/ui/admin/layout/admin-form-layout"
+} from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { SortableMenuItem } from "@zaenpm/beaver/ui/admin/menus/sortable-menu-item"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
+import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
+import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zaenpm/beaver/ui/admin/layout/admin-form-layout"
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ const INDENT_PX = 30
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export const MenuBuilder = forwardRef<MenuBuilderHandle, MenuBuilderProps>(function MenuBuilder({ type, initialTree, onStatusChange }, ref) {
-  
+
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set())
   const [items, setItems] = useState<FlattenedMenuItem[]>(() =>
     flattenTree(initialTree, null, 0, new Set())
@@ -391,10 +391,10 @@ export const MenuBuilder = forwardRef<MenuBuilderHandle, MenuBuilderProps>(funct
             .map((item) =>
               descendantIds.has(item.id)
                 ? {
-                    ...item,
-                    parentId: item.parentId === id ? deletedItem.parentId : item.parentId,
-                    depth: Math.max(0, item.depth - 1),
-                  }
+                  ...item,
+                  parentId: item.parentId === id ? deletedItem.parentId : item.parentId,
+                  depth: Math.max(0, item.depth - 1),
+                }
                 : item
             )
         })
@@ -549,91 +549,91 @@ export const MenuBuilder = forwardRef<MenuBuilderHandle, MenuBuilderProps>(funct
     <div className="space-y-4">
       {/* Header with save button and unsaved indicator */}
       {hasChanges && (
-      <div className="flex items-center gap-3 px-4">
+        <div className="flex items-center gap-3 px-4 mt-3">
           <Badge variant="secondary" className="animate-pulse">
             Unsaved changes
           </Badge>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? "Saving..." : "Save Menu"}
           </Button>
-      </div>
+        </div>
       )}
 
       <AdminFormLayout>
         <AdminFormMain>
           <AdminFormCard title="Menu items" description="Drag items to reorder. Drag right to nest, or left to outdent.">
-      {/* Menu tree */}
-      {items.length === 0 ? (
-        <div className="rounded-sm border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">
-            No menu items yet. Add your first item from the panel.
-          </p>
-        </div>
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2" role="list" aria-label="Menu items">
-              {items.map((item) => (
-                <SortableMenuItem
-                  key={item.id}
-                  item={item}
-                  maxDepth={MAX_DEPTH}
-                  onToggleCollapse={toggleCollapse}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onKeyAction={handleKeyAction}
-                />
-              ))}
-            </div>
-          </SortableContext>
-
-          <DragOverlay>
-            {activeItem ? (
-              <div className="rounded-sm border bg-background p-3 shadow-lg opacity-90">
-                <span className="font-medium">{activeItem.title}</span>
-                <span className="ml-2 text-xs text-muted-foreground truncate">{activeItem.url}</span>
+            {/* Menu tree */}
+            {items.length === 0 ? (
+              <div className="rounded-sm border border-dashed p-8 text-center">
+                <p className="text-muted-foreground">
+                  No menu items yet. Add your first item from the panel.
+                </p>
               </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2" role="list" aria-label="Menu items">
+                    {items.map((item) => (
+                      <SortableMenuItem
+                        key={item.id}
+                        item={item}
+                        maxDepth={MAX_DEPTH}
+                        onToggleCollapse={toggleCollapse}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onKeyAction={handleKeyAction}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+
+                <DragOverlay>
+                  {activeItem ? (
+                    <div className="rounded-sm border bg-background p-3 shadow-lg opacity-90">
+                      <span className="font-medium">{activeItem.title}</span>
+                      <span className="ml-2 text-xs text-muted-foreground truncate">{activeItem.url}</span>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            )}
           </AdminFormCard>
         </AdminFormMain>
         <AdminFormSidebar>
           <AdminFormCard title="Add menu item" description="New items are added to the top level.">
-          <div className="space-y-1.5">
-            <Label htmlFor="new-title">Title</Label>
-            <Input
-              id="new-title"
-              placeholder="Menu item title"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddItem()
-              }}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="new-url">URL</Label>
-            <Input
-              id="new-url"
-              placeholder="/page-url"
-              value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddItem()
-              }}
-            />
-          </div>
-          <Button className="w-full" onClick={handleAddItem} disabled={addingItem || !newTitle.trim() || !newUrl.trim()}>
-            {addingItem ? "Adding..." : "Add"}
-          </Button>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-title">Title</Label>
+              <Input
+                id="new-title"
+                placeholder="Menu item title"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddItem()
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-url">URL</Label>
+              <Input
+                id="new-url"
+                placeholder="/page-url"
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddItem()
+                }}
+              />
+            </div>
+            <Button className="w-full" onClick={handleAddItem} disabled={addingItem || !newTitle.trim() || !newUrl.trim()}>
+              {addingItem ? "Adding..." : "Add"}
+            </Button>
           </AdminFormCard>
         </AdminFormSidebar>
       </AdminFormLayout>

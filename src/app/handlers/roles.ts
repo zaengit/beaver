@@ -1,9 +1,9 @@
-import { adminCreated, adminError, adminSuccess } from "zadm/app/admin/api-response"
-import { mapServiceError } from "zadm/app/handlers/error-mapper"
-import { requireAuth, requirePermission, requireAnyPermission } from "zadm/app/handlers/guard"
-import { parseWithSchema } from "zadm/app/handlers/utils"
-import type { Session } from "zadm/app/handlers/types"
-import { listAllPermissionRecords } from "zadm/app/repositories/roles"
+import { adminCreated, adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
+import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
+import { requireAuth, requirePermission, requireAnyPermission } from "@zaenpm/beaver/app/handlers/guard"
+import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
+import type { Session } from "@zaenpm/beaver/app/handlers/types"
+import { listAllPermissionRecords } from "@zaenpm/beaver/app/repositories/roles"
 import {
   bulkDeleteRoles,
   bulkDuplicateRoles,
@@ -13,8 +13,8 @@ import {
   getRole,
   listRolesService,
   updateRole,
-} from "zadm/app/services/roles"
-import { createRoleSchema, updateRoleSchema } from "zadm/app/validations/roles"
+} from "@zaenpm/beaver/app/services/roles"
+import { createRoleSchema, updateRoleSchema } from "@zaenpm/beaver/app/validations/roles"
 
 // ---------------------------------------------------------------------------
 // Helpers

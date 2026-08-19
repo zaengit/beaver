@@ -12,7 +12,7 @@
     "outDir": "./dist",
     "types": ["vite/client"],
     "paths": {
-      "zadm/*": ["./src/*"],
+      "@zaenpm/beaver/*": ["./src/*"],
       "@content-type-registry": ["./src/registry/content-types.json"],
       "@menu-group-registry": ["./src/registry/menu-groups.json"],
       "@section-registry": ["./src/registry/sections.json"]

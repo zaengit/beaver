@@ -1,0 +1,27 @@
+---
+import type { Section } from "./shared/types"
+import SectionHeading from "./shared/section-heading.astro"
+
+interface Props { section: Section; mapCoordinate: string | null }
+const { section, mapCoordinate } = Astro.props
+
+const coordinate = mapCoordinate?.match(
+  /^\s*(-?(?:[0-8]?\d(?:\.\d+)?|90(?:\.0+)?))\s*,\s*(-?(?:1?[0-7]?\d(?:\.\d+)?|180(?:\.0+)?))\s*$/,
+)
+const mapUrl = coordinate
+  ? `https://www.google.com/maps?q=${encodeURIComponent(`${coordinate[1]},${coordinate[2]}`)}&z=15&output=embed`
+  : null
+---
+
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 my-6">
+  <section id={section.style_id || undefined} class:list={["rounded-[32px] sm:rounded-[40px] border border-slate-200/90 bg-white p-8 sm:p-12 shadow-xl", section.style_css]}>
+    <div class="mx-auto max-w-7xl">
+      <SectionHeading content={section} theme="light" />
+      {mapUrl && (
+        <div class="mt-10 h-[28rem] w-full overflow-hidden rounded-[24px] border border-slate-200 shadow-md">
+          <iframe class="h-full w-full border-0" src={mapUrl} title={section.title || "Map"} loading="lazy" />
+        </div>
+      )}
+    </div>
+  </section>
+</div>

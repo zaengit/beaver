@@ -3,18 +3,18 @@ import { useEffect, useState } from "react"
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { ChevronDown, ChevronUp, Copy, GripVertical, Plus, Settings2, Trash2 } from "lucide-react"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { Textarea } from "zadm/ui/admin/components/ui/textarea"
-import { Badge } from "zadm/ui/admin/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "zadm/ui/admin/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "zadm/ui/admin/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "zadm/ui/admin/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "zadm/ui/admin/components/ui/tabs"
-import { adminApiGet } from "zadm/ui/admin/shared/api-client"
-import { MediaPicker } from "zadm/ui/admin/shared/media-picker"
-import { getSectionRegistry, type SectionTemplate } from "zadm/app/registry/sections"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
+import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@zaenpm/beaver/ui/admin/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@zaenpm/beaver/ui/admin/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@zaenpm/beaver/ui/admin/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@zaenpm/beaver/ui/admin/components/ui/tabs"
+import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker"
+import { getSectionRegistry, type SectionTemplate } from "@zaenpm/beaver/app/registry/sections"
 import { createEmptyItem, type EmbeddedSection } from "./section-embedder-types"
 import { SortableItemCard } from "./sortable-item-card"
 
@@ -80,6 +80,8 @@ export function EmbeddedSectionCard({
   const allowsItems = templateConfig?.itemMode !== "none"
   const isSingleItem = templateConfig?.itemMode === "single"
   const sectionFields = new Set(templateConfig?.sectionFields ?? ["caption", "title", "text"])
+  const columns = templateConfig?.columns
+  const columnsMax = columns ? (columns.desktop ?? columns.tablet ?? columns.mobile) : undefined
   const sectionLink = section.links?.[0] ?? { label: "", url: "" }
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
   const selectedCategory = categories.find(
@@ -222,7 +224,19 @@ export function EmbeddedSectionCard({
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-1.5">
                       <Label>Image</Label>
-                      <MediaPicker value={section.image ?? null} onChange={(media) => onUpdateField("image", media ? media.url : null)} accept="image/*" />
+                      <div className="flex items-center gap-2">
+                        {section.image && (
+                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted">
+                            <img src={section.image} alt="" className="h-full w-full object-cover" />
+                          </div>
+                        )}
+                        <MediaPicker value={section.image ?? null} onChange={(media) => onUpdateField("image", media ? media.url : null)} accept="image/*" />
+                        {section.image && (
+                          <Button type="button" variant="outline" aria-label="Remove image" className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => onUpdateField("image", null)}>
+                            Remove
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label>Alt Image</Label>
@@ -240,7 +254,19 @@ export function EmbeddedSectionCard({
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-1.5">
                       <Label>Background Image</Label>
-                      <MediaPicker value={section.bg_image ?? null} onChange={(media) => onUpdateField("bg_image", media ? media.url : null)} accept="image/*" />
+                      <div className="flex items-center gap-2">
+                        {section.bg_image && (
+                          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted">
+                            <img src={section.bg_image} alt="" className="h-full w-full object-cover" />
+                          </div>
+                        )}
+                        <MediaPicker value={section.bg_image ?? null} onChange={(media) => onUpdateField("bg_image", media ? media.url : null)} accept="image/*" />
+                        {section.bg_image && (
+                          <Button type="button" variant="outline" aria-label="Remove background image" className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => onUpdateField("bg_image", null)}>
+                            Remove
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label>Background Color</Label>
@@ -284,7 +310,7 @@ export function EmbeddedSectionCard({
           {allowsItems && <div className="space-y-3 border-t pt-5">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <Label className="text-sm font-semibold">Items{templateConfig?.columns ? ` · up to ${templateConfig.columns.desktop ?? templateConfig.columns.tablet ?? templateConfig.columns.mobile} columns per row` : ""}</Label>
+                <Label className="text-sm font-semibold">Items{columnsMax ? ` · up to ${columnsMax} columns per row` : ""}</Label>
                 <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground">
                   <button type="button" onClick={onCollapseItems} className="hover:text-foreground">Collapse all</button>
                   <button type="button" onClick={onExpandItems} className="hover:text-foreground">Expand all</button>

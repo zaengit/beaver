@@ -1,9 +1,9 @@
 import bcrypt from "bcrypt"
 import { and, eq } from "drizzle-orm"
 
-import { db } from "zadm/app/db"
-import { adminRefreshSessions, roles, users } from "zadm/app/db/schema"
-import { getCurrentTimestamp } from "zadm/pkg/utils/index"
+import { db } from "@zaenpm/beaver/app/db"
+import { adminRefreshSessions, roles, users } from "@zaenpm/beaver/app/db/schema"
+import { getCurrentTimestamp } from "@zaenpm/beaver/pkg/utils/index"
 
 export function resetSuperAdminPassword() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase()
@@ -16,7 +16,7 @@ export function resetSuperAdminPassword() {
     .from(roles)
     .where(eq(roles.slug, "super-admin"))
     .get()
-  if (!superAdmin) throw new Error("The super-admin role does not exist. Run zadm seed first.")
+  if (!superAdmin) throw new Error("The super-admin role does not exist. Run beaver seed first.")
 
   const user = db.select({ id: users.id })
     .from(users)

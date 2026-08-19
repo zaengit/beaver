@@ -6,7 +6,7 @@ import {
   featuredImageSchema,
   galleryImageSchema,
   publishStatusEnum,
-} from "zadm/app/validations/shared"
+} from "@zaenpm/beaver/app/validations/shared"
 
 // Section object schema - embedded full section data (Req 20.2)
 const sectionSchema = z.object({

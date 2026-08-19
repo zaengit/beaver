@@ -13,11 +13,11 @@ import {
   updatePostRecord,
   deletePostRecord,
   syncPostCategoriesRecord,
-} from "zadm/app/repositories/posts"
-import { getServerContentTypeRegistry } from "zadm/app/registry/server-content-types"
-import { sanitizeText, sanitizeHtml } from "zadm/pkg/security/sanitize"
-import { generateId } from "zadm/pkg/utils/id"
-import type { CreatePostInput, UpdatePostInput } from "zadm/app/validations/posts"
+} from "@zaenpm/beaver/app/repositories/posts"
+import { getServerContentTypeRegistry } from "@zaenpm/beaver/app/registry/server-content-types"
+import { sanitizeText, sanitizeHtml } from "@zaenpm/beaver/pkg/security/sanitize"
+import { generateId } from "@zaenpm/beaver/pkg/utils/id"
+import type { CreatePostInput, UpdatePostInput } from "@zaenpm/beaver/app/validations/posts"
 import type {
   Post,
   PostWithRelations,
@@ -27,13 +27,13 @@ import type {
   ServiceResult,
   PaginatedResult,
   PostFilters,
-} from "zadm/pkg/types"
+} from "@zaenpm/beaver/pkg/types"
 import {
   serviceSuccess,
   serviceNotFound,
   serviceConflict,
-} from "zadm/app/services/utils"
-import { getCachedPublicData, invalidatePublicDataCache } from "zadm/app/cache/public-data-cache"
+} from "@zaenpm/beaver/app/services/utils"
+import { getCachedPublicData, invalidatePublicDataCache } from "@zaenpm/beaver/app/cache/public-data-cache"
 
 // ---------------------------------------------------------------------------
 // Pure helpers

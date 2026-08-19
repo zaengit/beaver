@@ -1,4 +1,4 @@
-import type { media } from "zadm/app/db/schema"
+import type { media } from "@zaenpm/beaver/app/db/schema"
 
 export const MEDIA_TABLE = "media"
 

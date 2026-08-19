@@ -1,4 +1,0 @@
-interface:
-  display_name: "Web Component Design"
-  short_description: "Build CMS web sections and templates"
-  default_prompt: "Use $design-web-components to create a new CMS web section in src/components/web."

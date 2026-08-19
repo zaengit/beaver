@@ -1,0 +1,106 @@
+{
+  "contentTypes": [
+    {
+      "name": "post",
+      "label": "Posts",
+      "slug": "post",
+      "icon": "FileText",
+      "description": "Editorial posts and news.",
+      "archiveTemplate": "editorial-list",
+      "detailTemplate": "post-reader",
+      "position": 1
+    }
+  ],
+  "templates": [
+    {
+      "id": "default",
+      "label": "Default archive",
+      "description": "Standard content list.",
+      "kind": "archive"
+    },
+    {
+      "id": "post-grid",
+      "label": "Post grid",
+      "description": "Responsive grid for post content.",
+      "kind": "archive"
+    },
+    {
+      "id": "default",
+      "label": "Default detail",
+      "description": "Standard content detail page.",
+      "kind": "detail",
+      "sectionsEnabled": true,
+      "fieldSlots": [
+        {
+          "key": "primary",
+          "label": "Primary detail",
+          "description": "The main supporting field.",
+          "type": "text"
+        },
+        {
+          "key": "secondary",
+          "label": "Secondary detail",
+          "description": "An additional supporting field.",
+          "type": "text"
+        },
+        {
+          "key": "metadata",
+          "label": "Metadata",
+          "description": "A concise metadata field.",
+          "type": "text"
+        },
+        {
+          "key": "date",
+          "label": "Date",
+          "description": "A date field.",
+          "type": "date"
+        },
+        {
+          "key": "image",
+          "label": "Image",
+          "description": "A supporting image.",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "id": "post-reader",
+      "label": "Post reader",
+      "description": "Long-form post layout.",
+      "kind": "detail",
+      "sectionsEnabled": true,
+      "fieldSlots": [
+        {
+          "key": "source",
+          "label": "Source",
+          "description": "Post source or reference.",
+          "type": "text"
+        },
+        {
+          "key": "readingTime",
+          "label": "Reading time",
+          "description": "Estimated reading duration.",
+          "type": "number"
+        },
+        {
+          "key": "authorNote",
+          "label": "Author note",
+          "description": "Additional author information.",
+          "type": "rich-text"
+        },
+        {
+          "key": "date",
+          "label": "Date",
+          "description": "An article date.",
+          "type": "date"
+        },
+        {
+          "key": "image",
+          "label": "Image",
+          "description": "An article image.",
+          "type": "image"
+        }
+      ]
+    }
+  ]
+}

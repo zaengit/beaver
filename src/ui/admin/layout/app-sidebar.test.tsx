@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 
-import { AdminSidebar } from "zadm/ui/admin/layout/app-sidebar"
+import { AdminSidebar } from "@zaenpm/beaver/ui/admin/layout/app-sidebar"
 
 const { navigateMock, setSessionMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
@@ -19,13 +19,13 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("zadm/ui/admin/auth/admin-session-provider", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/auth/admin-session-provider", () => ({
   useAdminSession: () => ({
     setSession: setSessionMock,
   }),
 }))
 
-vi.mock("zadm/ui/admin/components/ui/sidebar", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/components/ui/sidebar", () => ({
   Sidebar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

@@ -1,7 +1,7 @@
 import { Hono } from "hono"
-import { adminSecurity, type AdminApiEnvironment } from "zadm/router/admin/middleware"
-import { createAdminRouteContext, type AdminRoute } from "zadm/router/route"
-import { applySecurityHeaders, enforceRequestBodyLimit, hasValidSameOrigin, isReadRequest } from "zadm/router/security"
+import { adminSecurity, type AdminApiEnvironment } from "@zaenpm/beaver/router/admin/middleware"
+import { createAdminRouteContext, type AdminRoute } from "@zaenpm/beaver/router/route"
+import { applySecurityHeaders, enforceRequestBodyLimit, hasValidSameOrigin, isReadRequest } from "@zaenpm/beaver/router/security"
 
 type RouteModule = Partial<Record<"DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT", AdminRoute>>
 type ApiEnvironment = AdminApiEnvironment

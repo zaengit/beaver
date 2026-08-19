@@ -1,10 +1,10 @@
 
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { Textarea } from "zadm/ui/admin/components/ui/textarea"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { MediaPicker } from "zadm/ui/admin/shared/media-picker"
-import { getContentTypeRegistry } from "zadm/app/registry/content-types"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker"
+import { getContentTypeRegistry } from "@zaenpm/beaver/app/registry/content-types"
 
 interface Props {
   detailTemplate: string | null

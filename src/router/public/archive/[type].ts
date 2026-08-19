@@ -1,7 +1,7 @@
-import { getServerContentTypeRegistry } from "zadm/app/registry/server-content-types"
+import { getServerContentTypeRegistry } from "@zaenpm/beaver/app/registry/server-content-types"
 
-import { getPublicCustomFieldFiltersFromSearchParams, listPublishedPostsByType } from "zadm/app/public/posts"
-import type { AdminRoute } from "zadm/router/route"
+import { getPublicCustomFieldFiltersFromSearchParams, listPublishedPostsByType } from "@zaenpm/beaver/app/public/posts"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
 
 export const GET: AdminRoute = ({ params, request }) => {
   const registry = getServerContentTypeRegistry()

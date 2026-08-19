@@ -1,6 +1,6 @@
 
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { Checkbox } from "zadm/ui/admin/components/ui/checkbox"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { Checkbox } from "@zaenpm/beaver/ui/admin/components/ui/checkbox"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

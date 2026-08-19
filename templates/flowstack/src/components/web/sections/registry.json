@@ -1,0 +1,359 @@
+[
+  {
+    "type": "post",
+    "label": "Post Collection",
+    "description": "Published post collection with category and sort controls.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "caption",
+      "title",
+      "text",
+      "bg_color",
+      "bg_image",
+      "alignment",
+      "category",
+      "sort_by",
+      "sort_order",
+      "limit"
+    ],
+    "itemFields": [],
+    "itemMode": "none",
+    "contentType": "post"
+  },
+  {
+    "type": "hero",
+    "label": "Hero",
+    "description": "Large visual introduction. Each item is a hero panel.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "caption",
+      "title",
+      "text",
+      "image",
+      "alt_image",
+      "links"
+    ],
+    "itemMode": "repeatable",
+    "demo": {
+      "section": {
+        "bg_color": "#111827",
+        "alignment": "center"
+      },
+      "items": [
+        {
+          "caption": "Deploy faster",
+          "title": "Everything you need to deploy your app",
+          "text": "Build, deploy, and scale your next project from one place.",
+          "image": "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1600&q=85",
+          "alt_image": "Developer workspace",
+          "links": [
+            {
+              "label": "Get started",
+              "url": "/contact"
+            },
+            {
+              "label": "Learn more",
+              "url": "/about"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "type": "banner",
+    "label": "Banner",
+    "description": "Full-width announcement banner with repeatable content panels.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "caption",
+      "title",
+      "text",
+      "image",
+      "alt_image",
+      "links"
+    ],
+    "itemMode": "repeatable",
+    "demo": {
+      "section": {
+        "bg_color": "#111827"
+      },
+      "items": [
+        {
+          "caption": "New release",
+          "title": "Build faster with a simpler workflow",
+          "text": "Everything your team needs to move from idea to launch.",
+          "links": [
+            {
+              "label": "Explore",
+              "url": "/about"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "type": "slide",
+    "label": "Slides",
+    "description": "Horizontal scroll-snap slides.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "caption",
+      "title",
+      "text",
+      "image",
+      "alt_image",
+      "links"
+    ],
+    "itemMode": "repeatable",
+    "demo": {
+      "section": {
+        "bg_color": "#111827",
+        "alignment": "center"
+      },
+      "items": [
+        {
+          "caption": "Launch",
+          "title": "Ship with confidence",
+          "text": "A focused workflow for your next release.",
+          "links": [
+            {
+              "label": "Get started",
+              "url": "/contact"
+            }
+          ]
+        },
+        {
+          "caption": "Scale",
+          "title": "Everything stays in sync",
+          "text": "Keep your team, content, and delivery moving together.",
+          "links": [
+            {
+              "label": "Learn more",
+              "url": "/about"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "type": "feature-icon-grid",
+    "label": "Feature Icon Grid",
+    "description": "Section heading with an unlimited responsive icon grid.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "caption",
+      "title",
+      "text",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "icon",
+      "title",
+      "text",
+      "links"
+    ],
+    "itemMode": "repeatable",
+    "columns": {
+      "mobile": 1,
+      "tablet": 2,
+      "desktop": 3
+    },
+    "demo": {
+      "section": {
+        "caption": "Deploy faster",
+        "title": "Everything you need to deploy your app",
+        "text": "Build, secure, and scale from one platform.",
+        "bg_color": "#111827",
+        "alignment": "center"
+      },
+      "items": [
+        {
+          "icon": "Cloud",
+          "title": "Push to deploy",
+          "text": "Release your work with a workflow built for speed."
+        },
+        {
+          "icon": "Lock",
+          "title": "SSL certificates",
+          "text": "Keep every project protected by default."
+        },
+        {
+          "icon": "RefreshCw",
+          "title": "Simple queues",
+          "text": "Run reliable background work without extra setup."
+        }
+      ]
+    }
+  },
+  {
+    "type": "faq",
+    "label": "FAQ",
+    "description": "Section heading with repeatable question and answer rows.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "caption",
+      "title",
+      "text",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "question",
+      "answer"
+    ],
+    "itemMode": "repeatable",
+    "demo": {
+      "section": {
+        "caption": "Questions",
+        "title": "Frequently asked questions",
+        "text": "Everything you need to know before getting started.",
+        "bg_color": "#111827"
+      },
+      "items": [
+        {
+          "question": "How quickly can I get started?",
+          "answer": "Create your first project in minutes, then invite your team when you are ready."
+        },
+        {
+          "question": "Can I change my plan later?",
+          "answer": "Yes. You can upgrade or change your plan whenever your needs change."
+        }
+      ]
+    }
+  },
+  {
+    "type": "video",
+    "label": "Video",
+    "description": "Section heading with one YouTube video.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "caption",
+      "title",
+      "text",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "video"
+    ],
+    "itemMode": "single",
+    "demo": {
+      "section": {
+        "caption": "Product tour",
+        "title": "See how it works",
+        "text": "A short overview of the workflow.",
+        "bg_color": "#111827"
+      },
+      "items": [
+        {
+          "video": "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+        }
+      ]
+    }
+  },
+  {
+    "type": "map",
+    "label": "Map",
+    "description": "Section heading with one coordinate.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "caption",
+      "title",
+      "text",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "map"
+    ],
+    "itemMode": "single",
+    "demo": {
+      "section": {
+        "caption": "Visit us",
+        "title": "Find our studio",
+        "text": "We are based in Jakarta and work with teams everywhere.",
+        "bg_color": "#111827"
+      },
+      "items": [
+        {
+          "map": "-6.208763, 106.845599"
+        }
+      ]
+    }
+  },
+  {
+    "type": "contact",
+    "label": "Contact Form",
+    "description": "Contact form with section-level content and styling.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "caption",
+      "title",
+      "text",
+      "bg_color",
+      "bg_image",
+      "alignment",
+      "image",
+      "alt_image",
+      "links"
+    ],
+    "itemFields": [
+      "form_inquiry"
+    ],
+    "itemMode": "single",
+    "demo": {
+      "section": {
+        "caption": "Contact",
+        "title": "Start a conversation",
+        "text": "Tell us about your project and we will get back to you.",
+        "bg_color": "#111827"
+      },
+      "items": [
+        {
+          "form_inquiry": true
+        }
+      ]
+    }
+  }
+]

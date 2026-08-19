@@ -3,19 +3,19 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router"
 import { ArrowRight, FileText, Image, type LucideIcon } from "lucide-react"
 
-import { getContentTypeRegistry } from "zadm/app/registry/content-types"
-import { useAdminSession } from "zadm/ui/admin/auth/admin-session-provider"
-import { adminApiGet } from "zadm/ui/admin/shared/api-client"
-import { AdminLoadingState } from "zadm/ui/admin/core/admin-loading-state"
+import { getContentTypeRegistry } from "@zaenpm/beaver/app/registry/content-types"
+import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
+import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
 import {
   AdminPageHeader,
   AdminPageShell,
   AdminSectionCard,
   AdminStatCard,
   AdminStatsGrid,
-} from "zadm/ui/admin/layout/admin-page-shell"
-import { buttonVariants } from "zadm/ui/admin/components/ui/button"
-import { cn } from "zadm/pkg/utils/ui"
+} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
+import { buttonVariants } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
 
 type DashboardStats = {
   totalPosts: number

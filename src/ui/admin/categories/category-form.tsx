@@ -1,19 +1,19 @@
 
 import { useEffect, useState, useTransition } from "react"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { Textarea } from "zadm/ui/admin/components/ui/textarea"
-import { adminApiPost, adminApiPut } from "zadm/ui/admin/shared/api-client"
-import { MediaPicker } from "zadm/ui/admin/shared/media-picker"
-import { navigateToPath } from "zadm/ui/admin/navigation"
-import { slugify } from "zadm/pkg/utils/slug"
-import { adminToast } from "zadm/ui/admin/shared/admin-toast"
-import { useAdminSession } from "zadm/ui/admin/auth/admin-session-provider"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
+import { adminApiPost, adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker"
+import { navigateToPath } from "@zaenpm/beaver/ui/admin/navigation"
+import { slugify } from "@zaenpm/beaver/pkg/utils/slug"
+import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
+import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
 import {
   AdminPageHeader,
-} from "zadm/ui/admin/layout/admin-page-shell"
-import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "zadm/ui/admin/layout/admin-form-layout"
+} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
+import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zaenpm/beaver/ui/admin/layout/admin-form-layout"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -246,9 +246,10 @@ export function CategoryForm({ category, mode, pageTitle, defaultType }: Categor
                       {imageUrl && (
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          className="w-fit"
+                          aria-label="Remove image"
+                          className="w-fit text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => setImageUrl("")}
                         >
                           Remove

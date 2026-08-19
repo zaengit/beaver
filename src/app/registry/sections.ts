@@ -8,6 +8,7 @@ export interface SectionTemplate {
   itemFields: string[]
   itemMode?: string
   contentType?: string
+  columns?: { mobile?: number; tablet?: number; desktop?: number }
   demo?: { section?: Record<string, unknown>; items?: Record<string, unknown>[] }
 }
 

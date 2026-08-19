@@ -1,4 +1,4 @@
-import type { roles } from "zadm/app/db/schema"
+import type { roles } from "@zaenpm/beaver/app/db/schema"
 
 export const ROLE_TABLE = "roles"
 

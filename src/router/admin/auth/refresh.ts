@@ -1,6 +1,6 @@
-import type { AdminRoute } from "zadm/router/route"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
 
-import { refreshAdminSession } from "zadm/app/admin/api-guard"
+import { refreshAdminSession } from "@zaenpm/beaver/app/admin/api-guard"
 
 export const POST: AdminRoute = async ({ cookies }) => {
   const session = await refreshAdminSession(cookies)

@@ -1,6 +1,6 @@
-import type { AdminRoute } from "zadm/router/route"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
 
-import { handleDuplicateCategory } from "zadm/app/handlers"
+import { handleDuplicateCategory } from "@zaenpm/beaver/app/handlers"
 
 export const POST: AdminRoute = async ({ params, locals }) => {
   if (!params.id) {

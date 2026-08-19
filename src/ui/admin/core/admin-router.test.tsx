@@ -4,7 +4,7 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 
-import { AdminRouter } from "zadm/ui/admin/core/admin-router"
+import { AdminRouter } from "@zaenpm/beaver/ui/admin/core/admin-router"
 
 const sessionState = vi.hoisted(() => ({
   loading: false,
@@ -23,66 +23,66 @@ const sessionState = vi.hoisted(() => ({
   },
 }))
 
-vi.mock("zadm/ui/admin/auth/admin-session-provider", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/auth/admin-session-provider", () => ({
   useAdminSession: () => sessionState,
 }))
 
-vi.mock("zadm/ui/admin/auth/admin-login-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/auth/admin-login-page", () => ({
   AdminLoginPage: () => <div>login-page</div>,
 }))
 
-vi.mock("zadm/ui/admin/dashboard/admin-dashboard-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/dashboard/admin-dashboard-page", () => ({
   AdminDashboardPage: () => <div>dashboard-page</div>,
 }))
 
-vi.mock("zadm/ui/admin/posts/admin-content-list-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/posts/admin-content-list-page", () => ({
   AdminContentListPage: () => <div>posts-page</div>,
 }))
 
-vi.mock("zadm/ui/admin/users/admin-users-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/users/admin-users-page", () => ({
   AdminUsersPage: () => <div>users-page</div>,
 }))
 
-vi.mock("zadm/ui/admin/media/admin-media-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/media/admin-media-page", () => ({
   AdminMediaPage: () => <div>media-page</div>,
 }))
 
-vi.mock("zadm/ui/admin/categories/admin-categories-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/categories/admin-categories-page", () => ({
   AdminCategoriesPage: () => <div>categories-page</div>,
 }))
 
-vi.mock("zadm/ui/admin/menus/admin-menus-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/menus/admin-menus-page", () => ({
   AdminMenusPage: () => <div>menus-page</div>,
 }))
 
-vi.mock("zadm/ui/admin/roles/admin-roles-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/roles/admin-roles-page", () => ({
   AdminRolesPage: () => <div>roles-page</div>,
 }))
 
-vi.mock("zadm/ui/admin/posts/admin-post-form-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/posts/admin-post-form-page", () => ({
   AdminPostCreatePage: () => <div>post-create-page</div>,
   AdminPostEditPage: ({ id }: { id: string }) => <div>post-edit-page-{id}</div>,
 }))
 
-vi.mock("zadm/ui/admin/pages/admin-content-list-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/pages/admin-content-list-page", () => ({
   AdminContentListPage: () => <div>pages-page</div>,
 }))
 
-vi.mock("zadm/ui/admin/pages/admin-page-form-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/pages/admin-page-form-page", () => ({
   AdminPageCreatePage: () => <div>page-create-page</div>,
   AdminPageEditPage: ({ id }: { id: string }) => <div>page-edit-page-{id}</div>,
 }))
 
-vi.mock("zadm/ui/admin/roles/admin-role-form-page", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/roles/admin-role-form-page", () => ({
   AdminRoleCreatePage: () => <div>role-create-page</div>,
   AdminRoleEditPage: ({ id }: { id: string }) => <div>role-edit-page-{id}</div>,
 }))
 
-vi.mock("zadm/ui/admin/layout/app-sidebar", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/layout/app-sidebar", () => ({
   AdminSidebar: () => <div>sidebar-shell</div>,
 }))
 
-vi.mock("zadm/ui/admin/components/ui/sidebar", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/components/ui/sidebar", () => ({
   SidebarInset: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarTrigger: () => <button type="button">toggle</button>,

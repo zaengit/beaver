@@ -2,12 +2,12 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 
-import { useAdminSession } from "zadm/ui/admin/auth/admin-session-provider"
-import { ADMIN_PATH } from "zadm/app/admin/admin-path"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "zadm/ui/admin/components/ui/card"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
+import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
+import { ADMIN_PATH } from "@zaenpm/beaver/app/admin/admin-path"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@zaenpm/beaver/ui/admin/components/ui/card"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
 
 export function AdminLoginPage() {
   const { refreshSession } = useAdminSession()

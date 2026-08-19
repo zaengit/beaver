@@ -1,4 +1,4 @@
-import type { posts } from "zadm/app/db/schema"
+import type { posts } from "@zaenpm/beaver/app/db/schema"
 
 export const POST_TABLE = "posts"
 

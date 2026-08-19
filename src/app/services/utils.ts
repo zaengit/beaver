@@ -1,4 +1,4 @@
-import type { ServiceResult } from "zadm/pkg/types"
+import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
 
 export function serviceSuccess<T>(data: T, message: string): ServiceResult<T> {
   return { success: true, data, message }

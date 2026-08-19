@@ -3,34 +3,34 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 import { useNavigate } from "react-router"
 
 import { Search, Trash2, X, FileIcon } from "lucide-react"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { Textarea } from "zadm/ui/admin/components/ui/textarea"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "zadm/ui/admin/components/ui/select"
+} from "@zaenpm/beaver/ui/admin/components/ui/select"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "zadm/ui/admin/components/ui/dialog"
-import { MediaGrid, type MediaItem } from "zadm/ui/admin/media/media-grid"
-import { MediaUploadZone } from "zadm/ui/admin/shared/media-upload-zone"
+} from "@zaenpm/beaver/ui/admin/components/ui/dialog"
+import { MediaGrid, type MediaItem } from "@zaenpm/beaver/ui/admin/media/media-grid"
+import { MediaUploadZone } from "@zaenpm/beaver/ui/admin/shared/media-upload-zone"
 import {
   adminApiPost,
   adminApiPut,
-} from "zadm/ui/admin/shared/api-client"
+} from "@zaenpm/beaver/ui/admin/shared/api-client"
 import {
   getCurrentSearchParams,
-} from "zadm/ui/admin/navigation"
-import { adminToast } from "zadm/ui/admin/shared/admin-toast"
+} from "@zaenpm/beaver/ui/admin/navigation"
+import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

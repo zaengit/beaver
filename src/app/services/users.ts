@@ -1,6 +1,6 @@
-import { hashPassword } from "zadm/app/auth"
-import { generateId, getCurrentTimestamp } from "zadm/pkg/utils/index"
-import type { CreateUserInput, UpdateUserInput } from "zadm/app/validations/users"
+import { hashPassword } from "@zaenpm/beaver/app/auth"
+import { generateId, getCurrentTimestamp } from "@zaenpm/beaver/pkg/utils/index"
+import type { CreateUserInput, UpdateUserInput } from "@zaenpm/beaver/app/validations/users"
 import {
   findUserByIdRecord,
   findUserByEmailRecord,
@@ -10,9 +10,9 @@ import {
   updateUserRecord,
   deleteUserRecord,
   type UserSafe,
-} from "zadm/app/repositories/users"
-import type { ServiceResult } from "zadm/pkg/types"
-import { serviceSuccess, serviceNotFound, serviceConflict, serviceForbidden } from "zadm/app/services/utils"
+} from "@zaenpm/beaver/app/repositories/users"
+import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
+import { serviceSuccess, serviceNotFound, serviceConflict, serviceForbidden } from "@zaenpm/beaver/app/services/utils"
 
 // ─── Get User ─────────────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ export function getUser(id: string): ServiceResult<UserSafe> {
 
 // ─── Get User With Email (returns raw user for auth purposes) ─────────────────
 
-export function getUserByEmail(email: string): ServiceResult<typeof import("zadm/app/db/schema").users.$inferSelect> {
+export function getUserByEmail(email: string): ServiceResult<typeof import("@zaenpm/beaver/app/db/schema").users.$inferSelect> {
   const user = findUserByEmailRecord(email)
   if (!user) return serviceNotFound("User")
   return serviceSuccess(user, "OK")

@@ -17,7 +17,7 @@ const sharedConfig = {
   define: { __ADMIN_PATH__: "undefined" },
   resolve: {
     alias: {
-      "zadm": sourceRoot,
+      "@zaenpm/beaver": sourceRoot,
       "@content-type-registry": resolve(sourceRoot, "registry/content-types.json"),
       "@menu-group-registry": resolve(sourceRoot, "registry/menu-groups.json"),
       "@section-registry": resolve(sourceRoot, "registry/sections.json"),
@@ -95,7 +95,8 @@ await mkdir(resolve(distRoot, "migrations/meta"), { recursive: true })
 await writeFile(resolve(distRoot, "migrations/meta/_journal.json"), `${JSON.stringify(migrationJournal, null, 2)}\n`)
 await Promise.all(migrations.map(({ tag }) => cp(resolve(packageRoot, "migrations", `${tag}.sql`), resolve(distRoot, "migrations", `${tag}.sql`))))
 
-await writeFile(resolve(distRoot, "server.d.ts"), `import type { AstroIntegration } from "astro"\n\nexport interface ZadmOptions {\n  adminPath?: string\n  contentTypeRegistry?: string | URL\n  sectionRegistry?: string | URL\n  menuGroupRegistry?: string | URL\n}\n\ndeclare function zadm(options?: ZadmOptions): AstroIntegration\nexport default zadm\nexport declare const apiApp: import("hono").Hono\nexport declare const onRequest: unknown\nexport declare const ADMIN_PATH: string\nexport declare const getPublishedPostByType: (...args: any[]) => any\nexport declare const getPublishedArchiveFilterOptions: (...args: any[]) => any\nexport declare const getPublicCustomFieldFiltersFromSearchParams: (...args: any[]) => any\nexport declare const listPublishedPostsByType: (...args: any[]) => any\nexport declare const listPublishedPostsByTag: (...args: any[]) => any\nexport declare const searchPublishedPosts: (...args: any[]) => any\nexport declare const getMenuTree: (...args: any[]) => any\nexport declare const getSiteSettings: (...args: any[]) => any\nexport declare const seed: () => Promise<void>\nexport type MenuTree = any\n`)
+await writeFile(resolve(distRoot, "server.d.ts"), `import type { AstroIntegration } from "astro"\n\nexport interface BeaverOptions {\n  adminPath?: string\n  contentTypeRegistry?: string | URL\n  sectionRegistry?: string | URL\n  menuGroupRegistry?: string | URL\n}\n\ndeclare function beaver(options?: BeaverOptions): AstroIntegration\nexport default beaver\nexport declare const apiApp: import("hono").Hono\nexport declare const onRequest: unknown\nexport declare const ADMIN_PATH: string\nexport declare const getPublishedPostByType: (...args: any[]) => any\nexport declare const getPublishedArchiveFilterOptions: (...args: any[]) => any\nexport declare const getPublicCustomFieldFiltersFromSearchParams: (...args: any[]) => any\nexport declare const listPublishedPostsByType: (...args: any[]) => any\nexport declare const listPublishedPostsByTag: (...args: any[]) => any\nexport declare const searchPublishedPosts: (...args: any[]) => any\nexport declare const getMenuTree: (...args: any[]) => any\nexport declare const getSiteSettings: (...args: any[]) => any\nexport declare const seed: () => Promise<void>\nexport type MenuTree = any\n`)
 await appendFile(resolve(distRoot, "server.d.ts"), "export declare const migrate: () => void\n")
+await appendFile(resolve(distRoot, "server.d.ts"), "export declare const seedTemplate: (name: string) => Promise<void>\n")
 await appendFile(resolve(distRoot, "server.d.ts"), "export declare const resetSuperAdminPassword: () => { email: string }\n")
 await writeFile(resolve(distRoot, "ui.d.ts"), `import type { ReactElement } from "react"\nexport declare function AdminApp(props: { pathname: string }): ReactElement\n`)

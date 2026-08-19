@@ -5,6 +5,7 @@
     "resolveJsonModule": true,
     "paths": {
       "@/*": ["./src/*"],
+      "@zaenpm/beaver/*": ["./packages/beaver/src/*"],
       "@content-type-registry": ["./src/components/web/content-type-templates/registry.json"],
       "@menu-group-registry": ["./src/components/web/menus/registry.json"],
       "@section-registry": ["./src/components/web/sections/registry.json"]

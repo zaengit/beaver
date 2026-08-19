@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { ulid } from "ulidx";
 import { relations, or, like, eq, and, count, desc, asc, gt, inArray, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
+import { readFile } from "node:fs/promises";
 import sanitizeHtmlLibrary from "sanitize-html";
 import sharp from "sharp";
 import { jwtVerify, SignJWT } from "jose";
@@ -38,37 +39,37 @@ function getContentTypeRegistry() {
 function normalizePath(value) {
   const segment = value?.trim().replace(/^\/+|\/+$/g, "") || process.env.ADMIN_PATH?.trim().replace(/^\/+|\/+$/g, "") || "admin";
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(segment)) {
-    throw new Error("zadm adminPath must be a single URL segment, such as panel-rahasia.");
+    throw new Error("beaver adminPath must be a single URL segment, such as panel-rahasia.");
   }
   return `/${segment}`;
 }
 function resolveRegistry(value, defaultFile, optionName) {
   const filePath = value instanceof URL ? fileURLToPath(value) : value ? resolve(process.cwd(), value) : fileURLToPath(new URL(defaultFile, import.meta.url));
   if (!filePath.endsWith(".json")) {
-    throw new Error(`zadm ${optionName} must point to a JSON file.`);
+    throw new Error(`beaver ${optionName} must point to a JSON file.`);
   }
   if (!existsSync(filePath)) {
-    throw new Error(`zadm ${optionName} does not exist: ${filePath}`);
+    throw new Error(`beaver ${optionName} does not exist: ${filePath}`);
   }
   return filePath;
 }
 function readRegistry(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
 }
-function zadm(options = {}) {
+function beaver(options = {}) {
   const adminPath = normalizePath(options.adminPath);
   const registries = {
     "@content-type-registry": resolveRegistry(options.contentTypeRegistry, "./registry/content-types.json", "contentTypeRegistry"),
     "@section-registry": resolveRegistry(options.sectionRegistry, "./registry/sections.json", "sectionRegistry"),
     "@menu-group-registry": resolveRegistry(options.menuGroupRegistry, "./registry/menu-groups.json", "menuGroupRegistry")
   };
-  process.env.ZADM_CONTENT_TYPE_REGISTRY_PATH = registries["@content-type-registry"];
-  process.env.ZADM_SECTION_REGISTRY_PATH = registries["@section-registry"];
-  process.env.ZADM_MENU_GROUP_REGISTRY_PATH = registries["@menu-group-registry"];
+  process.env.BEAVER_CONTENT_TYPE_REGISTRY_PATH = registries["@content-type-registry"];
+  process.env.BEAVER_SECTION_REGISTRY_PATH = registries["@section-registry"];
+  process.env.BEAVER_MENU_GROUP_REGISTRY_PATH = registries["@menu-group-registry"];
   setContentTypeRegistry(readRegistry(registries["@content-type-registry"]));
   const compatShim = fileURLToPath(new URL("./compat/use-sync-external-store.js", import.meta.url));
   return {
-    name: "zadm",
+    name: "@zaenpm/beaver",
     hooks: {
       "astro:config:setup": ({ addMiddleware, injectRoute, updateConfig }) => {
         updateConfig({
@@ -86,7 +87,7 @@ function zadm(options = {}) {
               ]
             },
             define: { __ADMIN_PATH__: JSON.stringify(adminPath) },
-            ssr: { noExternal: ["@zaenpm/zadm"] },
+            ssr: { noExternal: ["@zaenpm/beaver"] },
             optimizeDeps: {
               include: [
                 "highlight.js/lib/core"
@@ -1036,7 +1037,7 @@ function syncPostCategoriesRecord(postId, categoryIds, now) {
 }
 let loadedPath;
 function getServerContentTypeRegistry() {
-  const registryPath = process.env.ZADM_CONTENT_TYPE_REGISTRY_PATH;
+  const registryPath = process.env.BEAVER_CONTENT_TYPE_REGISTRY_PATH;
   if (registryPath && registryPath !== loadedPath) {
     setContentTypeRegistry(JSON.parse(readFileSync(registryPath, "utf8")));
     loadedPath = registryPath;
@@ -1494,10 +1495,11 @@ function createMenu(data) {
     id,
     title: data.title,
     url: data.url,
-    type: data.type ?? "custom",
+    type: data.type,
     position: data.position ?? 0,
     cssClass: data.cssClass,
     target: data.target,
+    image: data.image,
     parentId: data.parentId,
     status: data.status,
     createdAt: now,
@@ -1517,6 +1519,7 @@ function updateMenu(id, data) {
   if (data.position !== void 0) updateData.position = data.position;
   if (data.cssClass !== void 0) updateData.cssClass = data.cssClass;
   if (data.target !== void 0) updateData.target = data.target;
+  if (data.image !== void 0) updateData.image = data.image;
   if (data.parentId !== void 0) updateData.parentId = data.parentId;
   if (data.status !== void 0) updateData.status = data.status;
   const updated = updateMenuRecord(id, updateData);
@@ -1925,262 +1928,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exitCode = 1;
   });
 }
-function resetSuperAdminPassword() {
-  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  const password = process.env.ADMIN_PASSWORD;
-  if (!email || !password || password.length < 12) {
-    throw new Error("ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters are required.");
-  }
-  const superAdmin = db.select({ id: roles.id }).from(roles).where(eq(roles.slug, "super-admin")).get();
-  if (!superAdmin) throw new Error("The super-admin role does not exist. Run zadm seed first.");
-  const user = db.select({ id: users.id }).from(users).where(and(eq(users.email, email), eq(users.roleId, superAdmin.id))).get();
-  if (!user) throw new Error(`No super-admin user found for ${email}.`);
-  const passwordHash = bcrypt.hashSync(password, 12);
-  const now = getCurrentTimestamp$1();
-  db.transaction((tx) => {
-    tx.update(users).set({ password: passwordHash, updatedAt: now }).where(eq(users.id, user.id)).run();
-    tx.delete(adminRefreshSessions).where(eq(adminRefreshSessions.userId, user.id)).run();
-  });
-  return { email };
-}
-const BCRYPT_COST = 12;
-async function hashPassword(password) {
-  return bcrypt.hash(password, BCRYPT_COST);
-}
-async function verifyPassword(password, hash) {
-  return bcrypt.compare(password, hash);
-}
-function getUser(id) {
-  const user = findUserByIdRecord(id);
-  if (!user) return serviceNotFound("User");
-  const { password, ...safe } = user;
-  return serviceSuccess(safe, "OK");
-}
-function getUserByEmail(email) {
-  const user = findUserByEmailRecord(email);
-  if (!user) return serviceNotFound("User");
-  return serviceSuccess(user, "OK");
-}
-function listUsersPaginated(filters = {}) {
-  const result = listUsersPaginatedRecord(filters);
-  return serviceSuccess(result, "OK");
-}
-async function createUser(data) {
-  const existing = findUserByEmailRecord(data.email);
-  if (existing) return serviceConflict("email", "A user with this email already exists.");
-  const id = generateId();
-  const now = getCurrentTimestamp$1();
-  const passwordHash = await hashPassword(data.password);
-  const created = createUserRecord({
-    id,
-    name: data.name,
-    email: data.email,
-    passwordHash,
-    roleId: data.roleId ?? null,
-    createdAt: now,
-    updatedAt: now
-  });
-  return serviceSuccess(created, "User created.");
-}
-async function updateUser(id, data, currentUserId) {
-  const existing = findUserByIdRecord(id);
-  if (!existing) return serviceNotFound("User");
-  if (data.email !== void 0 && data.email !== existing.email) {
-    const conflict = findUserByEmailRecord(data.email);
-    if (conflict) return serviceConflict("email", "A user with this email already exists.");
-  }
-  if (data.roleId !== void 0 && id === currentUserId) return serviceForbidden("You cannot change your own role.");
-  const now = getCurrentTimestamp$1();
-  const updateData = { updatedAt: now };
-  if (data.name !== void 0) updateData.name = data.name;
-  if (data.email !== void 0) updateData.email = data.email;
-  if (data.password !== void 0) updateData.passwordHash = await hashPassword(data.password);
-  if (data.roleId !== void 0) updateData.roleId = data.roleId;
-  const updated = updateUserRecord(id, updateData);
-  if (!updated) return serviceNotFound("User");
-  return serviceSuccess(updated, "User updated.");
-}
-function deleteUser(id, currentUserId) {
-  const existing = findUserByIdRecord(id);
-  if (!existing) return serviceNotFound("User");
-  if (id === currentUserId) return serviceForbidden("You cannot delete your own account.");
-  deleteUserRecord(id);
-  return serviceSuccess(null, "User deleted.");
-}
-function duplicateUser(id, currentUserId) {
-  const existing = findUserByIdRecord(id);
-  if (!existing) return serviceNotFound("User");
-  const newId = generateId();
-  const now = getCurrentTimestamp$1();
-  let newEmail = `duplicated_${existing.email}`;
-  if (findUserByEmailRecord(newEmail)) {
-    const ts = now.toString(36).slice(-4);
-    newEmail = `duplicated_${ts}_${existing.email}`;
-  }
-  try {
-    const created = createUserRecord({
-      id: newId,
-      name: `${existing.name} (Copy)`,
-      email: newEmail,
-      passwordHash: existing.password,
-      // duplicate password hash
-      roleId: existing.roleId,
-      createdAt: now,
-      updatedAt: now
-    });
-    return serviceSuccess(created, "User duplicated.");
-  } catch {
-    return { success: false, error: { code: "db_error", message: "Failed to duplicate user." } };
-  }
-}
-function bulkDeleteUsers(ids, currentUserId) {
-  const results = [];
-  for (const id of ids) {
-    const result = deleteUser(id, currentUserId);
-    results.push({ id, success: result.success, error: !result.success ? result.error.message : void 0 });
-  }
-  return serviceSuccess(results, "Bulk delete completed.");
-}
-function bulkDuplicateUsers(ids, currentUserId) {
-  const results = [];
-  for (const id of ids) {
-    const result = duplicateUser(id);
-    if (result.success) {
-      results.push({ id, success: true, newId: result.data.id });
-    } else {
-      results.push({ id, success: false });
-    }
-  }
-  return serviceSuccess(results, "Bulk duplicate completed.");
-}
-const ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/;
-const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const emptyToNull = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional();
-const imageUrlSchema = z.string().max(2048, "Image URL must be at most 2048 characters").refine(
-  (val) => {
-    if (val.startsWith("http://") || val.startsWith("https://")) {
-      return z.string().url().safeParse(val).success;
-    }
-    return val.startsWith("/");
-  },
-  "Image must be a valid URL (http/https) or a relative path starting with /"
-).nullable().optional();
-const featuredImageSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(imageUrlSchema);
-const galleryImageSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(imageUrlSchema);
-const imageUrlSimpleSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(
-  z.string().url("Image must be a valid URL").nullable().optional()
-);
-const publishStatusEnum = z.enum(["draft", "published"]);
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters")
-});
-z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be at most 128 characters"),
-  roleId: z.string().regex(ulidRegex, "Invalid role ID format").optional()
-});
-z.object({
-  email: z.string().email("Invalid email address")
-});
-z.object({
-  token: z.string().min(1, "Token is required"),
-  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be at most 128 characters")
-});
-async function handlePasswordLogin(body) {
-  const parsed = loginSchema.safeParse(body);
-  if (!parsed.success) {
-    return {
-      success: false,
-      status: 422,
-      message: "Validation error."
-    };
-  }
-  const { email, password } = parsed.data;
-  const userResult = getUserByEmail(email);
-  if (!userResult.success) {
-    return {
-      success: false,
-      status: 401,
-      message: "Invalid credentials."
-    };
-  }
-  const isValid = await verifyPassword(password, userResult.data.password);
-  if (!isValid) {
-    return {
-      success: false,
-      status: 401,
-      message: "Invalid credentials."
-    };
-  }
-  const { password: _password, ...safeUser } = userResult.data;
-  return {
-    success: true,
-    status: 200,
-    message: "Login successful.",
-    user: safeUser
-  };
-}
-function adminSuccess(data, message = "OK") {
-  return Response.json({ success: true, data, message });
-}
-function adminCreated(data, message = "Created") {
-  return Response.json({ success: true, data, message }, { status: 201 });
-}
-function adminError(message, status2 = 400, errors) {
-  return Response.json({ success: false, message, ...errors ? { errors } : {} }, { status: status2 });
-}
-function adminUnauthorized(message = "Unauthorized.") {
-  return adminError(message, 401);
-}
-function requireAuth(session2) {
-  return session2?.user ? null : adminUnauthorized();
-}
-async function requirePermission(session2, permission) {
-  if (!session2?.user) return adminUnauthorized();
-  const authorised = await can(session2.user.id, permission);
-  return authorised ? null : adminError("Insufficient permissions.", 403);
-}
-async function requireAnyPermission(session2, permissions2) {
-  if (!session2?.user) return adminUnauthorized();
-  const authorised = await canAny(session2.user.id, permissions2);
-  return authorised ? null : adminError("Insufficient permissions.", 403);
-}
-const CODE_STATUS = {
-  validation: 422,
-  conflict: 409,
-  not_found: 404,
-  forbidden: 403,
-  unauthorized: 401
-};
-function mapServiceError(result, fallbackStatus = 400) {
-  const code = result.error?.code ?? "";
-  const status2 = CODE_STATUS[code] ?? fallbackStatus;
-  return adminError(result.error?.message ?? "Unknown error.", status2, result.error?.fieldErrors);
-}
-function toFieldErrors(issues) {
-  return issues.reduce((acc, issue) => {
-    const field = String(issue.path[0] ?? "_root");
-    if (!acc[field]) acc[field] = [];
-    acc[field].push(issue.message);
-    return acc;
-  }, {});
-}
-function parseWithSchema(schema2, input, message = "Validation error.") {
-  const parsed = schema2.safeParse(input);
-  if (!parsed.success) {
-    return {
-      success: false,
-      message,
-      fieldErrors: toFieldErrors(parsed.error.issues)
-    };
-  }
-  return {
-    success: true,
-    data: parsed.data
-  };
-}
 function findCategoryByIdRecord(id) {
   return db.select({
     id: categories.id,
@@ -2193,6 +1940,19 @@ function findCategoryByIdRecord(id) {
     createdAt: categories.createdAt,
     updatedAt: categories.updatedAt
   }).from(categories).where(eq(categories.id, id)).get();
+}
+function findCategoryBySlugRecord(slug) {
+  return db.select({
+    id: categories.id,
+    name: categories.name,
+    slug: categories.slug,
+    type: categories.type,
+    description: categories.description,
+    image: categories.image,
+    status: categories.status,
+    createdAt: categories.createdAt,
+    updatedAt: categories.updatedAt
+  }).from(categories).where(eq(categories.slug, slug)).get();
 }
 function listCategoryRecords(filters) {
   const conditions = [];
@@ -2374,6 +2134,317 @@ function bulkUpdateCategoryStatus(ids, status2) {
 function listCategories(filters) {
   const items = listCategoryRecords(filters);
   return serviceSuccess(items, "Categories retrieved.");
+}
+function templatePath(name) {
+  if (!/^[a-z0-9-]+$/.test(name)) throw new Error("Invalid template name.");
+  const moduleDir = dirname(fileURLToPath(import.meta.url));
+  const packaged = resolve(moduleDir, "templates", name, "data", "seed.json");
+  return existsSync(packaged) ? packaged : resolve(moduleDir, "..", "..", "..", "templates", name, "data", "seed.json");
+}
+async function seedTemplate(name) {
+  const template = JSON.parse(await readFile(templatePath(name), "utf8"));
+  const user = db.select({ id: users.id }).from(users).get();
+  if (!user) throw new Error("Run the base seed before importing template data.");
+  const settings2 = getSiteSettings();
+  if (template.settings && settings2.title === "My CMS") {
+    const result = updateSiteSettings(template.settings);
+    if (!result.success) throw new Error(result.error.message);
+  }
+  const categories2 = /* @__PURE__ */ new Map();
+  for (const category of template.categories ?? []) {
+    const slug = category.name.toLowerCase().replace(/\s+/g, "-");
+    const existing = findCategoryBySlugRecord(slug);
+    if (existing) {
+      categories2.set(slug, existing.id);
+      continue;
+    }
+    const result = await createCategoryAsync({ name: category.name, type: "post", description: category.description, status: "published" });
+    if (!result.success) throw new Error(result.error.message);
+    categories2.set(slug, result.data.id);
+  }
+  for (const post of template.posts ?? []) {
+    if (findPostBySlugRecord(post.slug)) continue;
+    const categorySlugs = Array.isArray(post.categorySlugs) ? post.categorySlugs.filter((value) => typeof value === "string") : [];
+    const data = Object.fromEntries(Object.entries(post).filter(([key]) => key !== "categorySlugs"));
+    const result = createPost({ ...data, type: "post", status: "published", categoryIds: categorySlugs.map((slug) => categories2.get(slug)).filter((id) => Boolean(id)) }, user.id);
+    if (!result.success) throw new Error(result.error.message);
+  }
+  for (const page of template.pages ?? []) {
+    if (findPostBySlugRecord(page.slug)) continue;
+    const result = createPost({ ...page, type: "page", status: "published" }, user.id);
+    if (!result.success) throw new Error(result.error.message);
+  }
+  const existingMenus = listMenus$1();
+  for (const [position, menu] of (template.menus ?? []).entries()) {
+    if (existingMenus.some((item) => item.type === menu.type && item.url === menu.url)) continue;
+    const result = createMenu({ ...menu, position, status: "published" });
+    if (!result.success) throw new Error(result.error.message);
+  }
+  console.log(`Template data ready: ${name}`);
+}
+function resetSuperAdminPassword() {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD;
+  if (!email || !password || password.length < 12) {
+    throw new Error("ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters are required.");
+  }
+  const superAdmin = db.select({ id: roles.id }).from(roles).where(eq(roles.slug, "super-admin")).get();
+  if (!superAdmin) throw new Error("The super-admin role does not exist. Run beaver seed first.");
+  const user = db.select({ id: users.id }).from(users).where(and(eq(users.email, email), eq(users.roleId, superAdmin.id))).get();
+  if (!user) throw new Error(`No super-admin user found for ${email}.`);
+  const passwordHash = bcrypt.hashSync(password, 12);
+  const now = getCurrentTimestamp$1();
+  db.transaction((tx) => {
+    tx.update(users).set({ password: passwordHash, updatedAt: now }).where(eq(users.id, user.id)).run();
+    tx.delete(adminRefreshSessions).where(eq(adminRefreshSessions.userId, user.id)).run();
+  });
+  return { email };
+}
+const BCRYPT_COST = 12;
+async function hashPassword(password) {
+  return bcrypt.hash(password, BCRYPT_COST);
+}
+async function verifyPassword(password, hash) {
+  return bcrypt.compare(password, hash);
+}
+function getUser(id) {
+  const user = findUserByIdRecord(id);
+  if (!user) return serviceNotFound("User");
+  const { password, ...safe } = user;
+  return serviceSuccess(safe, "OK");
+}
+function getUserByEmail(email) {
+  const user = findUserByEmailRecord(email);
+  if (!user) return serviceNotFound("User");
+  return serviceSuccess(user, "OK");
+}
+function listUsersPaginated(filters = {}) {
+  const result = listUsersPaginatedRecord(filters);
+  return serviceSuccess(result, "OK");
+}
+async function createUser(data) {
+  const existing = findUserByEmailRecord(data.email);
+  if (existing) return serviceConflict("email", "A user with this email already exists.");
+  const id = generateId();
+  const now = getCurrentTimestamp$1();
+  const passwordHash = await hashPassword(data.password);
+  const created = createUserRecord({
+    id,
+    name: data.name,
+    email: data.email,
+    passwordHash,
+    roleId: data.roleId ?? null,
+    createdAt: now,
+    updatedAt: now
+  });
+  return serviceSuccess(created, "User created.");
+}
+async function updateUser(id, data, currentUserId) {
+  const existing = findUserByIdRecord(id);
+  if (!existing) return serviceNotFound("User");
+  if (data.email !== void 0 && data.email !== existing.email) {
+    const conflict = findUserByEmailRecord(data.email);
+    if (conflict) return serviceConflict("email", "A user with this email already exists.");
+  }
+  if (data.roleId !== void 0 && id === currentUserId) return serviceForbidden("You cannot change your own role.");
+  const now = getCurrentTimestamp$1();
+  const updateData = { updatedAt: now };
+  if (data.name !== void 0) updateData.name = data.name;
+  if (data.email !== void 0) updateData.email = data.email;
+  if (data.password !== void 0) updateData.passwordHash = await hashPassword(data.password);
+  if (data.roleId !== void 0) updateData.roleId = data.roleId;
+  const updated = updateUserRecord(id, updateData);
+  if (!updated) return serviceNotFound("User");
+  return serviceSuccess(updated, "User updated.");
+}
+function deleteUser(id, currentUserId) {
+  const existing = findUserByIdRecord(id);
+  if (!existing) return serviceNotFound("User");
+  if (id === currentUserId) return serviceForbidden("You cannot delete your own account.");
+  deleteUserRecord(id);
+  return serviceSuccess(null, "User deleted.");
+}
+function duplicateUser(id, currentUserId) {
+  const existing = findUserByIdRecord(id);
+  if (!existing) return serviceNotFound("User");
+  const newId = generateId();
+  const now = getCurrentTimestamp$1();
+  let newEmail = `duplicated_${existing.email}`;
+  if (findUserByEmailRecord(newEmail)) {
+    const ts = now.toString(36).slice(-4);
+    newEmail = `duplicated_${ts}_${existing.email}`;
+  }
+  try {
+    const created = createUserRecord({
+      id: newId,
+      name: `${existing.name} (Copy)`,
+      email: newEmail,
+      passwordHash: existing.password,
+      // duplicate password hash
+      roleId: existing.roleId,
+      createdAt: now,
+      updatedAt: now
+    });
+    return serviceSuccess(created, "User duplicated.");
+  } catch {
+    return { success: false, error: { code: "db_error", message: "Failed to duplicate user." } };
+  }
+}
+function bulkDeleteUsers(ids, currentUserId) {
+  const results = [];
+  for (const id of ids) {
+    const result = deleteUser(id, currentUserId);
+    results.push({ id, success: result.success, error: !result.success ? result.error.message : void 0 });
+  }
+  return serviceSuccess(results, "Bulk delete completed.");
+}
+function bulkDuplicateUsers(ids, currentUserId) {
+  const results = [];
+  for (const id of ids) {
+    const result = duplicateUser(id);
+    if (result.success) {
+      results.push({ id, success: true, newId: result.data.id });
+    } else {
+      results.push({ id, success: false });
+    }
+  }
+  return serviceSuccess(results, "Bulk duplicate completed.");
+}
+const ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const emptyToNull = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional();
+const imageUrlSchema = z.string().max(2048, "Image URL must be at most 2048 characters").refine(
+  (val) => {
+    if (val.startsWith("http://") || val.startsWith("https://")) {
+      return z.string().url().safeParse(val).success;
+    }
+    return val.startsWith("/");
+  },
+  "Image must be a valid URL (http/https) or a relative path starting with /"
+).nullable().optional();
+const featuredImageSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(imageUrlSchema);
+const galleryImageSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(imageUrlSchema);
+const imageUrlSimpleSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(
+  z.string().refine(
+    (val) => {
+      if (val.startsWith("http://") || val.startsWith("https://")) {
+        return z.string().url().safeParse(val).success;
+      }
+      return val.startsWith("/");
+    },
+    "Image must be a valid URL (http/https) or a relative path starting with /"
+  ).nullable().optional()
+);
+const publishStatusEnum = z.enum(["draft", "published"]);
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters")
+});
+z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be at most 128 characters"),
+  roleId: z.string().regex(ulidRegex, "Invalid role ID format").optional()
+});
+z.object({
+  email: z.string().email("Invalid email address")
+});
+z.object({
+  token: z.string().min(1, "Token is required"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be at most 128 characters")
+});
+async function handlePasswordLogin(body) {
+  const parsed = loginSchema.safeParse(body);
+  if (!parsed.success) {
+    return {
+      success: false,
+      status: 422,
+      message: "Validation error."
+    };
+  }
+  const { email, password } = parsed.data;
+  const userResult = getUserByEmail(email);
+  if (!userResult.success) {
+    return {
+      success: false,
+      status: 401,
+      message: "Invalid credentials."
+    };
+  }
+  const isValid = await verifyPassword(password, userResult.data.password);
+  if (!isValid) {
+    return {
+      success: false,
+      status: 401,
+      message: "Invalid credentials."
+    };
+  }
+  const { password: _password, ...safeUser } = userResult.data;
+  return {
+    success: true,
+    status: 200,
+    message: "Login successful.",
+    user: safeUser
+  };
+}
+function adminSuccess(data, message = "OK") {
+  return Response.json({ success: true, data, message });
+}
+function adminCreated(data, message = "Created") {
+  return Response.json({ success: true, data, message }, { status: 201 });
+}
+function adminError(message, status2 = 400, errors) {
+  return Response.json({ success: false, message, ...errors ? { errors } : {} }, { status: status2 });
+}
+function adminUnauthorized(message = "Unauthorized.") {
+  return adminError(message, 401);
+}
+function requireAuth(session2) {
+  return session2?.user ? null : adminUnauthorized();
+}
+async function requirePermission(session2, permission) {
+  if (!session2?.user) return adminUnauthorized();
+  const authorised = await can(session2.user.id, permission);
+  return authorised ? null : adminError("Insufficient permissions.", 403);
+}
+async function requireAnyPermission(session2, permissions2) {
+  if (!session2?.user) return adminUnauthorized();
+  const authorised = await canAny(session2.user.id, permissions2);
+  return authorised ? null : adminError("Insufficient permissions.", 403);
+}
+const CODE_STATUS = {
+  validation: 422,
+  conflict: 409,
+  not_found: 404,
+  forbidden: 403,
+  unauthorized: 401
+};
+function mapServiceError(result, fallbackStatus = 400) {
+  const code = result.error?.code ?? "";
+  const status2 = CODE_STATUS[code] ?? fallbackStatus;
+  return adminError(result.error?.message ?? "Unknown error.", status2, result.error?.fieldErrors);
+}
+function toFieldErrors(issues) {
+  return issues.reduce((acc, issue) => {
+    const field = String(issue.path[0] ?? "_root");
+    if (!acc[field]) acc[field] = [];
+    acc[field].push(issue.message);
+    return acc;
+  }, {});
+}
+function parseWithSchema(schema2, input, message = "Validation error.") {
+  const parsed = schema2.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message,
+      fieldErrors: toFieldErrors(parsed.error.issues)
+    };
+  }
+  return {
+    success: true,
+    data: parsed.data
+  };
 }
 const createCategorySchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters"),
@@ -4124,7 +4195,7 @@ export {
   apiApp,
   categories,
   categoriesRelations,
-  zadm as default,
+  beaver as default,
   getMenuTree,
   getPublicCustomFieldFiltersFromSearchParams,
   getPublishedArchiveFilterOptions,
@@ -4151,6 +4222,7 @@ export {
   rolesRelations,
   searchPublishedPosts,
   seed,
+  seedTemplate,
   settings$1 as settings,
   users,
   usersRelations

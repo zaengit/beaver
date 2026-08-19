@@ -1,0 +1,76 @@
+---
+import type { ArchiveProps } from "../types";
+import ResponsiveImage from "@/components/web/responsive-image.astro";
+import ArchiveFilters from "./archive-filters.astro";
+import ArchivePagination from "./archive-pagination.astro";
+const { contentType, posts, filterOptions, filters, pagination } = Astro.props as ArchiveProps;
+---
+
+<main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+  <header class="max-w-3xl">
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-indigo-700 shadow-2xs mb-3">
+      <span class="h-1.5 w-1.5 rounded-full bg-indigo-600"></span>
+      {contentType.slug}
+    </span>
+    <h1 class="text-4xl font-extrabold tracking-tight text-slate-950 sm:text-6xl leading-[1.15]">
+      {contentType.label}
+    </h1>
+    {contentType.description && (
+      <p class="mt-4 text-base sm:text-lg leading-relaxed text-slate-600 font-normal">
+        {contentType.description}
+      </p>
+    )}
+  </header>
+
+  <ArchiveFilters {contentType} {filterOptions} {filters} />
+
+  <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {posts.map((post) => (
+      <article class="rounded-[24px] overflow-hidden border border-slate-200/80 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-indigo-300 hover:shadow-xl group flex flex-col justify-between">
+        <div>
+          {post.featuredImage && (
+            <div class="overflow-hidden aspect-[4/3]">
+              <ResponsiveImage
+                src={post.featuredImage}
+                alt={post.title}
+                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              />
+            </div>
+          )}
+          <div class="space-y-2.5 p-6">
+            <h2 class="text-xl font-bold tracking-tight text-slate-950 transition-colors group-hover:text-indigo-600">
+              <a href={`/${contentType.slug}/${post.slug}`} class="focus:outline-none">
+                {post.title}
+              </a>
+            </h2>
+            {post.excerpt && (
+              <p class="text-sm leading-relaxed text-slate-600 font-normal line-clamp-3">{post.excerpt}</p>
+            )}
+          </div>
+        </div>
+        <div class="p-6 pt-0">
+          <a
+            href={`/${contentType.slug}/${post.slug}`}
+            class="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200/80 px-4 py-2 text-xs font-bold text-indigo-700 transition-all duration-200 hover:bg-indigo-600 hover:text-white group-hover:translate-x-1"
+          >
+            <span>View details</span>
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+            </svg>
+          </a>
+        </div>
+      </article>
+    ))}
+  </div>
+
+  {posts.length === 0 && (
+    <div class="mt-12 rounded-[24px] border border-slate-200 bg-slate-50/80 p-8 text-center">
+      <p class="text-base font-semibold text-slate-600">
+        No published {contentType.label.toLowerCase()} yet.
+      </p>
+    </div>
+  )}
+
+  <ArchivePagination {filters} {pagination} />
+</main>

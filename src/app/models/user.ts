@@ -1,4 +1,4 @@
-import type { users } from "zadm/app/db/schema"
+import type { users } from "@zaenpm/beaver/app/db/schema"
 
 export const USER_TABLE = "users"
 

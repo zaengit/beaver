@@ -2,16 +2,16 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router"
 
-import { adminApiGet, adminApiPost } from "zadm/ui/admin/shared/api-client"
-import { AdminLoadingState } from "zadm/ui/admin/core/admin-loading-state"
+import { adminApiGet, adminApiPost } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
 import {
   AdminPageShell,
   AdminPageHeader
-} from "zadm/ui/admin/layout/admin-page-shell"
-import { Badge } from "zadm/ui/admin/components/ui/badge"
-import { Button, buttonVariants } from "zadm/ui/admin/components/ui/button"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Checkbox } from "zadm/ui/admin/components/ui/checkbox"
+} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
+import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
+import { Button, buttonVariants } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Checkbox } from "@zaenpm/beaver/ui/admin/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -19,11 +19,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "zadm/ui/admin/components/ui/table"
+} from "@zaenpm/beaver/ui/admin/components/ui/table"
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
-import { cn } from "zadm/pkg/utils/ui"
-import { buildNavigationUrl } from "zadm/ui/admin/navigation"
-import { adminToast } from "zadm/ui/admin/shared/admin-toast"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { buildNavigationUrl } from "@zaenpm/beaver/ui/admin/navigation"
+import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
 
 export function AdminRolesPage() {
   const [data, setData] = useState<any>(null)

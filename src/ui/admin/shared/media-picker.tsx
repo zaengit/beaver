@@ -1,17 +1,17 @@
 
 import { useState, useEffect, useRef } from "react"
 import { ImageIcon, Search, Check, X, FileIcon } from "lucide-react"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { Textarea } from "zadm/ui/admin/components/ui/textarea"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "zadm/ui/admin/components/ui/select"
+} from "@zaenpm/beaver/ui/admin/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -19,12 +19,12 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
-} from "zadm/ui/admin/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "zadm/ui/admin/components/ui/tabs"
-import { adminApiGet } from "zadm/ui/admin/shared/api-client"
-import { MediaUploadZone } from "zadm/ui/admin/shared/media-upload-zone"
-import { Skeleton } from "zadm/ui/admin/components/ui/skeleton"
-import { cn } from "zadm/pkg/utils/ui"
+} from "@zaenpm/beaver/ui/admin/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@zaenpm/beaver/ui/admin/components/ui/tabs"
+import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { MediaUploadZone } from "@zaenpm/beaver/ui/admin/shared/media-upload-zone"
+import { Skeleton } from "@zaenpm/beaver/ui/admin/components/ui/skeleton"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

@@ -4,8 +4,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 
-import { AdminLoginPage } from "zadm/ui/admin/auth/admin-login-page"
-import { ADMIN_PATH } from "zadm/app/admin/admin-path"
+import { AdminLoginPage } from "@zaenpm/beaver/ui/admin/auth/admin-login-page"
+import { ADMIN_PATH } from "@zaenpm/beaver/app/admin/admin-path"
 
 const { navigateMock, refreshSessionMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("zadm/ui/admin/auth/admin-session-provider", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/auth/admin-session-provider", () => ({
   useAdminSession: () => ({
     refreshSession: refreshSessionMock,
   }),

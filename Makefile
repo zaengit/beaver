@@ -4,7 +4,7 @@
 
 help:
 	@printf '%s\n' \
-	  'zadm commands:' \
+	  'beaver commands:' \
 	  '  make install          Install package dependencies' \
 	  '  make build            Build distribution files in dist/' \
 	  '  make test             Run the package test suite' \

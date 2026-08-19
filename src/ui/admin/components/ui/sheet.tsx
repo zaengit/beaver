@@ -2,8 +2,8 @@
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 
-import { cn } from "zadm/pkg/utils/ui"
-import { Button } from "zadm/ui/admin/components/ui/button"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
 import { XIcon } from "lucide-react"
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {

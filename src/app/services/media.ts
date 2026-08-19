@@ -1,5 +1,5 @@
-import { generateId, getCurrentTimestamp } from "zadm/pkg/utils/index"
-import type { UpdateMediaInput, UploadMediaInput } from "zadm/app/validations/media"
+import { generateId, getCurrentTimestamp } from "@zaenpm/beaver/pkg/utils/index"
+import type { UpdateMediaInput, UploadMediaInput } from "@zaenpm/beaver/app/validations/media"
 import {
   findMediaByIdRecord,
   listMediaRecords,
@@ -8,9 +8,9 @@ import {
   updateMediaRecord,
   deleteMediaRecord,
   type MediaRow,
-} from "zadm/app/repositories/media"
-import type { ServiceResult } from "zadm/pkg/types"
-import { serviceSuccess, serviceNotFound } from "zadm/app/services/utils"
+} from "@zaenpm/beaver/app/repositories/media"
+import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
+import { serviceSuccess, serviceNotFound } from "@zaenpm/beaver/app/services/utils"
 import {
   MAX_FILE_SIZE,
   ALLOWED_MIME_TYPES,
@@ -19,7 +19,7 @@ import {
   generateThumbnailPath,
   getExtensionFromMimeType,
   getUploadDir,
-} from "zadm/pkg/media/media"
+} from "@zaenpm/beaver/pkg/media/media"
 import sharp from "sharp"
 import path from "path"
 import fs from "fs"

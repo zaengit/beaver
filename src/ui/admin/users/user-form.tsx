@@ -1,23 +1,23 @@
 
 import { useState, useTransition } from "react"
 
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "zadm/ui/admin/components/ui/select"
-import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "zadm/ui/admin/layout/admin-form-layout"
-import { adminApiPost, adminApiPut } from "zadm/ui/admin/shared/api-client"
-import { navigateToPath } from "zadm/ui/admin/navigation"
-import { adminToast } from "zadm/ui/admin/shared/admin-toast"
+} from "@zaenpm/beaver/ui/admin/components/ui/select"
+import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zaenpm/beaver/ui/admin/layout/admin-form-layout"
+import { adminApiPost, adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { navigateToPath } from "@zaenpm/beaver/ui/admin/navigation"
+import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
 import {
   AdminPageHeader
-} from "zadm/ui/admin/layout/admin-page-shell"
+} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

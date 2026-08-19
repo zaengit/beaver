@@ -1,0 +1,30 @@
+---
+interface Props {
+  tags: string | null
+}
+
+const { tags } = Astro.props
+let parsedTags: string[] = []
+
+try {
+  const value = tags ? JSON.parse(tags) : []
+  if (Array.isArray(value)) {
+    parsedTags = [...new Set(value.filter((tag): tag is string => typeof tag === "string").map((tag) => tag.trim()).filter(Boolean))]
+  }
+} catch {
+  // A malformed legacy value should not prevent a public page from rendering.
+}
+---
+
+{parsedTags.length > 0 && (
+  <nav class="mt-6 flex flex-wrap gap-2.5" aria-label="Tags">
+    {parsedTags.map((tag) => (
+      <a
+        href={`/tag/${encodeURIComponent(tag)}`}
+        class="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200/90 px-4 py-1.5 text-xs font-bold text-indigo-700 shadow-2xs transition-all duration-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 active:scale-95"
+      >
+        <span>#{tag}</span>
+      </a>
+    ))}
+  </nav>
+)}

@@ -1,16 +1,16 @@
 
 import type { ReactNode } from "react"
-import { SidebarTrigger } from "zadm/ui/admin/components/ui/sidebar"
+import { SidebarTrigger } from "@zaenpm/beaver/ui/admin/components/ui/sidebar"
 
-import { cn } from "zadm/pkg/utils/ui"
-import { Badge } from "zadm/ui/admin/components/ui/badge"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "zadm/ui/admin/components/ui/card"
+} from "@zaenpm/beaver/ui/admin/components/ui/card"
 
 export function AdminPageShell({
     children,

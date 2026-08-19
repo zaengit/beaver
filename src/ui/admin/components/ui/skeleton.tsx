@@ -1,4 +1,4 @@
-import { cn } from "zadm/pkg/utils/ui"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
 
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
   return (

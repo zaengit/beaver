@@ -1,6 +1,7 @@
 {
-  "name": "@zaenpm/zadm",
-  "version": "0.1.0",
+  "name": "@zbeaver/beaver",
+  "version": "0.1.4",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/server.js",
   "types": "./dist/server.d.ts",
@@ -12,11 +13,11 @@
   "files": [
     "dist",
     "bin",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "bin": {
-    "cms": "bin/zadm.mjs",
-    "zadm": "bin/zadm.mjs"
+    "beaver": "bin/beaver.mjs"
   },
   "exports": {
     ".": {

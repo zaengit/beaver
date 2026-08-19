@@ -1,10 +1,10 @@
 
 import { useEffect } from "react"
 import { BrowserRouter, useNavigate } from "react-router"
-import { AdminSessionProvider } from "zadm/ui/admin/auth/admin-session-provider"
-import { AdminRouter } from "zadm/ui/admin/core/admin-router"
-import { Toaster } from "zadm/ui/admin/components/ui/sonner"
-import { setGlobalNavigator } from "zadm/ui/admin/navigation"
+import { AdminSessionProvider } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
+import { AdminRouter } from "@zaenpm/beaver/ui/admin/core/admin-router"
+import { Toaster } from "@zaenpm/beaver/ui/admin/components/ui/sonner"
+import { setGlobalNavigator } from "@zaenpm/beaver/ui/admin/navigation"
 
 function NavigationTracker() {
   const navigate = useNavigate()

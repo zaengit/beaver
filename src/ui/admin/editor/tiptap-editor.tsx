@@ -15,7 +15,7 @@ import Placeholder from "@tiptap/extension-placeholder"
 import CharacterCount from "@tiptap/extension-character-count"
 import { common, createLowlight } from "lowlight"
 
-import { cn } from "zadm/pkg/utils/ui"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
 import { TiptapToolbar } from "./tiptap-toolbar"
 import { TiptapBubbleMenu } from "./tiptap-bubble-menu"
 import { TiptapFloatingMenu } from "./tiptap-floating-menu"

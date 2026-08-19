@@ -1,4 +1,4 @@
-import { badRequest, conflict, internalServerError } from "zadm/pkg/http/api-response";
+import { badRequest, conflict, internalServerError } from "@zaenpm/beaver/pkg/http/api-response";
 
 /**
  * Maps SQLite database constraint violation errors to user-friendly

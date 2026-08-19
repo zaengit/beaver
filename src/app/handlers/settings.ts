@@ -1,10 +1,10 @@
-import { adminError, adminSuccess } from "zadm/app/admin/api-response"
-import { mapServiceError } from "zadm/app/handlers/error-mapper"
-import { requirePermission } from "zadm/app/handlers/guard"
-import { parseWithSchema } from "zadm/app/handlers/utils"
-import type { Session } from "zadm/app/handlers/types"
-import { getSiteSettings, updateSiteSettings } from "zadm/app/services/settings"
-import { updateSettingsSchema } from "zadm/app/validations/settings"
+import { adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
+import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
+import { requirePermission } from "@zaenpm/beaver/app/handlers/guard"
+import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
+import type { Session } from "@zaenpm/beaver/app/handlers/types"
+import { getSiteSettings, updateSiteSettings } from "@zaenpm/beaver/app/services/settings"
+import { updateSettingsSchema } from "@zaenpm/beaver/app/validations/settings"
 
 // ---------------------------------------------------------------------------
 // Handlers

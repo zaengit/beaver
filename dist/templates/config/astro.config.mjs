@@ -5,7 +5,7 @@ import react from "@astrojs/react"
 import node from "@astrojs/node"
 import tailwindcss from "@tailwindcss/vite"
 import { loadEnv } from "vite"
-import zadm from "@zaenpm/zadm"
+import beaver from "@zaen3/beaver"
 
 function normalizePath(value, fallback, envName) {
   const segment = value?.trim().replace(/^\/+|\/+$/g, "") || fallback
@@ -43,11 +43,7 @@ const contentTypeRegistryPath = resolveRegistryPath(
   "src/components/web/content-type-templates/registry.json",
   "CONTENT_TYPE_REGISTRY_PATH",
 )
-const menuGroupRegistryPath = resolveRegistryPath(
-  environment.MENU_GROUP_REGISTRY_PATH,
-  "src/components/web/menus/registry.json",
-  "MENU_GROUP_REGISTRY_PATH",
-)
+const menuGroupRegistryPath = resolveRegistryPath(environment.MENU_GROUP_REGISTRY_PATH, "src/components/web/menus/registry.json", "MENU_GROUP_REGISTRY_PATH")
 
 export default defineConfig({
   output: "server",
@@ -59,11 +55,6 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
-    resolve: {
-      alias: {
-        "@": resolve(process.cwd(), "src"),
-      },
-    },
     server: {
       watch: {
         ignored: [
@@ -74,7 +65,7 @@ export default defineConfig({
       },
     },
   },
-  integrations: [react(), zadm({
+  integrations: [react(), beaver({
     adminPath,
     sectionRegistry: sectionRegistryPath,
     contentTypeRegistry: contentTypeRegistryPath,

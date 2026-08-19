@@ -1,5 +1,5 @@
-import { generateId, getCurrentTimestamp, slugify } from "zadm/pkg/utils/index"
-import type { CreateCategoryInput, UpdateCategoryInput } from "zadm/app/validations/categories"
+import { generateId, getCurrentTimestamp, slugify } from "@zaenpm/beaver/pkg/utils/index"
+import type { CreateCategoryInput, UpdateCategoryInput } from "@zaenpm/beaver/app/validations/categories"
 import {
   findCategoryByIdRecord,
   listCategoryRecords,
@@ -8,9 +8,9 @@ import {
   updateCategoryRecord,
   deleteCategoryRecord,
   type CategoryRow,
-} from "zadm/app/repositories/categories"
-import type { ServiceResult } from "zadm/pkg/types"
-import { serviceSuccess, serviceNotFound } from "zadm/app/services/utils"
+} from "@zaenpm/beaver/app/repositories/categories"
+import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
+import { serviceSuccess, serviceNotFound } from "@zaenpm/beaver/app/services/utils"
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -3,14 +3,14 @@ import { useState, useCallback } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, ChevronRight, ChevronDown, Pencil, Trash2, X, Check } from "lucide-react"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Badge } from "zadm/ui/admin/components/ui/badge"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { MediaPicker } from "zadm/ui/admin/shared/media-picker"
-import { cn } from "zadm/pkg/utils/ui"
-import { useAdminSession } from "zadm/ui/admin/auth/admin-session-provider"
-import type { FlattenedMenuItem } from "zadm/ui/admin/menus/menu-builder"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
+import type { FlattenedMenuItem } from "@zaenpm/beaver/ui/admin/menus/menu-builder"
 
 interface SortableMenuItemProps {
   item: FlattenedMenuItem
@@ -230,7 +230,28 @@ export function SortableMenuItem({
                 placeholder="Title"
               />
             </div>
-            <div className="space-y-1"><Label>Image</Label><MediaPicker value={editImage || null} onChange={(media) => setEditImage(media?.url ?? "")} accept="image/*" /></div>
+            <div className="space-y-1">
+              <Label>Image</Label>
+              <div className="flex items-center gap-2">
+                {editImage ? (
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted">
+                    <img src={editImage} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ) : null}
+                <MediaPicker value={editImage || null} onChange={(media) => setEditImage(media?.url ?? "")} accept="image/*" />
+                {editImage ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label="Remove image"
+                    className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setEditImage("")}
+                  >
+                    Remove
+                  </Button>
+                ) : null}
+              </div>
+            </div>
             <div className="space-y-1">
               <Label htmlFor={`edit-url-${item.id}`}>URL</Label>
               <Input

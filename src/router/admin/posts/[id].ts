@@ -1,6 +1,6 @@
-import type { AdminRoute } from "zadm/router/route"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
 
-import { handleDeletePost, handleGetPost, handleUpdatePost } from "zadm/app/handlers"
+import { handleDeletePost, handleGetPost, handleUpdatePost } from "@zaenpm/beaver/app/handlers"
 
 export const GET: AdminRoute = async ({ params, locals }) => {
   return handleGetPost(locals.session as { user: { id: string } } | null, params.id!)

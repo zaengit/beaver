@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { emptyToNull } from "zadm/app/validations/shared"
+import { emptyToNull } from "@zaenpm/beaver/app/validations/shared"
 
 /**
  * Schema for metadata sent alongside file upload (Req 21).

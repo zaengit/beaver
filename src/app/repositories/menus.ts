@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm"
 
-import { db } from "zadm/app/db"
-import { menus } from "zadm/app/db/schema"
-import type { MenuRecord } from "zadm/app/models/menu"
-import { sanitizeText } from "zadm/pkg/security/sanitize"
+import { db } from "@zaenpm/beaver/app/db"
+import { menus } from "@zaenpm/beaver/app/db/schema"
+import type { MenuRecord } from "@zaenpm/beaver/app/models/menu"
+import { sanitizeText } from "@zaenpm/beaver/pkg/security/sanitize"
 
 export type MenuRow = MenuRecord
 export interface MenuTree {

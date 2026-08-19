@@ -1,8 +1,8 @@
 import { jsx as e, jsxs as a, Fragment as He } from "react/jsx-runtime";
 import * as ye from "react";
-import { createContext as Jn, useContext as Yn, useState as u, useRef as $e, useCallback as q, useEffect as ee, lazy as me, Suspense as xa, useTransition as yt, forwardRef as Xn, useMemo as Ot, useImperativeHandle as Qn, useId as Zn } from "react";
-import { useNavigate as Qe, Routes as es, Route as ae, Navigate as st, useParams as Ve, useLocation as dt, Outlet as ts, BrowserRouter as as, Link as fe } from "react-router";
-import { XIcon as cn, PanelLeftIcon as ns, LayoutDashboard as Na, Image as dn, Menu as ss, Users as rs, Shield as is, Globe as ls, CircleDot as ta, Hash as Ma, Settings as os, FolderTree as un, FileText as Bt, ChevronDown as wt, UserRound as cs, LogOut as ds, LoaderCircle as us, Loader2Icon as ms, OctagonXIcon as hs, TriangleAlertIcon as gs, InfoIcon as ps, CircleCheckIcon as fs, ArrowRight as bs, Check as Ht, ChevronDownIcon as mn, CheckIcon as vs, ChevronUpIcon as xs, ArrowUp as We, ArrowDown as Je, ArrowUpDown as Ye, Upload as Ns, FileIcon as Nt, Loader2 as hn, X as Vt, Search as gn, Trash2 as we, ImageIcon as Pt, Copy as ya, GripVertical as Gt, ChevronRight as ys, Pencil as pn, Settings2 as wa, ChevronUp as fn, Plus as Re, Save as ws, Bold as bn, Italic as vn, Underline as xn, Strikethrough as Cs, Highlighter as ks, Heading1 as la, Heading2 as oa, Heading3 as ca, Heading4 as $a, Pilcrow as Ra, Quote as da, Code2 as ua, List as ma, ListOrdered as ha, ListChecks as Oa, Minus as Ba, AlignLeft as ja, AlignCenter as Ua, AlignRight as Fa, AlignJustify as Ha, Link2 as ga, Video as Va, TableIcon as aa, Merge as Ga, SplitSquareHorizontal as qa, MoreHorizontal as Ss, Undo2 as Ps, Redo2 as _s } from "lucide-react";
+import { createContext as Jn, useContext as Yn, useState as d, useRef as Re, useCallback as q, useEffect as te, lazy as me, Suspense as xa, useTransition as yt, forwardRef as Xn, useMemo as Ot, useImperativeHandle as Qn, useId as Zn } from "react";
+import { useNavigate as Qe, Routes as es, Route as ne, Navigate as st, useParams as Ve, useLocation as dt, Outlet as ts, BrowserRouter as as, Link as fe } from "react-router";
+import { XIcon as cn, PanelLeftIcon as ns, LayoutDashboard as Na, Image as dn, Menu as ss, Users as rs, Shield as is, Globe as ls, CircleDot as ta, Hash as Ma, Settings as os, FolderTree as un, FileText as Bt, ChevronDown as wt, UserRound as cs, LogOut as ds, LoaderCircle as us, Loader2Icon as ms, OctagonXIcon as hs, TriangleAlertIcon as gs, InfoIcon as ps, CircleCheckIcon as fs, ArrowRight as bs, Check as Ht, ChevronDownIcon as mn, CheckIcon as vs, ChevronUpIcon as xs, ArrowUp as We, ArrowDown as Je, ArrowUpDown as Ye, Upload as Ns, FileIcon as Nt, Loader2 as hn, X as Vt, Search as gn, Trash2 as we, ImageIcon as Pt, Copy as ya, GripVertical as Gt, ChevronRight as ys, Pencil as pn, Settings2 as wa, ChevronUp as fn, Plus as $e, Save as ws, Bold as bn, Italic as vn, Underline as xn, Strikethrough as Cs, Highlighter as ks, Heading1 as la, Heading2 as oa, Heading3 as ca, Heading4 as Ra, Pilcrow as $a, Quote as da, Code2 as ua, List as ma, ListOrdered as ha, ListChecks as Oa, Minus as Ba, AlignLeft as ja, AlignCenter as Ua, AlignRight as Fa, AlignJustify as Ha, Link2 as ga, Video as Va, TableIcon as aa, Merge as Ga, SplitSquareHorizontal as qa, MoreHorizontal as Ss, Undo2 as Ps, Redo2 as _s } from "lucide-react";
 import { Collapsible as Ca } from "@base-ui/react/collapsible";
 import { useTheme as As } from "next-themes";
 import { Toaster as zs, toast as tt } from "sonner";
@@ -14,8 +14,8 @@ import { useRender as Yt } from "@base-ui/react/use-render";
 import { cva as _t } from "class-variance-authority";
 import { clsx as Ls } from "clsx";
 import { twMerge as Ms } from "tailwind-merge";
-import { Input as $s } from "@base-ui/react/input";
-import { Separator as Rs } from "@base-ui/react/separator";
+import { Input as Rs } from "@base-ui/react/input";
+import { Separator as $s } from "@base-ui/react/separator";
 import { Dialog as ve } from "@base-ui/react/dialog";
 import { Tooltip as vt } from "@base-ui/react/tooltip";
 import { NodeViewWrapper as Os, NodeViewContent as Bs, useEditor as js, ReactNodeViewRenderer as Us, EditorContent as Fs } from "@tiptap/react";
@@ -44,17 +44,17 @@ async function dr() {
   });
   return t.ok ? (await t.json()).data : null;
 }
-let Rt = null, Nn = null;
+let $t = null, Nn = null;
 function Ka(t) {
   Nn = t;
 }
 async function ur() {
-  return Rt || (Rt = fetch("/api/admin/auth/refresh", {
+  return $t || ($t = fetch("/api/admin/auth/refresh", {
     method: "POST",
     credentials: "include"
   }).then((t) => t.ok).catch(() => !1).finally(() => {
-    Rt = null;
-  })), Rt;
+    $t = null;
+  })), $t;
 }
 async function Qt(t, n = {}) {
   const s = new Headers(n.headers), l = typeof FormData < "u" && n.body instanceof FormData;
@@ -109,11 +109,11 @@ const wn = Jn({
   }
 }), mr = 600 * 1e3;
 function hr({ children: t }) {
-  const [n, s] = u(!0), [l, i] = u(null), r = $e(null), o = $e(!0), c = q(async () => {
-    const m = await dr();
-    return o.current && (i(m), !m && r.current && (clearInterval(r.current), r.current = null)), m;
+  const [n, s] = d(!0), [l, i] = d(null), r = Re(null), o = Re(!0), c = q(async () => {
+    const u = await dr();
+    return o.current && (i(u), !u && r.current && (clearInterval(r.current), r.current = null)), u;
   }, []);
-  return ee(() => (o.current = !0, Ka(() => {
+  return te(() => (o.current = !0, Ka(() => {
     o.current && (i(null), r.current && (clearInterval(r.current), r.current = null));
   }), c().finally(() => {
     o.current && s(!1);
@@ -168,7 +168,7 @@ const At = _t(
     }
   }
 );
-function N({
+function x({
   className: t,
   variant: n = "default",
   size: s = "default",
@@ -187,9 +187,9 @@ function N({
     }
   );
 }
-function V({ className: t, type: n, ...s }) {
+function G({ className: t, type: n, ...s }) {
   return /* @__PURE__ */ e(
-    $s,
+    Rs,
     {
       type: n,
       "data-slot": "input",
@@ -207,7 +207,7 @@ function it({
   ...s
 }) {
   return /* @__PURE__ */ e(
-    Rs,
+    $s,
     {
       "data-slot": "separator",
       orientation: n,
@@ -264,7 +264,7 @@ function vr({
             {
               "data-slot": "sheet-close",
               render: /* @__PURE__ */ e(
-                N,
+                x,
                 {
                   variant: "ghost",
                   className: "absolute top-3 right-3",
@@ -388,32 +388,32 @@ function Tr({
   children: r,
   ...o
 }) {
-  const c = gr(), [m, p] = ye.useState(!1), [y, _] = ye.useState(t), h = n ?? y, D = ye.useCallback(
-    (v) => {
-      const f = typeof v == "function" ? v(h) : v;
-      s ? s(f) : _(f), document.cookie = `${Sr}=${f}; path=/; max-age=${Pr}`;
+  const c = gr(), [u, m] = ye.useState(!1), [y, _] = ye.useState(t), h = n ?? y, E = ye.useCallback(
+    (b) => {
+      const p = typeof b == "function" ? b(h) : b;
+      s ? s(p) : _(p), document.cookie = `${Sr}=${p}; path=/; max-age=${Pr}`;
     },
     [s, h]
-  ), z = ye.useCallback(() => c ? p((v) => !v) : D((v) => !v), [c, D, p]);
+  ), z = ye.useCallback(() => c ? m((b) => !b) : E((b) => !b), [c, E, m]);
   ye.useEffect(() => {
-    const v = (f) => {
-      f.key === Ir && (f.metaKey || f.ctrlKey) && (f.preventDefault(), z());
+    const b = (p) => {
+      p.key === Ir && (p.metaKey || p.ctrlKey) && (p.preventDefault(), z());
     };
-    return window.addEventListener("keydown", v), () => window.removeEventListener("keydown", v);
+    return window.addEventListener("keydown", b), () => window.removeEventListener("keydown", b);
   }, [z]);
-  const $ = h ? "expanded" : "collapsed", M = ye.useMemo(
+  const O = h ? "expanded" : "collapsed", R = ye.useMemo(
     () => ({
-      state: $,
+      state: O,
       open: h,
-      setOpen: D,
+      setOpen: E,
       isMobile: c,
-      openMobile: m,
-      setOpenMobile: p,
+      openMobile: u,
+      setOpenMobile: m,
       toggleSidebar: z
     }),
-    [$, h, D, c, m, p, z]
+    [O, h, E, c, u, m, z]
   );
-  return /* @__PURE__ */ e(kn.Provider, { value: M, children: /* @__PURE__ */ e(
+  return /* @__PURE__ */ e(kn.Provider, { value: R, children: /* @__PURE__ */ e(
     "div",
     {
       "data-slot": "sidebar-wrapper",
@@ -440,7 +440,7 @@ function Dr({
   dir: r,
   ...o
 }) {
-  const { isMobile: c, state: m, openMobile: p, setOpenMobile: y } = za();
+  const { isMobile: c, state: u, openMobile: m, setOpenMobile: y } = za();
   return s === "none" ? /* @__PURE__ */ e(
     "div",
     {
@@ -452,7 +452,7 @@ function Dr({
       ...o,
       children: i
     }
-  ) : c ? /* @__PURE__ */ e(pr, { open: p, onOpenChange: y, ...o, children: /* @__PURE__ */ a(
+  ) : c ? /* @__PURE__ */ e(pr, { open: m, onOpenChange: y, ...o, children: /* @__PURE__ */ a(
     vr,
     {
       dir: r,
@@ -476,8 +476,8 @@ function Dr({
     "div",
     {
       className: "group peer hidden text-sidebar-foreground md:block",
-      "data-state": m,
-      "data-collapsible": m === "collapsed" ? s : "",
+      "data-state": u,
+      "data-collapsible": u === "collapsed" ? s : "",
       "data-variant": n,
       "data-side": t,
       "data-slot": "sidebar",
@@ -528,7 +528,7 @@ function Er({
 }) {
   const { toggleSidebar: l } = za();
   return /* @__PURE__ */ a(
-    N,
+    x,
     {
       "data-sidebar": "trigger",
       "data-slot": "sidebar-trigger",
@@ -570,7 +570,7 @@ function Mr({ className: t, ...n }) {
     }
   );
 }
-function $r({ className: t, ...n }) {
+function Rr({ className: t, ...n }) {
   return /* @__PURE__ */ e(
     "div",
     {
@@ -581,7 +581,7 @@ function $r({ className: t, ...n }) {
     }
   );
 }
-function Rr({ className: t, ...n }) {
+function $r({ className: t, ...n }) {
   return /* @__PURE__ */ e(
     "div",
     {
@@ -694,7 +694,7 @@ function pt({
   className: r,
   ...o
 }) {
-  const { isMobile: c, state: m } = za(), p = Yt({
+  const { isMobile: c, state: u } = za(), m = Yt({
     defaultTagName: "button",
     props: Jt(
       {
@@ -713,17 +713,17 @@ function pt({
   return i ? (typeof i == "string" && (i = {
     children: i
   }), /* @__PURE__ */ a(wr, { children: [
-    p,
+    m,
     /* @__PURE__ */ e(
       kr,
       {
         side: "right",
         align: "center",
-        hidden: m !== "collapsed" || c,
+        hidden: u !== "collapsed" || c,
         ...i
       }
     )
-  ] })) : p;
+  ] })) : m;
 }
 function Fr({ className: t, ...n }) {
   return /* @__PURE__ */ e(
@@ -827,14 +827,14 @@ function Qr({ user: t, permissions: n, roleName: s, pathname: l }) {
   ], r = Qe(), { setSession: o } = Ze(), c = Xr.filter(
     (h) => h.permission === null || n.includes(h.permission)
   );
-  function m(h) {
+  function u(h) {
     return h === "/admin" ? l === "/admin" : l === h || l.startsWith(h + "/");
   }
-  function p(h) {
+  function m(h) {
     return l.startsWith(`/admin/posts/${h}`) || h !== "page" && l.startsWith(`/admin/categories/${h}`);
   }
   function y(h) {
-    return p(h);
+    return m(h);
   }
   async function _() {
     await fetch("/api/admin/auth/logout", { method: "POST", credentials: "include" }), o(null), r("/admin/login", { replace: !0 });
@@ -843,15 +843,15 @@ function Qr({ user: t, permissions: n, roleName: s, pathname: l }) {
     /* @__PURE__ */ e(Mr, { className: "gap-3 px-3 pt-3", children: /* @__PURE__ */ e(sa, { children: /* @__PURE__ */ e(lt, { children: /* @__PURE__ */ a(pt, { size: "lg", className: "rounded-sm", onClick: () => r("/admin"), children: [
       /* @__PURE__ */ e("div", { className: "flex aspect-square size-9 items-center justify-center rounded-sm bg-sidebar-primary text-sidebar-primary-foreground shadow-sm", children: /* @__PURE__ */ e(Na, { className: "size-4" }) }),
       /* @__PURE__ */ a("div", { className: "grid flex-1 text-left text-sm leading-tight", children: [
-        /* @__PURE__ */ e("span", { className: "truncate font-semibold", children: "CMS Admin" }),
+        /* @__PURE__ */ e("span", { className: "truncate font-semibold", children: "Beaver" }),
         /* @__PURE__ */ e("span", { className: "truncate text-xs text-sidebar-foreground/65", children: "Editorial control center" })
       ] })
     ] }) }) }) }),
-    /* @__PURE__ */ e(Rr, { children: /* @__PURE__ */ e(Or, { children: /* @__PURE__ */ e(jr, { children: /* @__PURE__ */ a(sa, { children: [
+    /* @__PURE__ */ e($r, { children: /* @__PURE__ */ e(Or, { children: /* @__PURE__ */ e(jr, { children: /* @__PURE__ */ a(sa, { children: [
       c.map((h) => /* @__PURE__ */ e(lt, { children: /* @__PURE__ */ a(
         pt,
         {
-          isActive: m(h.href),
+          isActive: u(h.href),
           tooltip: h.title,
           className: "rounded-sm",
           onClick: () => r(h.href),
@@ -863,27 +863,27 @@ function Qr({ user: t, permissions: n, roleName: s, pathname: l }) {
       ) }, h.href)),
       /* @__PURE__ */ e(lt, { className: "mt-3 pt-3 border-t border-sidebar-border", children: /* @__PURE__ */ e(Br, { className: "px-1 pb-2 text-xs font-semibold tracking-wider text-sidebar-foreground/50", children: "CONTENT" }) }),
       i.map((h) => {
-        const D = h.icon && Ya[h.icon] ? Ya[h.icon] : Bt, z = n.includes(`content.${h.slug}.view`), $ = n.includes(`category.${h.slug}.view`);
-        if (!z && !$) return null;
+        const E = h.icon && Ya[h.icon] ? Ya[h.icon] : Bt, z = n.includes(`content.${h.slug}.view`), O = n.includes(`category.${h.slug}.view`);
+        if (!z && !O) return null;
         if (h.slug === "page") {
           if (!z) return null;
-          const v = l.startsWith(`/admin/posts/${h.slug}`);
+          const b = l.startsWith(`/admin/posts/${h.slug}`);
           return /* @__PURE__ */ e(lt, { children: /* @__PURE__ */ a(
             pt,
             {
               tooltip: h.label,
               className: "rounded-sm",
-              isActive: v,
+              isActive: b,
               onClick: () => r(`/admin/posts/${h.slug}`),
               children: [
-                /* @__PURE__ */ e(D, {}),
+                /* @__PURE__ */ e(E, {}),
                 /* @__PURE__ */ e("span", { children: h.label })
               ]
             }
           ) }, h.id);
         }
-        const M = y(h.slug);
-        return /* @__PURE__ */ e(Hr, { defaultOpen: M, className: "group/collapsible", children: /* @__PURE__ */ a(lt, { children: [
+        const R = y(h.slug);
+        return /* @__PURE__ */ e(Hr, { defaultOpen: R, className: "group/collapsible", children: /* @__PURE__ */ a(lt, { children: [
           /* @__PURE__ */ a(
             Vr,
             {
@@ -892,11 +892,11 @@ function Qr({ user: t, permissions: n, roleName: s, pathname: l }) {
                 {
                   tooltip: h.label,
                   className: "rounded-sm",
-                  isActive: p(h.slug)
+                  isActive: m(h.slug)
                 }
               ),
               children: [
-                /* @__PURE__ */ e(D, {}),
+                /* @__PURE__ */ e(E, {}),
                 /* @__PURE__ */ e("span", { children: h.label }),
                 /* @__PURE__ */ e(wt, { className: "ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" })
               ]
@@ -915,7 +915,7 @@ function Qr({ user: t, permissions: n, roleName: s, pathname: l }) {
                 ]
               }
             ) }),
-            $ && /* @__PURE__ */ e(Wa, { children: /* @__PURE__ */ a(
+            O && /* @__PURE__ */ e(Wa, { children: /* @__PURE__ */ a(
               Ja,
               {
                 isActive: l.startsWith(`/admin/categories/${h.slug}`),
@@ -931,7 +931,7 @@ function Qr({ user: t, permissions: n, roleName: s, pathname: l }) {
         ] }) }, h.id);
       })
     ] }) }) }) }),
-    /* @__PURE__ */ e($r, { children: /* @__PURE__ */ a(sa, { children: [
+    /* @__PURE__ */ e(Rr, { children: /* @__PURE__ */ a(sa, { children: [
       /* @__PURE__ */ e(lt, { children: /* @__PURE__ */ a(pt, { className: "rounded-sm", onClick: () => r("/admin/profile"), children: [
         /* @__PURE__ */ e(cs, {}),
         /* @__PURE__ */ e("span", { children: "Profile" })
@@ -1011,7 +1011,7 @@ function ze({ className: t, ...n }) {
     }
   );
 }
-function E({ className: t, ...n }) {
+function L({ className: t, ...n }) {
   return /* @__PURE__ */ e(
     "label",
     {
@@ -1025,9 +1025,9 @@ function E({ className: t, ...n }) {
   );
 }
 function Zr() {
-  const { refreshSession: t } = Ze(), n = Qe(), [s, l] = u(""), [i, r] = u(""), [o, c] = u("");
-  async function m(p) {
-    p.preventDefault(), c("");
+  const { refreshSession: t } = Ze(), n = Qe(), [s, l] = d(""), [i, r] = d(""), [o, c] = d("");
+  async function u(m) {
+    m.preventDefault(), c("");
     const y = await fetch("/api/admin/auth/login", {
       method: "POST",
       credentials: "include",
@@ -1049,55 +1049,55 @@ function Zr() {
       c("Sesi tidak dapat diverifikasi. Silakan coba lagi.");
     }
   }
-  return /* @__PURE__ */ e("main", { className: "mx-auto flex min-h-screen max-w-md items-center px-6", children: /* @__PURE__ */ e("form", { className: "w-full", onSubmit: m, children: /* @__PURE__ */ a(Pe, { className: "border-border/60 shadow-sm", children: [
+  return /* @__PURE__ */ e("main", { className: "mx-auto flex min-h-screen max-w-md items-center px-6", children: /* @__PURE__ */ e("form", { className: "w-full", onSubmit: u, children: /* @__PURE__ */ a(Pe, { className: "border-border/60 shadow-sm", children: [
     /* @__PURE__ */ e(_e, { children: /* @__PURE__ */ e(Ae, { children: "Login" }) }),
     /* @__PURE__ */ a(ze, { className: "space-y-4", children: [
       o ? /* @__PURE__ */ e("div", { className: "rounded-sm border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive", children: o }) : null,
       /* @__PURE__ */ a("div", { className: "space-y-1.5", children: [
-        /* @__PURE__ */ e(E, { htmlFor: "login-email", children: "Email" }),
-        /* @__PURE__ */ e(V, { id: "login-email", type: "email", value: s, onChange: (p) => l(p.target.value), placeholder: "Email" })
+        /* @__PURE__ */ e(L, { htmlFor: "login-email", children: "Email" }),
+        /* @__PURE__ */ e(G, { id: "login-email", type: "email", value: s, onChange: (m) => l(m.target.value), placeholder: "Email" })
       ] }),
       /* @__PURE__ */ a("div", { className: "space-y-1.5", children: [
-        /* @__PURE__ */ e(E, { htmlFor: "login-password", children: "Password" }),
-        /* @__PURE__ */ e(V, { id: "login-password", type: "password", value: i, onChange: (p) => r(p.target.value), placeholder: "Password" })
+        /* @__PURE__ */ e(L, { htmlFor: "login-password", children: "Password" }),
+        /* @__PURE__ */ e(G, { id: "login-password", type: "password", value: i, onChange: (m) => r(m.target.value), placeholder: "Password" })
       ] }),
-      /* @__PURE__ */ e(N, { className: "w-full", type: "submit", children: "Sign in" })
+      /* @__PURE__ */ e(x, { className: "w-full", type: "submit", children: "Sign in" })
     ] })
   ] }) }) });
 }
-const ei = me(async () => ({ default: (await Promise.resolve().then(() => zi)).AdminDashboardPage })), Xa = me(async () => ({ default: (await Promise.resolve().then(() => Mi)).AdminContentListPage })), ti = me(async () => ({ default: (await Promise.resolve().then(() => Ri)).AdminUsersPage })), ai = me(async () => ({ default: (await Promise.resolve().then(() => Pn)).AdminUserCreatePage })), ni = me(async () => ({ default: (await Promise.resolve().then(() => Pn)).AdminUserEditPage })), si = me(async () => ({ default: (await Promise.resolve().then(() => Fi)).AdminMediaPage })), Qa = me(async () => ({ default: (await Promise.resolve().then(() => Vi)).AdminCategoriesPage })), ri = me(async () => ({ default: (await Promise.resolve().then(() => ol)).AdminMenusPage })), ii = me(async () => ({ default: (await Promise.resolve().then(() => dl)).AdminRolesPage })), li = me(async () => ({ default: (await Promise.resolve().then(() => ml)).AdminProfilePage })), Za = me(async () => ({ default: (await Promise.resolve().then(() => In)).AdminCategoryCreatePage })), oi = me(async () => ({ default: (await Promise.resolve().then(() => In)).AdminCategoryEditPage })), en = me(async () => ({ default: (await Promise.resolve().then(() => Mn)).AdminPostCreatePage })), ci = me(async () => ({ default: (await Promise.resolve().then(() => Mn)).AdminPostEditPage })), di = me(async () => ({ default: (await Promise.resolve().then(() => Il)).AdminContentListPage })), ui = me(async () => ({ default: (await Promise.resolve().then(() => Rn)).AdminPageCreatePage })), mi = me(async () => ({ default: (await Promise.resolve().then(() => Rn)).AdminPageEditPage })), hi = me(async () => ({ default: (await Promise.resolve().then(() => jn)).AdminRoleCreatePage })), gi = me(async () => ({ default: (await Promise.resolve().then(() => jn)).AdminRoleEditPage })), pi = me(async () => ({ default: (await Promise.resolve().then(() => Hl)).AdminSettingsPage }));
+const ei = me(async () => ({ default: (await Promise.resolve().then(() => zi)).AdminDashboardPage })), Xa = me(async () => ({ default: (await Promise.resolve().then(() => Mi)).AdminContentListPage })), ti = me(async () => ({ default: (await Promise.resolve().then(() => $i)).AdminUsersPage })), ai = me(async () => ({ default: (await Promise.resolve().then(() => Pn)).AdminUserCreatePage })), ni = me(async () => ({ default: (await Promise.resolve().then(() => Pn)).AdminUserEditPage })), si = me(async () => ({ default: (await Promise.resolve().then(() => Fi)).AdminMediaPage })), Qa = me(async () => ({ default: (await Promise.resolve().then(() => Vi)).AdminCategoriesPage })), ri = me(async () => ({ default: (await Promise.resolve().then(() => ol)).AdminMenusPage })), ii = me(async () => ({ default: (await Promise.resolve().then(() => dl)).AdminRolesPage })), li = me(async () => ({ default: (await Promise.resolve().then(() => ml)).AdminProfilePage })), Za = me(async () => ({ default: (await Promise.resolve().then(() => In)).AdminCategoryCreatePage })), oi = me(async () => ({ default: (await Promise.resolve().then(() => In)).AdminCategoryEditPage })), en = me(async () => ({ default: (await Promise.resolve().then(() => Mn)).AdminPostCreatePage })), ci = me(async () => ({ default: (await Promise.resolve().then(() => Mn)).AdminPostEditPage })), di = me(async () => ({ default: (await Promise.resolve().then(() => Il)).AdminContentListPage })), ui = me(async () => ({ default: (await Promise.resolve().then(() => $n)).AdminPageCreatePage })), mi = me(async () => ({ default: (await Promise.resolve().then(() => $n)).AdminPageEditPage })), hi = me(async () => ({ default: (await Promise.resolve().then(() => jn)).AdminRoleCreatePage })), gi = me(async () => ({ default: (await Promise.resolve().then(() => jn)).AdminRoleEditPage })), pi = me(async () => ({ default: (await Promise.resolve().then(() => Hl)).AdminSettingsPage }));
 function fi() {
   return /* @__PURE__ */ e(xa, { fallback: /* @__PURE__ */ e(ge, {}), children: /* @__PURE__ */ a(es, { children: [
-    /* @__PURE__ */ e(ae, { path: `${Be}/login`, element: /* @__PURE__ */ e(bi, {}) }),
-    /* @__PURE__ */ a(ae, { path: Be, element: /* @__PURE__ */ e(vi, {}), children: [
-      /* @__PURE__ */ e(ae, { index: !0, element: /* @__PURE__ */ e(ei, {}) }),
-      /* @__PURE__ */ e(ae, { path: "posts", element: /* @__PURE__ */ e(Xa, {}) }),
-      /* @__PURE__ */ e(ae, { path: "posts/new", element: /* @__PURE__ */ e(en, {}) }),
-      /* @__PURE__ */ e(ae, { path: "posts/:id/edit", element: /* @__PURE__ */ e(an, {}) }),
-      /* @__PURE__ */ e(ae, { path: "users", element: /* @__PURE__ */ e(ti, {}) }),
-      /* @__PURE__ */ e(ae, { path: "users/new", element: /* @__PURE__ */ e(ai, {}) }),
-      /* @__PURE__ */ e(ae, { path: "users/:id/edit", element: /* @__PURE__ */ e(Ni, {}) }),
-      /* @__PURE__ */ e(ae, { path: "media", element: /* @__PURE__ */ e(si, {}) }),
-      /* @__PURE__ */ e(ae, { path: "categories", element: /* @__PURE__ */ e(Qa, {}) }),
-      /* @__PURE__ */ e(ae, { path: "categories/new", element: /* @__PURE__ */ e(Za, {}) }),
-      /* @__PURE__ */ e(ae, { path: "categories/:id/edit", element: /* @__PURE__ */ e(tn, {}) }),
-      /* @__PURE__ */ e(ae, { path: "menus", element: /* @__PURE__ */ e(ri, {}) }),
-      /* @__PURE__ */ e(ae, { path: "profile", element: /* @__PURE__ */ e(li, {}) }),
-      /* @__PURE__ */ e(ae, { path: "roles", element: /* @__PURE__ */ e(ii, {}) }),
-      /* @__PURE__ */ e(ae, { path: "roles/new", element: /* @__PURE__ */ e(hi, {}) }),
-      /* @__PURE__ */ e(ae, { path: "roles/:id/edit", element: /* @__PURE__ */ e(yi, {}) }),
-      /* @__PURE__ */ e(ae, { path: "posts/page", element: /* @__PURE__ */ e(di, {}) }),
-      /* @__PURE__ */ e(ae, { path: "posts/page/new", element: /* @__PURE__ */ e(ui, {}) }),
-      /* @__PURE__ */ e(ae, { path: "posts/page/:id/edit", element: /* @__PURE__ */ e(xi, {}) }),
-      /* @__PURE__ */ e(ae, { path: "posts/:type", element: /* @__PURE__ */ e(Xa, {}) }),
-      /* @__PURE__ */ e(ae, { path: "posts/:type/new", element: /* @__PURE__ */ e(en, {}) }),
-      /* @__PURE__ */ e(ae, { path: "posts/:type/:id/edit", element: /* @__PURE__ */ e(an, {}) }),
-      /* @__PURE__ */ e(ae, { path: "categories/:type", element: /* @__PURE__ */ e(Qa, {}) }),
-      /* @__PURE__ */ e(ae, { path: "categories/:type/new", element: /* @__PURE__ */ e(Za, {}) }),
-      /* @__PURE__ */ e(ae, { path: "categories/:type/:id/edit", element: /* @__PURE__ */ e(tn, {}) }),
-      /* @__PURE__ */ e(ae, { path: "settings", element: /* @__PURE__ */ e(pi, {}) })
+    /* @__PURE__ */ e(ne, { path: `${Be}/login`, element: /* @__PURE__ */ e(bi, {}) }),
+    /* @__PURE__ */ a(ne, { path: Be, element: /* @__PURE__ */ e(vi, {}), children: [
+      /* @__PURE__ */ e(ne, { index: !0, element: /* @__PURE__ */ e(ei, {}) }),
+      /* @__PURE__ */ e(ne, { path: "posts", element: /* @__PURE__ */ e(Xa, {}) }),
+      /* @__PURE__ */ e(ne, { path: "posts/new", element: /* @__PURE__ */ e(en, {}) }),
+      /* @__PURE__ */ e(ne, { path: "posts/:id/edit", element: /* @__PURE__ */ e(an, {}) }),
+      /* @__PURE__ */ e(ne, { path: "users", element: /* @__PURE__ */ e(ti, {}) }),
+      /* @__PURE__ */ e(ne, { path: "users/new", element: /* @__PURE__ */ e(ai, {}) }),
+      /* @__PURE__ */ e(ne, { path: "users/:id/edit", element: /* @__PURE__ */ e(Ni, {}) }),
+      /* @__PURE__ */ e(ne, { path: "media", element: /* @__PURE__ */ e(si, {}) }),
+      /* @__PURE__ */ e(ne, { path: "categories", element: /* @__PURE__ */ e(Qa, {}) }),
+      /* @__PURE__ */ e(ne, { path: "categories/new", element: /* @__PURE__ */ e(Za, {}) }),
+      /* @__PURE__ */ e(ne, { path: "categories/:id/edit", element: /* @__PURE__ */ e(tn, {}) }),
+      /* @__PURE__ */ e(ne, { path: "menus", element: /* @__PURE__ */ e(ri, {}) }),
+      /* @__PURE__ */ e(ne, { path: "profile", element: /* @__PURE__ */ e(li, {}) }),
+      /* @__PURE__ */ e(ne, { path: "roles", element: /* @__PURE__ */ e(ii, {}) }),
+      /* @__PURE__ */ e(ne, { path: "roles/new", element: /* @__PURE__ */ e(hi, {}) }),
+      /* @__PURE__ */ e(ne, { path: "roles/:id/edit", element: /* @__PURE__ */ e(yi, {}) }),
+      /* @__PURE__ */ e(ne, { path: "posts/page", element: /* @__PURE__ */ e(di, {}) }),
+      /* @__PURE__ */ e(ne, { path: "posts/page/new", element: /* @__PURE__ */ e(ui, {}) }),
+      /* @__PURE__ */ e(ne, { path: "posts/page/:id/edit", element: /* @__PURE__ */ e(xi, {}) }),
+      /* @__PURE__ */ e(ne, { path: "posts/:type", element: /* @__PURE__ */ e(Xa, {}) }),
+      /* @__PURE__ */ e(ne, { path: "posts/:type/new", element: /* @__PURE__ */ e(en, {}) }),
+      /* @__PURE__ */ e(ne, { path: "posts/:type/:id/edit", element: /* @__PURE__ */ e(an, {}) }),
+      /* @__PURE__ */ e(ne, { path: "categories/:type", element: /* @__PURE__ */ e(Qa, {}) }),
+      /* @__PURE__ */ e(ne, { path: "categories/:type/new", element: /* @__PURE__ */ e(Za, {}) }),
+      /* @__PURE__ */ e(ne, { path: "categories/:type/:id/edit", element: /* @__PURE__ */ e(tn, {}) }),
+      /* @__PURE__ */ e(ne, { path: "settings", element: /* @__PURE__ */ e(pi, {}) })
     ] }),
-    /* @__PURE__ */ e(ae, { path: "*", element: /* @__PURE__ */ e(st, { to: Be, replace: !0 }) })
+    /* @__PURE__ */ e(ne, { path: "*", element: /* @__PURE__ */ e(st, { to: Be, replace: !0 }) })
   ] }) });
 }
 function bi() {
@@ -1208,7 +1208,7 @@ function Xe(t, n) {
 }
 function Si() {
   const t = Qe();
-  return ee(() => (nn((n, s) => {
+  return te(() => (nn((n, s) => {
     t(n, { replace: s?.replace });
   }), () => {
     nn(null);
@@ -1274,7 +1274,7 @@ function Ge({
   ] });
 }
 function _i() {
-  const [t, n] = u(null), [s, l] = u(null), { session: i } = Ze(), r = [
+  const [t, n] = d(null), [s, l] = d(null), { session: i } = Ze(), r = [
     { label: "Pages", slug: "page" },
     { label: "Posts", slug: "post" },
     ...Zt().contentTypes.filter(
@@ -1289,7 +1289,7 @@ function _i() {
     const c = await ue("/api/admin/dashboard");
     n(c);
   }
-  return ee(() => {
+  return te(() => {
     o().catch((c) => l(c.message));
   }, []), s ? /* @__PURE__ */ e("main", { className: "p-6", children: /* @__PURE__ */ a("p", { className: "text-destructive", children: [
     "Error: ",
@@ -1547,7 +1547,7 @@ function Ee({
     }
   ) });
 }
-function se({
+function re({
   className: t,
   children: n,
   ...s
@@ -1677,7 +1677,7 @@ function oe({ className: t, ...n }) {
     }
   );
 }
-function ne({ className: t, ...n }) {
+function se({ className: t, ...n }) {
   return /* @__PURE__ */ e(
     "td",
     {
@@ -1735,76 +1735,76 @@ const kt = {
   }
 };
 function Li({ contentType: t, pageTitle: n }) {
-  const [s, l] = u(null), [i, r] = u(null), [o, c] = u([]), [m, p] = u(!1), y = dt(), _ = Qe(), { type: h } = Ve(), D = t ?? h ?? "post", z = t || h ? `/admin/posts/${D}` : "/admin/posts", [$, M] = u(
+  const [s, l] = d(null), [i, r] = d(null), [o, c] = d([]), [u, m] = d(!1), y = dt(), _ = Qe(), { type: h } = Ve(), E = t ?? h ?? "post", z = t || h ? `/admin/posts/${E}` : "/admin/posts", [O, R] = d(
     new URLSearchParams(y.search).get("search") ?? ""
-  ), [v, f] = u(
+  ), [b, p] = d(
     new URLSearchParams(y.search).get("status") ?? "all"
-  ), [g, x] = u(
+  ), [g, N] = d(
     new URLSearchParams(y.search).get("sortBy") ?? ""
-  ), [P, B] = u(
+  ), [P, U] = d(
     new URLSearchParams(y.search).get("sortOrder") ?? ""
   );
   async function k() {
     r(null);
-    const T = new URLSearchParams();
-    $ && T.set("search", $), v && v !== "all" && T.set("status", v), g && T.set("sortBy", g), P && T.set("sortOrder", P), T.set("type", D);
-    const J = T.toString() ? `?${T.toString()}` : "", K = await ue(`/api/admin/posts${J}`);
+    const D = new URLSearchParams();
+    O && D.set("search", O), b && b !== "all" && D.set("status", b), g && D.set("sortBy", g), P && D.set("sortOrder", P), D.set("type", E);
+    const Y = D.toString() ? `?${D.toString()}` : "", K = await ue(`/api/admin/posts${Y}`);
     l(K), c([]);
   }
-  ee(() => {
-    k().catch((T) => r(T.message));
-  }, [y.search, D]);
+  te(() => {
+    k().catch((D) => r(D.message));
+  }, [y.search, E]);
   function C() {
-    _(Ce(z, { search: $, status: v, sortBy: g, sortOrder: P }));
+    _(Ce(z, { search: O, status: b, sortBy: g, sortOrder: P }));
   }
-  function b(T) {
-    const J = g === T && P === "asc" ? "desc" : "asc";
-    x(T), B(J), _(Ce(z, { search: $, status: v, sortBy: T, sortOrder: J }));
+  function f(D) {
+    const Y = g === D && P === "asc" ? "desc" : "asc";
+    N(D), U(Y), _(Ce(z, { search: O, status: b, sortBy: D, sortOrder: Y }));
   }
-  function I(T) {
-    T.key === "Enter" && (T.preventDefault(), C());
+  function I(D) {
+    D.key === "Enter" && (D.preventDefault(), C());
   }
-  const R = $e(!0);
-  ee(() => {
-    if (R.current) {
-      R.current = !1;
+  const B = Re(!0);
+  te(() => {
+    if (B.current) {
+      B.current = !1;
       return;
     }
-    const T = setTimeout(() => {
+    const D = setTimeout(() => {
       C();
     }, 400);
-    return () => clearTimeout(T);
-  }, [$, v, D]);
-  const H = q((T) => {
-    s?.data && c(T ? s.data.map((J) => J.id) : []);
-  }, [s]), L = q((T, J) => {
+    return () => clearTimeout(D);
+  }, [O, b, E]);
+  const V = q((D) => {
+    s?.data && c(D ? s.data.map((Y) => Y.id) : []);
+  }, [s]), M = q((D, Y) => {
     c(
-      (K) => J ? [...K, T] : K.filter((Q) => Q !== T)
+      (K) => Y ? [...K, D] : K.filter((Z) => Z !== D)
     );
   }, []), w = s?.data?.length > 0 && o.length === s.data.length, A = o.length > 0;
-  async function d(T, J) {
+  async function v(D, Y) {
     if (o.length === 0) return;
-    p(!0);
-    const K = await Le(T, { ids: o });
-    p(!1), K.success ? (W.success("update", "post"), await k()) : W.error(K.message);
+    m(!0);
+    const K = await Le(D, { ids: o });
+    m(!1), K.success ? (W.success("update", "post"), await k()) : W.error(K.message);
   }
-  const G = q(async () => {
-    o.length !== 0 && confirm(`Delete ${o.length} post(s)? This action cannot be undone.`) && await d("/api/admin/posts/bulk/delete");
-  }, [o]), ie = q(async () => {
-    await d("/api/admin/posts/bulk/publish");
-  }, [o]), j = q(async () => {
-    await d("/api/admin/posts/bulk/unpublish");
-  }, [o]), Y = q(async () => {
-    await d("/api/admin/posts/bulk/duplicate");
+  const Q = q(async () => {
+    o.length !== 0 && confirm(`Delete ${o.length} post(s)? This action cannot be undone.`) && await v("/api/admin/posts/bulk/delete");
+  }, [o]), T = q(async () => {
+    await v("/api/admin/posts/bulk/publish");
+  }, [o]), $ = q(async () => {
+    await v("/api/admin/posts/bulk/unpublish");
+  }, [o]), J = q(async () => {
+    await v("/api/admin/posts/bulk/duplicate");
   }, [o]);
   if (i) return /* @__PURE__ */ e("main", { className: "p-6", children: /* @__PURE__ */ a("p", { className: "text-destructive", children: [
     "Error: ",
     i
   ] }) });
   if (!s) return /* @__PURE__ */ e(ge, {});
-  const O = s.data ?? [];
-  function X(T) {
-    return Ce(z, { search: $, status: v, sortBy: g, sortOrder: P, page: T });
+  const j = s.data ?? [];
+  function X(D) {
+    return Ce(z, { search: O, status: b, sortBy: g, sortOrder: P, page: D });
   }
   return /* @__PURE__ */ a(et, { children: [
     /* @__PURE__ */ e(
@@ -1812,34 +1812,34 @@ function Li({ contentType: t, pageTitle: n }) {
       {
         title: n ?? "Posts",
         search: /* @__PURE__ */ e(
-          V,
+          G,
           {
             placeholder: "Search by title...",
-            value: $,
-            onChange: (T) => M(T.target.value),
+            value: O,
+            onChange: (D) => R(D.target.value),
             onKeyDown: I,
             className: "max-w-xs"
           }
         ),
         actions: /* @__PURE__ */ a(fe, { to: `${z}/new`, className: S(At({ size: "lg" })), children: [
           "New ",
-          D.charAt(0).toUpperCase() + D.slice(1)
+          E.charAt(0).toUpperCase() + E.slice(1)
         ] })
       }
     ),
     /* @__PURE__ */ a("div", { className: "p-4 space-y-4", children: [
       /* @__PURE__ */ a("div", { className: "flex flex-wrap items-center gap-3", children: [
-        /* @__PURE__ */ a(Ie, { value: v, onValueChange: (T) => {
-          T && f(T);
+        /* @__PURE__ */ a(Ie, { value: b, onValueChange: (D) => {
+          D && p(D);
         }, children: [
           /* @__PURE__ */ e(De, { className: "w-[140px]", children: /* @__PURE__ */ e(Te, { placeholder: "Status" }) }),
           /* @__PURE__ */ a(Ee, { children: [
-            /* @__PURE__ */ e(se, { value: "all", children: "All Status" }),
-            /* @__PURE__ */ e(se, { value: "draft", children: "Draft" }),
-            /* @__PURE__ */ e(se, { value: "published", children: "Published" })
+            /* @__PURE__ */ e(re, { value: "all", children: "All Status" }),
+            /* @__PURE__ */ e(re, { value: "draft", children: "Draft" }),
+            /* @__PURE__ */ e(re, { value: "published", children: "Published" })
           ] })
         ] }),
-        /* @__PURE__ */ e(N, { type: "button", variant: "secondary", size: "sm", onClick: C, children: "Filter" })
+        /* @__PURE__ */ e(x, { type: "button", variant: "secondary", size: "sm", onClick: C, children: "Filter" })
       ] }),
       A && /* @__PURE__ */ a("div", { className: "flex items-center gap-2 rounded-sm border bg-muted/30 px-4 py-2", children: [
         /* @__PURE__ */ a("span", { className: "text-sm text-muted-foreground", children: [
@@ -1848,52 +1848,52 @@ function Li({ contentType: t, pageTitle: n }) {
         ] }),
         /* @__PURE__ */ a("div", { className: "ml-auto flex items-center gap-2", children: [
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
-              onClick: ie,
-              disabled: m,
+              onClick: T,
+              disabled: u,
               children: "Publish"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
-              onClick: j,
-              disabled: m,
+              onClick: $,
+              disabled: u,
               children: "Unpublish"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
-              onClick: Y,
-              disabled: m,
+              onClick: J,
+              disabled: u,
               children: "Duplicate"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "destructive",
               size: "sm",
-              onClick: G,
-              disabled: m,
+              onClick: Q,
+              disabled: u,
               children: "Delete"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "ghost",
               size: "sm",
               onClick: () => c([]),
-              disabled: m,
+              disabled: u,
               children: "Clear"
             }
           )
@@ -1905,7 +1905,7 @@ function Li({ contentType: t, pageTitle: n }) {
             xe,
             {
               checked: w,
-              onCheckedChange: (T) => H(T === !0),
+              onCheckedChange: (D) => V(D === !0),
               "aria-label": "Select all content"
             }
           ) }),
@@ -1913,7 +1913,7 @@ function Li({ contentType: t, pageTitle: n }) {
             "button",
             {
               type: "button",
-              onClick: () => b("title"),
+              onClick: () => f("title"),
               className: "inline-flex items-center gap-1 hover:text-foreground",
               children: [
                 "Title",
@@ -1926,7 +1926,7 @@ function Li({ contentType: t, pageTitle: n }) {
             "button",
             {
               type: "button",
-              onClick: () => b("updatedAt"),
+              onClick: () => f("updatedAt"),
               className: "inline-flex items-center gap-1 hover:text-foreground",
               children: [
                 "Updated",
@@ -1936,30 +1936,30 @@ function Li({ contentType: t, pageTitle: n }) {
           ) }),
           /* @__PURE__ */ e(oe, { className: "w-px px-4 py-3", children: "Published" })
         ] }) }),
-        /* @__PURE__ */ e(Tt, { children: O.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(ne, { colSpan: 5, className: "px-4 py-8 text-center text-muted-foreground", children: "No content found." }) }) : O.map((T) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3", children: /* @__PURE__ */ e(
+        /* @__PURE__ */ e(Tt, { children: j.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(se, { colSpan: 5, className: "px-4 py-8 text-center text-muted-foreground", children: "No content found." }) }) : j.map((D) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
+          /* @__PURE__ */ e(se, { className: "px-4 py-3", children: /* @__PURE__ */ e(
             xe,
             {
-              checked: o.includes(T.id),
-              onCheckedChange: (J) => L(T.id, J === !0),
-              "aria-label": `Select ${T.title}`
+              checked: o.includes(D.id),
+              onCheckedChange: (Y) => M(D.id, Y === !0),
+              "aria-label": `Select ${D.title}`
             }
           ) }),
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ a("div", { className: "flex items-center gap-3", children: [
-            T.featuredImage ? /* @__PURE__ */ e("img", { src: T.featuredImage, alt: "", className: "size-10 rounded-sm border object-cover" }) : /* @__PURE__ */ e("div", { className: "size-10 rounded-sm border bg-muted" }),
-            /* @__PURE__ */ e(fe, { to: `${z}/${T.id}/edit`, className: "underline", children: T.title })
+          /* @__PURE__ */ e(se, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ a("div", { className: "flex items-center gap-3", children: [
+            D.featuredImage ? /* @__PURE__ */ e("img", { src: D.featuredImage, alt: "", className: "size-10 rounded-sm border object-cover" }) : /* @__PURE__ */ e("div", { className: "size-10 rounded-sm border bg-muted" }),
+            /* @__PURE__ */ e(fe, { to: `${z}/${D.id}/edit`, className: "underline", children: D.title })
           ] }) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(
             Ue,
             {
-              variant: T.status === "published" ? "default" : "secondary",
-              className: T.status === "published" ? "border-0 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300" : "capitalize",
-              children: T.status
+              variant: D.status === "published" ? "default" : "secondary",
+              className: D.status === "published" ? "border-0 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300" : "capitalize",
+              children: D.status
             }
           ) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(T.updatedAt * 1e3).toLocaleDateString() }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3 text-muted-foreground", children: T.publishedAt ? new Date(T.publishedAt).toLocaleDateString() : "—" })
-        ] }, T.id)) })
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(D.updatedAt * 1e3).toLocaleDateString() }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3 text-muted-foreground", children: D.publishedAt ? new Date(D.publishedAt).toLocaleDateString() : "—" })
+        ] }, D.id)) })
       ] }),
       s.meta && /* @__PURE__ */ a("div", { className: "flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between", children: [
         /* @__PURE__ */ a("span", { children: [
@@ -1982,62 +1982,62 @@ const Mi = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   AdminContentListPage: Li
 }, Symbol.toStringTag, { value: "Module" }));
-function $i() {
-  const [t, n] = u(null), [s, l] = u(null), [i, r] = u([]), [o, c] = u(!1), m = dt(), p = Qe(), [y, _] = u(
-    new URLSearchParams(m.search).get("search") ?? ""
-  ), [h, D] = u(
-    new URLSearchParams(m.search).get("roleId") ?? "all"
-  ), [z, $] = u(
-    new URLSearchParams(m.search).get("sortBy") ?? ""
-  ), [M, v] = u(
-    new URLSearchParams(m.search).get("sortOrder") ?? ""
+function Ri() {
+  const [t, n] = d(null), [s, l] = d(null), [i, r] = d([]), [o, c] = d(!1), u = dt(), m = Qe(), [y, _] = d(
+    new URLSearchParams(u.search).get("search") ?? ""
+  ), [h, E] = d(
+    new URLSearchParams(u.search).get("roleId") ?? "all"
+  ), [z, O] = d(
+    new URLSearchParams(u.search).get("sortBy") ?? ""
+  ), [R, b] = d(
+    new URLSearchParams(u.search).get("sortOrder") ?? ""
   );
-  async function f() {
+  async function p() {
     l(null);
-    const d = await ue(`/api/admin/users${m.search}`);
-    n(d), r([]);
+    const v = await ue(`/api/admin/users${u.search}`);
+    n(v), r([]);
   }
-  ee(() => {
-    f().catch((d) => l(d.message));
-  }, [m.search]);
+  te(() => {
+    p().catch((v) => l(v.message));
+  }, [u.search]);
   function g() {
-    p(Ce("/admin/users", { search: y, roleId: h, sortBy: z, sortOrder: M }));
+    m(Ce("/admin/users", { search: y, roleId: h, sortBy: z, sortOrder: R }));
   }
-  function x(d) {
-    const G = z === d && M === "asc" ? "desc" : "asc";
-    $(d), v(G), p(Ce("/admin/users", { search: y, roleId: h, sortBy: d, sortOrder: G }));
+  function N(v) {
+    const Q = z === v && R === "asc" ? "desc" : "asc";
+    O(v), b(Q), m(Ce("/admin/users", { search: y, roleId: h, sortBy: v, sortOrder: Q }));
   }
-  function P(d) {
-    d.key === "Enter" && (d.preventDefault(), g());
+  function P(v) {
+    v.key === "Enter" && (v.preventDefault(), g());
   }
-  const B = $e(!0);
-  ee(() => {
-    if (B.current) {
-      B.current = !1;
+  const U = Re(!0);
+  te(() => {
+    if (U.current) {
+      U.current = !1;
       return;
     }
-    const d = setTimeout(() => {
+    const v = setTimeout(() => {
       g();
     }, 400);
-    return () => clearTimeout(d);
+    return () => clearTimeout(v);
   }, [y, h]);
-  const k = q((d) => {
-    t?.data && r(d ? t.data.map((G) => G.id) : []);
-  }, [t]), C = q((d, G) => {
+  const k = q((v) => {
+    t?.data && r(v ? t.data.map((Q) => Q.id) : []);
+  }, [t]), C = q((v, Q) => {
     r(
-      (ie) => G ? [...ie, d] : ie.filter((j) => j !== d)
+      (T) => Q ? [...T, v] : T.filter(($) => $ !== v)
     );
-  }, []), b = t?.data?.length > 0 && i.length === t.data.length, I = i.length > 0;
-  async function R(d) {
+  }, []), f = t?.data?.length > 0 && i.length === t.data.length, I = i.length > 0;
+  async function B(v) {
     if (i.length === 0) return;
     c(!0);
-    const G = await Le(d, { ids: i });
-    c(!1), G.success ? (W.success("update", "user"), await f()) : W.error(G.message);
+    const Q = await Le(v, { ids: i });
+    c(!1), Q.success ? (W.success("update", "user"), await p()) : W.error(Q.message);
   }
-  const H = q(async () => {
-    i.length !== 0 && confirm(`Delete ${i.length} user(s)? This action cannot be undone.`) && await R("/api/admin/users/bulk/delete");
-  }, [i]), L = q(async () => {
-    await R("/api/admin/users/bulk/duplicate");
+  const V = q(async () => {
+    i.length !== 0 && confirm(`Delete ${i.length} user(s)? This action cannot be undone.`) && await B("/api/admin/users/bulk/delete");
+  }, [i]), M = q(async () => {
+    await B("/api/admin/users/bulk/duplicate");
   }, [i]);
   if (s) return /* @__PURE__ */ e("main", { className: "p-6", children: /* @__PURE__ */ a("p", { className: "text-destructive", children: [
     "Error: ",
@@ -2045,8 +2045,8 @@ function $i() {
   ] }) });
   if (!t) return /* @__PURE__ */ e(ge, {});
   const w = t.data ?? [];
-  function A(d) {
-    return Ce("/admin/users", { search: y, roleId: h, sortBy: z, sortOrder: M, page: d });
+  function A(v) {
+    return Ce("/admin/users", { search: y, roleId: h, sortBy: z, sortOrder: R, page: v });
   }
   return /* @__PURE__ */ a(et, { children: [
     /* @__PURE__ */ e(
@@ -2054,11 +2054,11 @@ function $i() {
       {
         title: "Users",
         search: /* @__PURE__ */ e(
-          V,
+          G,
           {
             placeholder: "Search by name...",
             value: y,
-            onChange: (d) => _(d.target.value),
+            onChange: (v) => _(v.target.value),
             onKeyDown: P,
             className: "max-w-xs"
           }
@@ -2068,16 +2068,16 @@ function $i() {
     ),
     /* @__PURE__ */ a("div", { className: "p-4 space-y-4", children: [
       /* @__PURE__ */ a("div", { className: "flex flex-wrap items-center gap-3", children: [
-        /* @__PURE__ */ a(Ie, { value: h, onValueChange: (d) => {
-          d && D(d);
+        /* @__PURE__ */ a(Ie, { value: h, onValueChange: (v) => {
+          v && E(v);
         }, children: [
           /* @__PURE__ */ e(De, { className: "w-[160px]", children: /* @__PURE__ */ e(Te, { placeholder: "Role" }) }),
           /* @__PURE__ */ a(Ee, { children: [
-            /* @__PURE__ */ e(se, { value: "all", children: "All Roles" }),
-            t.roles?.map((d) => /* @__PURE__ */ e(se, { value: d.id, children: d.name }, d.id))
+            /* @__PURE__ */ e(re, { value: "all", children: "All Roles" }),
+            t.roles?.map((v) => /* @__PURE__ */ e(re, { value: v.id, children: v.name }, v.id))
           ] })
         ] }),
-        /* @__PURE__ */ e(N, { type: "button", variant: "secondary", size: "sm", onClick: g, children: "Filter" })
+        /* @__PURE__ */ e(x, { type: "button", variant: "secondary", size: "sm", onClick: g, children: "Filter" })
       ] }),
       I && /* @__PURE__ */ a("div", { className: "flex items-center gap-2 rounded-sm border bg-muted/30 px-4 py-2", children: [
         /* @__PURE__ */ a("span", { className: "text-sm text-muted-foreground", children: [
@@ -2086,27 +2086,27 @@ function $i() {
         ] }),
         /* @__PURE__ */ a("div", { className: "ml-auto flex items-center gap-2", children: [
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
-              onClick: L,
+              onClick: M,
               disabled: o,
               children: "Duplicate"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "destructive",
               size: "sm",
-              onClick: H,
+              onClick: V,
               disabled: o,
               children: "Delete"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "ghost",
               size: "sm",
@@ -2122,8 +2122,8 @@ function $i() {
           /* @__PURE__ */ e(oe, { className: "w-10 px-4 py-3", children: /* @__PURE__ */ e(
             xe,
             {
-              checked: b,
-              onCheckedChange: (d) => k(d === !0),
+              checked: f,
+              onCheckedChange: (v) => k(v === !0),
               "aria-label": "Select all users"
             }
           ) }),
@@ -2131,11 +2131,11 @@ function $i() {
             "button",
             {
               type: "button",
-              onClick: () => x("name"),
+              onClick: () => N("name"),
               className: "inline-flex items-center gap-1 hover:text-foreground",
               children: [
                 "Name",
-                z === "name" ? M === "asc" ? /* @__PURE__ */ e(We, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Je, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Ye, { className: "h-3.5 w-3.5 text-muted-foreground/50" })
+                z === "name" ? R === "asc" ? /* @__PURE__ */ e(We, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Je, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Ye, { className: "h-3.5 w-3.5 text-muted-foreground/50" })
               ]
             }
           ) }),
@@ -2145,29 +2145,29 @@ function $i() {
             "button",
             {
               type: "button",
-              onClick: () => x("updatedAt"),
+              onClick: () => N("updatedAt"),
               className: "inline-flex items-center gap-1 hover:text-foreground",
               children: [
                 "Updated",
-                z === "updatedAt" ? M === "asc" ? /* @__PURE__ */ e(We, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Je, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Ye, { className: "h-3.5 w-3.5 text-muted-foreground/50" })
+                z === "updatedAt" ? R === "asc" ? /* @__PURE__ */ e(We, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Je, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Ye, { className: "h-3.5 w-3.5 text-muted-foreground/50" })
               ]
             }
           ) })
         ] }) }),
-        /* @__PURE__ */ e(Tt, { children: w.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(ne, { colSpan: 5, className: "px-4 py-8 text-center text-muted-foreground", children: "No users found." }) }) : w.map((d) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3", children: /* @__PURE__ */ e(
+        /* @__PURE__ */ e(Tt, { children: w.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(se, { colSpan: 5, className: "px-4 py-8 text-center text-muted-foreground", children: "No users found." }) }) : w.map((v) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
+          /* @__PURE__ */ e(se, { className: "px-4 py-3", children: /* @__PURE__ */ e(
             xe,
             {
-              checked: i.includes(d.id),
-              onCheckedChange: (G) => C(d.id, G === !0),
-              "aria-label": `Select ${d.name}`
+              checked: i.includes(v.id),
+              onCheckedChange: (Q) => C(v.id, Q === !0),
+              "aria-label": `Select ${v.name}`
             }
           ) }),
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ e(fe, { to: `/admin/users/${d.id}/edit`, className: "underline", children: d.name }) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3 text-muted-foreground", children: d.email }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(Ue, { variant: "outline", className: "capitalize", children: d.roleName ?? "No role" }) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(d.updatedAt * 1e3).toLocaleDateString() })
-        ] }, d.id)) })
+          /* @__PURE__ */ e(se, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ e(fe, { to: `/admin/users/${v.id}/edit`, className: "underline", children: v.name }) }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3 text-muted-foreground", children: v.email }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(Ue, { variant: "outline", className: "capitalize", children: v.roleName ?? "No role" }) }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(v.updatedAt * 1e3).toLocaleDateString() })
+        ] }, v.id)) })
       ] }),
       t.meta && /* @__PURE__ */ a("div", { className: "flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between", children: [
         /* @__PURE__ */ a("span", { children: [
@@ -2186,9 +2186,9 @@ function $i() {
     ] })
   ] });
 }
-const Ri = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const $i = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  AdminUsersPage: $i
+  AdminUsersPage: Ri
 }, Symbol.toStringTag, { value: "Module" }));
 function Dt({
   children: t,
@@ -2218,16 +2218,16 @@ function je({
   ] });
 }
 function Sn({ user: t, roles: n = [], mode: s, pageTitle: l }) {
-  const [i, r] = yt(), [o, c] = u({}), [m, p] = u(null), [y, _] = u(t?.name ?? ""), [h, D] = u(t?.email ?? ""), [z, $] = u(""), [M, v] = u(t?.roleId ?? ""), f = n.find((x) => x.id === M)?.name;
-  function g(x) {
-    x.preventDefault(), c({}), p(null);
+  const [i, r] = yt(), [o, c] = d({}), [u, m] = d(null), [y, _] = d(t?.name ?? ""), [h, E] = d(t?.email ?? ""), [z, O] = d(""), [R, b] = d(t?.roleId ?? ""), p = n.find((N) => N.id === R)?.name;
+  function g(N) {
+    N.preventDefault(), c({}), m(null);
     const P = {
       name: y,
       email: h
     };
-    z && (P.password = z), M && (P.roleId = M), r(async () => {
-      let B;
-      s === "edit" && t ? B = await rt(`/api/admin/users/${t.id}`, P) : B = await Le("/api/admin/users", P), B.success ? (W.success(s === "edit" ? "update" : "create", "user"), Xe("/admin/users")) : B.errors && Object.keys(B.errors).length > 0 ? (c(B.errors), W.error(B.message)) : (p(B.message), W.error(B.message));
+    z && (P.password = z), R && (P.roleId = R), r(async () => {
+      let U;
+      s === "edit" && t ? U = await rt(`/api/admin/users/${t.id}`, P) : U = await Le("/api/admin/users", P), U.success ? (W.success(s === "edit" ? "update" : "create", "user"), Xe("/admin/users")) : U.errors && Object.keys(U.errors).length > 0 ? (c(U.errors), W.error(U.message)) : (m(U.message), W.error(U.message));
     });
   }
   return /* @__PURE__ */ a("form", { onSubmit: g, className: "", children: [
@@ -2236,9 +2236,9 @@ function Sn({ user: t, roles: n = [], mode: s, pageTitle: l }) {
       {
         title: l || "Users",
         actions: /* @__PURE__ */ a("div", { className: "flex items-center gap-3", children: [
-          /* @__PURE__ */ e(N, { type: "submit", disabled: i, children: i ? s === "edit" ? "Saving…" : "Creating…" : s === "edit" ? "Save Changes" : "Create User" }),
+          /* @__PURE__ */ e(x, { type: "submit", disabled: i, children: i ? s === "edit" ? "Saving…" : "Creating…" : s === "edit" ? "Save Changes" : "Create User" }),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               type: "button",
               variant: "outline",
@@ -2250,20 +2250,20 @@ function Sn({ user: t, roles: n = [], mode: s, pageTitle: l }) {
         ] })
       }
     ),
-    m && /* @__PURE__ */ e("div", { className: "mx-4 rounded-sm border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive", children: m }),
+    u && /* @__PURE__ */ e("div", { className: "mx-4 rounded-sm border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive", children: u }),
     /* @__PURE__ */ a(Dt, { children: [
       /* @__PURE__ */ e(Et, { children: /* @__PURE__ */ e(je, { title: "User details", children: /* @__PURE__ */ a("div", { className: "grid gap-5", children: [
         /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ a(E, { htmlFor: "name", children: [
+          /* @__PURE__ */ a(L, { htmlFor: "name", children: [
             "Name ",
             /* @__PURE__ */ e("span", { className: "text-destructive", children: "*" })
           ] }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "name",
               value: y,
-              onChange: (x) => _(x.target.value),
+              onChange: (N) => _(N.target.value),
               placeholder: "Full name",
               required: !0,
               maxLength: 100,
@@ -2274,17 +2274,17 @@ function Sn({ user: t, roles: n = [], mode: s, pageTitle: l }) {
           o.name && /* @__PURE__ */ e("p", { id: "name-error", className: "text-xs text-destructive", children: o.name[0] })
         ] }),
         /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ a(E, { htmlFor: "email", children: [
+          /* @__PURE__ */ a(L, { htmlFor: "email", children: [
             "Email ",
             /* @__PURE__ */ e("span", { className: "text-destructive", children: "*" })
           ] }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "email",
               type: "email",
               value: h,
-              onChange: (x) => D(x.target.value),
+              onChange: (N) => E(N.target.value),
               placeholder: "user@example.com",
               required: !0,
               "aria-invalid": !!o.email,
@@ -2294,18 +2294,18 @@ function Sn({ user: t, roles: n = [], mode: s, pageTitle: l }) {
           o.email && /* @__PURE__ */ e("p", { id: "email-error", className: "text-xs text-destructive", children: o.email[0] })
         ] }),
         /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ a(E, { htmlFor: "password", children: [
+          /* @__PURE__ */ a(L, { htmlFor: "password", children: [
             "Password",
             " ",
             s === "create" && /* @__PURE__ */ e("span", { className: "text-destructive", children: "*" })
           ] }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "password",
               type: "password",
               value: z,
-              onChange: (x) => $(x.target.value),
+              onChange: (N) => O(N.target.value),
               placeholder: s === "edit" ? "Leave blank to keep current" : "Minimum 8 characters",
               required: s === "create",
               minLength: s === "create" ? 8 : void 0,
@@ -2318,12 +2318,12 @@ function Sn({ user: t, roles: n = [], mode: s, pageTitle: l }) {
         ] })
       ] }) }) }),
       /* @__PURE__ */ e(Lt, { children: /* @__PURE__ */ e(je, { title: "Organization", children: /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-        /* @__PURE__ */ e(E, { htmlFor: "role", children: "Role" }),
-        n.length > 0 ? /* @__PURE__ */ a(Ie, { value: M || "none", onValueChange: (x) => v(x === "none" || !x ? "" : x), children: [
-          /* @__PURE__ */ e(De, { id: "role", children: /* @__PURE__ */ e(Te, { placeholder: "Select role", children: f ?? (M ? "No role" : void 0) }) }),
+        /* @__PURE__ */ e(L, { htmlFor: "role", children: "Role" }),
+        n.length > 0 ? /* @__PURE__ */ a(Ie, { value: R || "none", onValueChange: (N) => b(N === "none" || !N ? "" : N), children: [
+          /* @__PURE__ */ e(De, { id: "role", children: /* @__PURE__ */ e(Te, { placeholder: "Select role", children: p ?? (R ? "No role" : void 0) }) }),
           /* @__PURE__ */ a(Ee, { children: [
-            /* @__PURE__ */ e(se, { value: "none", children: "No role" }),
-            n.map((x) => /* @__PURE__ */ e(se, { value: x.id, children: x.name }, x.id))
+            /* @__PURE__ */ e(re, { value: "none", children: "No role" }),
+            n.map((N) => /* @__PURE__ */ e(re, { value: N.id, children: N.name }, N.id))
           ] })
         ] }) : /* @__PURE__ */ e("p", { className: "text-sm text-muted-foreground", children: "No roles available." }),
         o.roleId && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: o.roleId[0] })
@@ -2332,8 +2332,8 @@ function Sn({ user: t, roles: n = [], mode: s, pageTitle: l }) {
   ] });
 }
 function Oi() {
-  const [t, n] = u([]), [s, l] = u(!0);
-  return ee(() => {
+  const [t, n] = d([]), [s, l] = d(!0);
+  return te(() => {
     ue("/api/admin/roles").then((i) => {
       n(i.roles), l(!1);
     });
@@ -2347,13 +2347,13 @@ function Oi() {
   ) });
 }
 function Bi({ id: t }) {
-  const [n, s] = u(null), [l, i] = u([]), [r, o] = u(!0);
-  return ee(() => {
+  const [n, s] = d(null), [l, i] = d([]), [r, o] = d(!0);
+  return te(() => {
     Promise.all([
       ue(`/api/admin/users/${t}`),
       ue("/api/admin/roles")
-    ]).then(([c, m]) => {
-      s(c), i(m.roles), o(!1);
+    ]).then(([c, u]) => {
+      s(c), i(u.roles), o(!1);
     });
   }, [t]), r ? /* @__PURE__ */ e(ge, {}) : n ? /* @__PURE__ */ e(He, { children: /* @__PURE__ */ e(
     Sn,
@@ -2377,63 +2377,63 @@ function _n({
   className: l,
   compact: i = !1
 }) {
-  const [r, o] = u(!1), [c, m] = u([]), p = $e(null), y = q((v) => {
-    v.preventDefault(), v.stopPropagation(), o(!0);
-  }, []), _ = q((v) => {
-    v.preventDefault(), v.stopPropagation(), o(!1);
+  const [r, o] = d(!1), [c, u] = d([]), m = Re(null), y = q((b) => {
+    b.preventDefault(), b.stopPropagation(), o(!0);
+  }, []), _ = q((b) => {
+    b.preventDefault(), b.stopPropagation(), o(!1);
   }, []), h = q(
-    async (v) => {
-      const f = Math.random().toString(36).slice(2);
-      m((g) => [...g, { id: f, file: v, progress: 0 }]);
+    async (b) => {
+      const p = Math.random().toString(36).slice(2);
+      u((g) => [...g, { id: p, file: b, progress: 0 }]);
       try {
         const g = new FormData();
-        g.append("file", v);
+        g.append("file", b);
         const P = await (await fetch("/api/admin/media/upload", {
           method: "POST",
           body: g
         })).json();
         if (!P.success) {
-          const B = P.message || "Upload failed";
-          return m(
+          const U = P.message || "Upload failed";
+          return u(
             (k) => k.map(
-              (C) => C.id === f ? { ...C, error: B } : C
+              (C) => C.id === p ? { ...C, error: U } : C
             )
-          ), n?.(B), W.error(B), null;
+          ), n?.(U), W.error(U), null;
         }
-        return m((B) => B.filter((k) => k.id !== f)), t?.(P.data), W.uploaded(v.name), P.data;
+        return u((U) => U.filter((k) => k.id !== p)), t?.(P.data), W.uploaded(b.name), P.data;
       } catch {
         const g = "Upload failed. Please try again.";
-        return m(
-          (x) => x.map(
-            (P) => P.id === f ? { ...P, error: g } : P
+        return u(
+          (N) => N.map(
+            (P) => P.id === p ? { ...P, error: g } : P
           )
         ), n?.(g), W.error(g), null;
       }
     },
     [t, n]
-  ), D = q(
-    async (v) => {
-      v.preventDefault(), v.stopPropagation(), o(!1);
-      const f = Array.from(v.dataTransfer.files);
-      if (f.length !== 0)
-        for (const g of f)
+  ), E = q(
+    async (b) => {
+      b.preventDefault(), b.stopPropagation(), o(!1);
+      const p = Array.from(b.dataTransfer.files);
+      if (p.length !== 0)
+        for (const g of p)
           s && !ji(g.type, s) || await h(g);
     },
     [s, h]
   ), z = q(
-    async (v) => {
-      const f = Array.from(v.target.files || []);
-      if (f.length !== 0) {
-        for (const g of f)
+    async (b) => {
+      const p = Array.from(b.target.files || []);
+      if (p.length !== 0) {
+        for (const g of p)
           await h(g);
-        p.current && (p.current.value = "");
+        m.current && (m.current.value = "");
       }
     },
     [h]
-  ), $ = q(() => {
-    p.current?.click();
-  }, []), M = q((v) => {
-    m((f) => f.filter((g) => g.id !== v));
+  ), O = q(() => {
+    m.current?.click();
+  }, []), R = q((b) => {
+    u((p) => p.filter((g) => g.id !== b));
   }, []);
   return /* @__PURE__ */ a("div", { className: S("space-y-2", l), children: [
     /* @__PURE__ */ a(
@@ -2441,12 +2441,12 @@ function _n({
       {
         onDragOver: y,
         onDragLeave: _,
-        onDrop: D,
-        onClick: $,
+        onDrop: E,
+        onClick: O,
         role: "button",
         tabIndex: 0,
-        onKeyDown: (v) => {
-          (v.key === "Enter" || v.key === " ") && (v.preventDefault(), $());
+        onKeyDown: (b) => {
+          (b.key === "Enter" || b.key === " ") && (b.preventDefault(), O());
         },
         "aria-label": "Upload media files",
         className: S(
@@ -2477,7 +2477,7 @@ function _n({
     /* @__PURE__ */ e(
       "input",
       {
-        ref: p,
+        ref: m,
         type: "file",
         multiple: !0,
         accept: s,
@@ -2486,33 +2486,33 @@ function _n({
         "aria-hidden": "true"
       }
     ),
-    c.length > 0 && /* @__PURE__ */ e("div", { className: "space-y-1", children: c.map((v) => /* @__PURE__ */ a(
+    c.length > 0 && /* @__PURE__ */ e("div", { className: "space-y-1", children: c.map((b) => /* @__PURE__ */ a(
       "div",
       {
         className: S(
           "flex items-center gap-2 rounded-sm border px-3 py-2 text-sm",
-          v.error ? "border-destructive/50 bg-destructive/10" : "border-border"
+          b.error ? "border-destructive/50 bg-destructive/10" : "border-border"
         ),
         children: [
-          v.error ? /* @__PURE__ */ e(Nt, { className: "h-4 w-4 text-destructive" }) : /* @__PURE__ */ e(hn, { className: "h-4 w-4 animate-spin text-muted-foreground" }),
+          b.error ? /* @__PURE__ */ e(Nt, { className: "h-4 w-4 text-destructive" }) : /* @__PURE__ */ e(hn, { className: "h-4 w-4 animate-spin text-muted-foreground" }),
           /* @__PURE__ */ a("span", { className: "flex-1 truncate", children: [
-            v.file.name,
-            v.error && /* @__PURE__ */ e("span", { className: "ml-2 text-destructive", children: v.error })
+            b.file.name,
+            b.error && /* @__PURE__ */ e("span", { className: "ml-2 text-destructive", children: b.error })
           ] }),
-          v.error && /* @__PURE__ */ e(
-            N,
+          b.error && /* @__PURE__ */ e(
+            x,
             {
               variant: "ghost",
               size: "icon-sm",
-              onClick: (f) => {
-                f.stopPropagation(), M(v.id);
+              onClick: (p) => {
+                p.stopPropagation(), R(b.id);
               },
               children: /* @__PURE__ */ e(Vt, { className: "h-3 w-3" })
             }
           )
         ]
       },
-      v.id
+      b.id
     )) })
   ] });
 }
@@ -2526,53 +2526,53 @@ function ji(t, n) {
   }) : !0;
 }
 function Ui() {
-  const t = dt(), n = Qe(), [s, l] = u(null), [i, r] = u(!1), [o, c] = u(
+  const t = dt(), n = Qe(), [s, l] = d(null), [i, r] = d(!1), [o, c] = d(
     new URLSearchParams(t.search).get("search") ?? ""
-  ), [m, p] = u(1), [y, _] = u(/* @__PURE__ */ new Set()), [h, D] = u([]);
-  function z(b) {
-    const I = m, R = new URLSearchParams(t.search);
-    o && R.set("search", o), R.set("page", String(I)), R.set("perPage", "30"), ue(`/api/admin/media?${R.toString()}`).then(l);
+  ), [u, m] = d(1), [y, _] = d(/* @__PURE__ */ new Set()), [h, E] = d([]);
+  function z(f) {
+    const I = u, B = new URLSearchParams(t.search);
+    o && B.set("search", o), B.set("page", String(I)), B.set("perPage", "30"), ue(`/api/admin/media?${B.toString()}`).then(l);
   }
-  ee(() => {
+  te(() => {
     z();
-  }, [t.search, m]);
-  const $ = $e(!0);
-  ee(() => {
-    if ($.current) {
-      $.current = !1;
+  }, [t.search, u]);
+  const O = Re(!0);
+  te(() => {
+    if (O.current) {
+      O.current = !1;
       return;
     }
-    const b = setTimeout(() => {
+    const f = setTimeout(() => {
       const I = new URLSearchParams(t.search);
-      o ? I.set("search", o) : I.delete("search"), I.delete("page"), p(1), n(`/admin/media?${I.toString()}`);
+      o ? I.set("search", o) : I.delete("search"), I.delete("page"), m(1), n(`/admin/media?${I.toString()}`);
     }, 400);
-    return () => clearTimeout(b);
+    return () => clearTimeout(f);
   }, [o]);
-  function M(b, I) {
-    confirm(`Delete "${I}"?`) && yn(`/api/admin/media/${b}`).then((R) => {
-      R.success ? (W.success("delete", "media"), z()) : W.error(R.message);
+  function R(f, I) {
+    confirm(`Delete "${I}"?`) && yn(`/api/admin/media/${f}`).then((B) => {
+      B.success ? (W.success("delete", "media"), z()) : W.error(B.message);
     });
   }
-  const v = s != null && s.data.length > 0 && h.length === s.data.length, f = h.length > 0;
-  function g(b) {
-    !s?.data || s == null || D(b ? s.data.map((I) => I.id) : []);
+  const b = s != null && s.data.length > 0 && h.length === s.data.length, p = h.length > 0;
+  function g(f) {
+    !s?.data || s == null || E(f ? s.data.map((I) => I.id) : []);
   }
-  function x(b, I) {
-    D(I ? (R) => [...R, b] : (R) => R.filter((H) => H !== b));
+  function N(f, I) {
+    E(I ? (B) => [...B, f] : (B) => B.filter((V) => V !== f));
   }
   function P() {
-    D([]);
+    E([]);
   }
-  function B() {
-    h.length !== 0 && confirm(`Delete ${h.length} item(s)? This cannot be undone.`) && Le("/api/admin/media/bulk/delete", { ids: h }).then((b) => {
-      b.success ? (W.success("delete", "selected media"), D([]), z()) : W.error(b.message);
+  function U() {
+    h.length !== 0 && confirm(`Delete ${h.length} item(s)? This cannot be undone.`) && Le("/api/admin/media/bulk/delete", { ids: h }).then((f) => {
+      f.success ? (W.success("delete", "selected media"), E([]), z()) : W.error(f.message);
     });
   }
-  function k(b) {
-    navigator.clipboard.writeText(b).then(() => W.copied("url"));
+  function k(f) {
+    navigator.clipboard.writeText(f).then(() => W.copied("url"));
   }
-  function C(b) {
-    return b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / (1024 * 1024)).toFixed(1)} MB`;
+  function C(f) {
+    return f < 1024 ? `${f} B` : f < 1024 * 1024 ? `${(f / 1024).toFixed(1)} KB` : `${(f / (1024 * 1024)).toFixed(1)} MB`;
   }
   return /* @__PURE__ */ a(et, { children: [
     /* @__PURE__ */ e(
@@ -2582,34 +2582,34 @@ function Ui() {
         search: /* @__PURE__ */ a("div", { className: "relative flex-1", children: [
           /* @__PURE__ */ e(gn, { className: "absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               value: o,
-              onChange: (b) => c(b.target.value),
+              onChange: (f) => c(f.target.value),
               placeholder: "Search media…",
               className: "pl-8"
             }
           )
         ] }),
-        actions: /* @__PURE__ */ e(N, { type: "button", size: "lg", onClick: () => r((b) => !b), children: i ? "Hide Upload" : "Upload" })
+        actions: /* @__PURE__ */ e(x, { type: "button", size: "lg", onClick: () => r((f) => !f), children: i ? "Hide Upload" : "Upload" })
       }
     ),
     /* @__PURE__ */ a("div", { className: "p-4 space-y-4", children: [
       i && /* @__PURE__ */ e(_n, { onUploadComplete: () => {
         r(!1), z();
       } }),
-      f && /* @__PURE__ */ a("div", { className: "flex items-center gap-2 rounded-sm border bg-muted/30 px-4 py-2", children: [
+      p && /* @__PURE__ */ a("div", { className: "flex items-center gap-2 rounded-sm border bg-muted/30 px-4 py-2", children: [
         /* @__PURE__ */ a("span", { className: "text-sm text-muted-foreground", children: [
           h.length,
           " selected"
         ] }),
         /* @__PURE__ */ a("div", { className: "ml-auto flex items-center gap-2", children: [
           /* @__PURE__ */ a(
-            N,
+            x,
             {
               variant: "destructive",
               size: "sm",
-              onClick: B,
+              onClick: U,
               children: [
                 /* @__PURE__ */ e(we, { className: "mr-1 h-4 w-4" }),
                 "Delete"
@@ -2617,7 +2617,7 @@ function Ui() {
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "ghost",
               size: "sm",
@@ -2635,28 +2635,28 @@ function Ui() {
           /* @__PURE__ */ e(
             xe,
             {
-              checked: v,
-              onCheckedChange: (b) => g(b === !0),
+              checked: b,
+              onCheckedChange: (f) => g(f === !0),
               "aria-label": "Select all media"
             }
           ),
-          /* @__PURE__ */ e("span", { className: "text-xs text-muted-foreground", children: v ? `${h.length} selected` : "Select all" })
+          /* @__PURE__ */ e("span", { className: "text-xs text-muted-foreground", children: b ? `${h.length} selected` : "Select all" })
         ] }),
-        /* @__PURE__ */ e("div", { className: "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6", children: s.data.map((b) => {
-          const I = b.mimeType.startsWith("image/"), R = y.has(b.id);
+        /* @__PURE__ */ e("div", { className: "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6", children: s.data.map((f) => {
+          const I = f.mimeType.startsWith("image/"), B = y.has(f.id);
           return /* @__PURE__ */ a(
             "div",
             {
               className: "group relative overflow-hidden rounded-sm border bg-muted/30",
               children: [
                 /* @__PURE__ */ a("div", { className: "aspect-square", children: [
-                  I && !R ? /* @__PURE__ */ e(
+                  I && !B ? /* @__PURE__ */ e(
                     "img",
                     {
-                      src: b.thumbnailUrl || b.url,
-                      alt: b.alt || b.name,
+                      src: f.thumbnailUrl || f.url,
+                      alt: f.alt || f.name,
                       className: "h-full w-full object-cover",
-                      onError: () => _((H) => new Set(H).add(b.id))
+                      onError: () => _((V) => new Set(V).add(f.id))
                     }
                   ) : /* @__PURE__ */ e("div", { className: "flex h-full items-center justify-center bg-muted", children: /* @__PURE__ */ e(Nt, { className: "h-10 w-10 text-muted-foreground/50" }) }),
                   /* @__PURE__ */ e(
@@ -2664,15 +2664,15 @@ function Ui() {
                     {
                       className: S(
                         "absolute top-1.5 left-1.5 z-10",
-                        !f && "opacity-0 group-hover:opacity-100 transition-opacity"
+                        !p && "opacity-0 group-hover:opacity-100 transition-opacity"
                       ),
-                      onClick: (H) => H.stopPropagation(),
+                      onClick: (V) => V.stopPropagation(),
                       children: /* @__PURE__ */ e(
                         xe,
                         {
-                          checked: h.includes(b.id),
-                          onCheckedChange: (H) => x(b.id, H === !0),
-                          "aria-label": `Select ${b.name}`
+                          checked: h.includes(f.id),
+                          onCheckedChange: (V) => N(f.id, V === !0),
+                          "aria-label": `Select ${f.name}`
                         }
                       )
                     }
@@ -2680,24 +2680,24 @@ function Ui() {
                 ] }),
                 /* @__PURE__ */ e("div", { className: "absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100", children: /* @__PURE__ */ a("div", { className: "flex items-center justify-end gap-1 p-2", children: [
                   /* @__PURE__ */ e(
-                    N,
+                    x,
                     {
                       type: "button",
                       size: "icon-sm",
                       variant: "ghost",
-                      onClick: () => k(b.url),
+                      onClick: () => k(f.url),
                       className: "h-8 w-8 text-white hover:bg-white/20",
                       "aria-label": "Copy URL",
                       children: /* @__PURE__ */ e(ya, { className: "h-3.5 w-3.5" })
                     }
                   ),
                   /* @__PURE__ */ e(
-                    N,
+                    x,
                     {
                       type: "button",
                       size: "icon-sm",
                       variant: "ghost",
-                      onClick: () => M(b.id, b.name),
+                      onClick: () => R(f.id, f.name),
                       className: "h-8 w-8 text-white hover:bg-destructive/80",
                       "aria-label": "Delete",
                       children: /* @__PURE__ */ e(we, { className: "h-3.5 w-3.5" })
@@ -2705,28 +2705,28 @@ function Ui() {
                   )
                 ] }) }),
                 /* @__PURE__ */ a("div", { className: "px-2.5 py-2", children: [
-                  /* @__PURE__ */ e("p", { className: "truncate text-xs font-medium", children: b.name }),
+                  /* @__PURE__ */ e("p", { className: "truncate text-xs font-medium", children: f.name }),
                   /* @__PURE__ */ a("p", { className: "text-[11px] text-muted-foreground", children: [
-                    b.mimeType,
+                    f.mimeType,
                     " · ",
-                    C(b.size),
-                    b.width && b.height && ` · ${b.width}×${b.height}`
+                    C(f.size),
+                    f.width && f.height && ` · ${f.width}×${f.height}`
                   ] })
                 ] })
               ]
             },
-            b.id
+            f.id
           );
         }) })
-      ] }) : /* @__PURE__ */ e("div", { className: "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6", children: Array.from({ length: 12 }).map((b, I) => /* @__PURE__ */ e(Cn, { className: "aspect-square rounded-sm" }, I)) }),
+      ] }) : /* @__PURE__ */ e("div", { className: "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6", children: Array.from({ length: 12 }).map((f, I) => /* @__PURE__ */ e(Cn, { className: "aspect-square rounded-sm" }, I)) }),
       s && s.meta.lastPage > 1 && /* @__PURE__ */ a("div", { className: "flex items-center justify-center gap-3 pt-2", children: [
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             variant: "outline",
             size: "sm",
-            disabled: m <= 1,
-            onClick: () => p((b) => Math.max(1, b - 1)),
+            disabled: u <= 1,
+            onClick: () => m((f) => Math.max(1, f - 1)),
             children: "Previous"
           }
         ),
@@ -2737,12 +2737,12 @@ function Ui() {
           s.meta.lastPage
         ] }),
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             variant: "outline",
             size: "sm",
-            disabled: m >= s.meta.lastPage,
-            onClick: () => p((b) => b + 1),
+            disabled: u >= s.meta.lastPage,
+            onClick: () => m((f) => f + 1),
             children: "Next"
           }
         )
@@ -2755,62 +2755,62 @@ const Fi = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   AdminMediaPage: Ui
 }, Symbol.toStringTag, { value: "Module" }));
 function Hi() {
-  const [t, n] = u(null), [s, l] = u(null), [i, r] = u([]), [o, c] = u(!1), m = dt(), p = Qe(), { type: y = "post" } = Ve(), [_, h] = u(
-    new URLSearchParams(m.search).get("search") ?? ""
-  ), [D, z] = u(
-    new URLSearchParams(m.search).get("sortBy") ?? ""
-  ), [$, M] = u(
-    new URLSearchParams(m.search).get("sortOrder") ?? ""
+  const [t, n] = d(null), [s, l] = d(null), [i, r] = d([]), [o, c] = d(!1), u = dt(), m = Qe(), { type: y = "post" } = Ve(), [_, h] = d(
+    new URLSearchParams(u.search).get("search") ?? ""
+  ), [E, z] = d(
+    new URLSearchParams(u.search).get("sortBy") ?? ""
+  ), [O, R] = d(
+    new URLSearchParams(u.search).get("sortOrder") ?? ""
   );
-  async function v() {
+  async function b() {
     l(null);
     const A = new URLSearchParams();
-    _ && A.set("search", _), D && A.set("sortBy", D), $ && A.set("sortOrder", $), A.set("type", y);
-    const d = A.toString() ? `?${A.toString()}` : "", G = await ue(`/api/admin/categories${d}`);
-    n(G), r([]);
+    _ && A.set("search", _), E && A.set("sortBy", E), O && A.set("sortOrder", O), A.set("type", y);
+    const v = A.toString() ? `?${A.toString()}` : "", Q = await ue(`/api/admin/categories${v}`);
+    n(Q), r([]);
   }
-  ee(() => {
-    v().catch((A) => l(A.message));
-  }, [m.search, y]);
-  function f() {
-    p(Ce(`/admin/categories/${y}`, { search: _, sortBy: D, sortOrder: $ }));
+  te(() => {
+    b().catch((A) => l(A.message));
+  }, [u.search, y]);
+  function p() {
+    m(Ce(`/admin/categories/${y}`, { search: _, sortBy: E, sortOrder: O }));
   }
   function g(A) {
-    const d = D === A && $ === "asc" ? "desc" : "asc";
-    z(A), M(d), p(Ce(`/admin/categories/${y}`, { search: _, sortBy: A, sortOrder: d }));
+    const v = E === A && O === "asc" ? "desc" : "asc";
+    z(A), R(v), m(Ce(`/admin/categories/${y}`, { search: _, sortBy: A, sortOrder: v }));
   }
-  function x(A) {
-    A.key === "Enter" && (A.preventDefault(), f());
+  function N(A) {
+    A.key === "Enter" && (A.preventDefault(), p());
   }
-  const P = $e(!0);
-  ee(() => {
+  const P = Re(!0);
+  te(() => {
     if (P.current) {
       P.current = !1;
       return;
     }
     const A = setTimeout(() => {
-      f();
+      p();
     }, 400);
     return () => clearTimeout(A);
   }, [_]);
-  const B = q((A) => {
-    t && r(A ? t.map((d) => d.id) : []);
-  }, [t]), k = q((A, d) => {
+  const U = q((A) => {
+    t && r(A ? t.map((v) => v.id) : []);
+  }, [t]), k = q((A, v) => {
     r(
-      (G) => d ? [...G, A] : G.filter((ie) => ie !== A)
+      (Q) => v ? [...Q, A] : Q.filter((T) => T !== A)
     );
-  }, []), C = t?.length > 0 && i.length === t.length, b = i.length > 0;
-  async function I(A, d = {}) {
+  }, []), C = t?.length > 0 && i.length === t.length, f = i.length > 0;
+  async function I(A, v = {}) {
     if (i.length === 0) return;
     c(!0);
-    const G = await Le(A, { ids: i, ...d });
-    c(!1), G.success ? (W.success("update", "category"), await v()) : W.error(G.message);
+    const Q = await Le(A, { ids: i, ...v });
+    c(!1), Q.success ? (W.success("update", "category"), await b()) : W.error(Q.message);
   }
-  const R = q(async () => {
+  const B = q(async () => {
     i.length !== 0 && confirm(`Delete ${i.length} category(ies)? This action cannot be undone.`) && await I("/api/admin/categories/bulk/delete");
-  }, [i]), H = q(async () => {
+  }, [i]), V = q(async () => {
     await I("/api/admin/categories/bulk/duplicate");
-  }, [i]), L = q(async (A) => {
+  }, [i]), M = q(async (A) => {
     await I("/api/admin/categories/bulk/status", { status: A });
   }, [i]);
   if (s) return /* @__PURE__ */ e("main", { className: "p-6", children: /* @__PURE__ */ a("p", { className: "text-destructive", children: [
@@ -2825,12 +2825,12 @@ function Hi() {
       {
         title: "Categories",
         search: /* @__PURE__ */ e(
-          V,
+          G,
           {
             placeholder: "Search by name...",
             value: _,
             onChange: (A) => h(A.target.value),
-            onKeyDown: x,
+            onKeyDown: N,
             className: "max-w-xs"
           }
         ),
@@ -2838,37 +2838,37 @@ function Hi() {
       }
     ),
     /* @__PURE__ */ a("div", { className: "p-4 space-y-4", children: [
-      /* @__PURE__ */ e("div", { className: "flex flex-wrap items-center gap-3", children: /* @__PURE__ */ e(N, { type: "button", variant: "secondary", size: "sm", onClick: f, children: "Filter" }) }),
-      b && /* @__PURE__ */ a("div", { className: "flex items-center gap-2 rounded-sm border bg-muted/30 px-4 py-2", children: [
+      /* @__PURE__ */ e("div", { className: "flex flex-wrap items-center gap-3", children: /* @__PURE__ */ e(x, { type: "button", variant: "secondary", size: "sm", onClick: p, children: "Filter" }) }),
+      f && /* @__PURE__ */ a("div", { className: "flex items-center gap-2 rounded-sm border bg-muted/30 px-4 py-2", children: [
         /* @__PURE__ */ a("span", { className: "text-sm text-muted-foreground", children: [
           i.length,
           " selected"
         ] }),
         /* @__PURE__ */ a("div", { className: "ml-auto flex items-center gap-2", children: [
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
-              onClick: H,
+              onClick: V,
               disabled: o,
               children: "Duplicate"
             }
           ),
-          /* @__PURE__ */ e(N, { variant: "outline", size: "sm", onClick: () => L("published"), disabled: o, children: "Publish" }),
-          /* @__PURE__ */ e(N, { variant: "outline", size: "sm", onClick: () => L("draft"), disabled: o, children: "Unpublish" }),
+          /* @__PURE__ */ e(x, { variant: "outline", size: "sm", onClick: () => M("published"), disabled: o, children: "Publish" }),
+          /* @__PURE__ */ e(x, { variant: "outline", size: "sm", onClick: () => M("draft"), disabled: o, children: "Unpublish" }),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "destructive",
               size: "sm",
-              onClick: R,
+              onClick: B,
               disabled: o,
               children: "Delete"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "ghost",
               size: "sm",
@@ -2885,7 +2885,7 @@ function Hi() {
             xe,
             {
               checked: C,
-              onCheckedChange: (A) => B(A === !0),
+              onCheckedChange: (A) => U(A === !0),
               "aria-label": "Select all categories"
             }
           ) }),
@@ -2897,7 +2897,7 @@ function Hi() {
               className: "inline-flex items-center gap-1 hover:text-foreground",
               children: [
                 "Name",
-                D === "name" ? $ === "asc" ? /* @__PURE__ */ e(We, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Je, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Ye, { className: "h-3.5 w-3.5 text-muted-foreground/50" })
+                E === "name" ? O === "asc" ? /* @__PURE__ */ e(We, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Je, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Ye, { className: "h-3.5 w-3.5 text-muted-foreground/50" })
               ]
             }
           ) }),
@@ -2911,24 +2911,24 @@ function Hi() {
               className: "inline-flex items-center gap-1 hover:text-foreground",
               children: [
                 "Created",
-                D === "createdAt" ? $ === "asc" ? /* @__PURE__ */ e(We, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Je, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Ye, { className: "h-3.5 w-3.5 text-muted-foreground/50" })
+                E === "createdAt" ? O === "asc" ? /* @__PURE__ */ e(We, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Je, { className: "h-3.5 w-3.5" }) : /* @__PURE__ */ e(Ye, { className: "h-3.5 w-3.5 text-muted-foreground/50" })
               ]
             }
           ) })
         ] }) }),
-        /* @__PURE__ */ e(Tt, { children: w.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(ne, { colSpan: 5, className: "px-4 py-8 text-center text-muted-foreground", children: "No categories found." }) }) : w.map((A) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3", children: /* @__PURE__ */ e(
+        /* @__PURE__ */ e(Tt, { children: w.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(se, { colSpan: 5, className: "px-4 py-8 text-center text-muted-foreground", children: "No categories found." }) }) : w.map((A) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
+          /* @__PURE__ */ e(se, { className: "px-4 py-3", children: /* @__PURE__ */ e(
             xe,
             {
               checked: i.includes(A.id),
-              onCheckedChange: (d) => k(A.id, d === !0),
+              onCheckedChange: (v) => k(A.id, v === !0),
               "aria-label": `Select ${A.name}`
             }
           ) }),
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ e(fe, { to: `/admin/categories/${A.id}/edit`, className: "underline", children: A.name }) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3 text-muted-foreground", children: A.slug }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(Ue, { variant: A.status === "published" ? "secondary" : "outline", children: A.status === "published" ? "Published" : "Unpublished" }) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(A.createdAt * 1e3).toLocaleDateString() })
+          /* @__PURE__ */ e(se, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ e(fe, { to: `/admin/categories/${A.id}/edit`, className: "underline", children: A.name }) }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3 text-muted-foreground", children: A.slug }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(Ue, { variant: A.status === "published" ? "secondary" : "outline", children: A.status === "published" ? "Published" : "Unpublished" }) }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(A.createdAt * 1e3).toLocaleDateString() })
         ] }, A.id)) })
       ] })
     ] })
@@ -2990,7 +2990,7 @@ function mt({
             {
               "data-slot": "dialog-close",
               render: /* @__PURE__ */ e(
-                N,
+                x,
                 {
                   variant: "ghost",
                   className: "absolute top-2 right-2",
@@ -3038,7 +3038,7 @@ function Ct({
       ...l,
       children: [
         s,
-        n && /* @__PURE__ */ e(ve.Close, { render: /* @__PURE__ */ e(N, { variant: "outline" }), children: "Close" })
+        n && /* @__PURE__ */ e(ve.Close, { render: /* @__PURE__ */ e(x, { variant: "outline" }), children: "Close" })
       ]
     }
   );
@@ -3154,12 +3154,12 @@ function Fe({
   maxFiles: r = 10,
   trigger: o
 }) {
-  const [c, m] = u(!1);
-  return /* @__PURE__ */ a(ut, { open: c, onOpenChange: m, children: [
+  const [c, u] = d(!1);
+  return /* @__PURE__ */ a(ut, { open: c, onOpenChange: u, children: [
     /* @__PURE__ */ e(
       Mt,
       {
-        render: o || /* @__PURE__ */ a(N, { type: "button", variant: "outline", className: "gap-2", children: [
+        render: o || /* @__PURE__ */ a(x, { type: "button", variant: "outline", className: "gap-2", children: [
           /* @__PURE__ */ e(Pt, { className: "h-4 w-4" }),
           t ? "Change Media" : "Select Media"
         ] })
@@ -3169,9 +3169,9 @@ function Fe({
       Ji,
       {
         open: c,
-        onOpenChange: m,
-        onSelect: (p) => {
-          i && s?.(p), p.length > 0 && n(p[0]), m(!1);
+        onOpenChange: u,
+        onSelect: (m) => {
+          i && s?.(m), m.length > 0 && n(m[0]), u(!1);
         },
         accept: l,
         multiple: i,
@@ -3188,47 +3188,47 @@ function Ji({
   multiple: i = !1,
   maxFiles: r = 10
 }) {
-  const [o, c] = u([]), [m, p] = u(!1), [y, _] = u(""), [h, D] = u(""), [z, $] = u(l ?? "all"), [M, v] = u(1), [f, g] = u(1), [x, P] = u([]), [B, k] = u("library");
-  ee(() => {
-    t && b();
-  }, [t, h, z, M]);
-  const C = $e(!0);
-  ee(() => {
+  const [o, c] = d([]), [u, m] = d(!1), [y, _] = d(""), [h, E] = d(""), [z, O] = d(l ?? "all"), [R, b] = d(1), [p, g] = d(1), [N, P] = d([]), [U, k] = d("library");
+  te(() => {
+    t && f();
+  }, [t, h, z, R]);
+  const C = Re(!0);
+  te(() => {
     if (C.current) {
       C.current = !1;
       return;
     }
-    const L = setTimeout(() => {
-      v(1), D(y);
+    const M = setTimeout(() => {
+      b(1), E(y);
     }, 400);
-    return () => clearTimeout(L);
-  }, [y]), ee(() => {
-    t && (P([]), k("library"), v(1));
+    return () => clearTimeout(M);
+  }, [y]), te(() => {
+    t && (P([]), k("library"), b(1));
   }, [t]);
-  async function b() {
-    p(!0);
+  async function f() {
+    m(!0);
     try {
-      const L = new URLSearchParams();
-      h && L.set("search", h), L.set("page", String(M)), L.set("perPage", "24"), z && z !== "all" && L.set("mimeType", z);
-      const w = await ue(`/api/admin/media?${L.toString()}`);
+      const M = new URLSearchParams();
+      h && M.set("search", h), M.set("page", String(R)), M.set("perPage", "24"), z && z !== "all" && M.set("mimeType", z);
+      const w = await ue(`/api/admin/media?${M.toString()}`);
       c(w.data), g(w.meta.lastPage ?? 1);
     } catch {
       c([]), g(1);
     }
-    p(!1);
+    m(!1);
   }
-  function I(L) {
-    P(i ? (w) => w.find((d) => d.id === L.id) ? w.filter((d) => d.id !== L.id) : w.length >= r ? w : [...w, L] : [L]);
+  function I(M) {
+    P(i ? (w) => w.find((v) => v.id === M.id) ? w.filter((v) => v.id !== M.id) : w.length >= r ? w : [...w, M] : [M]);
   }
-  function R() {
-    s(x);
+  function B() {
+    s(N);
   }
-  function H(L) {
-    P(i ? (w) => w.length >= r ? w : [...w, L] : [L]), k("library"), b();
+  function V(M) {
+    P(i ? (w) => w.length >= r ? w : [...w, M] : [M]), k("library"), f();
   }
   return /* @__PURE__ */ a(mt, { className: "sm:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col", children: [
     /* @__PURE__ */ e(ht, { children: /* @__PURE__ */ e(gt, { children: "Select Media" }) }),
-    /* @__PURE__ */ a(Ut, { value: B, onValueChange: k, className: "flex-1 overflow-hidden flex flex-col", children: [
+    /* @__PURE__ */ a(Ut, { value: U, onValueChange: k, className: "flex-1 overflow-hidden flex flex-col", children: [
       /* @__PURE__ */ a(Ft, { children: [
         /* @__PURE__ */ e(qe, { value: "library", children: "Media Library" }),
         /* @__PURE__ */ e(qe, { value: "upload", children: "Upload" })
@@ -3238,66 +3238,66 @@ function Ji({
           /* @__PURE__ */ a("div", { className: "relative flex-1", children: [
             /* @__PURE__ */ e(gn, { className: "absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" }),
             /* @__PURE__ */ e(
-              V,
+              G,
               {
                 value: y,
-                onChange: (L) => _(L.target.value),
+                onChange: (M) => _(M.target.value),
                 placeholder: "Search…",
                 className: "pl-8 h-8"
               }
             )
           ] }),
-          !l && /* @__PURE__ */ a(Ie, { value: z, onValueChange: (L) => {
-            L && ($(L), v(1));
+          !l && /* @__PURE__ */ a(Ie, { value: z, onValueChange: (M) => {
+            M && (O(M), b(1));
           }, children: [
             /* @__PURE__ */ e(De, { className: "w-[120px] h-8", children: /* @__PURE__ */ e(Te, { placeholder: "All types" }) }),
             /* @__PURE__ */ a(Ee, { children: [
-              /* @__PURE__ */ e(se, { value: "all", children: "All types" }),
-              /* @__PURE__ */ e(se, { value: "image/*", children: "Images" }),
-              /* @__PURE__ */ e(se, { value: "video/mp4", children: "Video" }),
-              /* @__PURE__ */ e(se, { value: "application/pdf", children: "PDF" })
+              /* @__PURE__ */ e(re, { value: "all", children: "All types" }),
+              /* @__PURE__ */ e(re, { value: "image/*", children: "Images" }),
+              /* @__PURE__ */ e(re, { value: "video/mp4", children: "Video" }),
+              /* @__PURE__ */ e(re, { value: "application/pdf", children: "PDF" })
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ e("div", { className: "flex-1 overflow-y-auto", children: m ? /* @__PURE__ */ e("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ e("div", { className: "grid w-full grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6", children: Array.from({ length: 6 }).map((L, w) => /* @__PURE__ */ e(Cn, { className: "aspect-square w-full rounded-sm" }, w)) }) }) : o.length === 0 ? /* @__PURE__ */ a("div", { className: "flex flex-col items-center justify-center py-12", children: [
+        /* @__PURE__ */ e("div", { className: "flex-1 overflow-y-auto", children: u ? /* @__PURE__ */ e("div", { className: "flex items-center justify-center py-12", children: /* @__PURE__ */ e("div", { className: "grid w-full grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6", children: Array.from({ length: 6 }).map((M, w) => /* @__PURE__ */ e(Cn, { className: "aspect-square w-full rounded-sm" }, w)) }) }) : o.length === 0 ? /* @__PURE__ */ a("div", { className: "flex flex-col items-center justify-center py-12", children: [
           /* @__PURE__ */ e(Nt, { className: "h-10 w-10 text-muted-foreground/50" }),
           /* @__PURE__ */ e("p", { className: "mt-2 text-sm text-muted-foreground", children: "No media found." })
-        ] }) : /* @__PURE__ */ e("div", { className: "grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6", children: o.map((L) => {
-          const w = x.some((A) => A.id === L.id);
+        ] }) : /* @__PURE__ */ e("div", { className: "grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6", children: o.map((M) => {
+          const w = N.some((A) => A.id === M.id);
           return /* @__PURE__ */ e(
             Yi,
             {
-              item: L,
+              item: M,
               isSelected: w,
-              onClick: () => I(L)
+              onClick: () => I(M)
             },
-            L.id
+            M.id
           );
         }) }) }),
-        f > 1 && /* @__PURE__ */ a("div", { className: "flex items-center justify-center gap-2 pt-2 border-t mt-2", children: [
+        p > 1 && /* @__PURE__ */ a("div", { className: "flex items-center justify-center gap-2 pt-2 border-t mt-2", children: [
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
-              disabled: M <= 1,
-              onClick: () => v((L) => Math.max(1, L - 1)),
+              disabled: R <= 1,
+              onClick: () => b((M) => Math.max(1, M - 1)),
               children: "Previous"
             }
           ),
           /* @__PURE__ */ a("span", { className: "text-xs text-muted-foreground", children: [
             "Page ",
-            M,
+            R,
             " of ",
-            f
+            p
           ] }),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
-              disabled: M >= f,
-              onClick: () => v((L) => L + 1),
+              disabled: R >= p,
+              onClick: () => b((M) => M + 1),
               children: "Next"
             }
           )
@@ -3306,24 +3306,24 @@ function Ji({
       /* @__PURE__ */ e(Ke, { value: "upload", className: "mt-3", children: /* @__PURE__ */ e(
         _n,
         {
-          onUploadComplete: H,
+          onUploadComplete: V,
           accept: l
         }
       ) })
     ] }),
-    x.length > 0 && /* @__PURE__ */ a("div", { className: "border-t pt-3 mt-2", children: [
-      !i && x.length === 1 && /* @__PURE__ */ e(Xi, { item: x[0] }),
+    N.length > 0 && /* @__PURE__ */ a("div", { className: "border-t pt-3 mt-2", children: [
+      !i && N.length === 1 && /* @__PURE__ */ e(Xi, { item: N[0] }),
       i && /* @__PURE__ */ a("div", { className: "flex items-center gap-2 flex-wrap", children: [
-        x.map((L) => /* @__PURE__ */ a(
+        N.map((M) => /* @__PURE__ */ a(
           "div",
           {
             className: "relative h-10 w-10 rounded-sm border overflow-hidden",
             children: [
-              L.mimeType.startsWith("image/") ? /* @__PURE__ */ e(
+              M.mimeType.startsWith("image/") ? /* @__PURE__ */ e(
                 "img",
                 {
-                  src: L.thumbnailUrl || L.url,
-                  alt: L.alt || L.name,
+                  src: M.thumbnailUrl || M.url,
+                  alt: M.alt || M.name,
                   className: "object-cover h-full w-full"
                 }
               ) : /* @__PURE__ */ e("div", { className: "flex h-full items-center justify-center bg-muted", children: /* @__PURE__ */ e(Nt, { className: "h-4 w-4 text-muted-foreground" }) }),
@@ -3332,7 +3332,7 @@ function Ji({
                 {
                   type: "button",
                   onClick: () => P(
-                    (w) => w.filter((A) => A.id !== L.id)
+                    (w) => w.filter((A) => A.id !== M.id)
                   ),
                   className: "absolute -top-1 -right-1 rounded-sm bg-destructive p-0.5 text-destructive-foreground",
                   children: /* @__PURE__ */ e(Vt, { className: "h-2.5 w-2.5" })
@@ -3340,21 +3340,21 @@ function Ji({
               )
             ]
           },
-          L.id
+          M.id
         )),
         /* @__PURE__ */ a("span", { className: "text-xs text-muted-foreground", children: [
-          x.length,
+          N.length,
           " selected",
           r && ` (max ${r})`
         ] })
       ] })
     ] }),
     /* @__PURE__ */ e(Ct, { children: /* @__PURE__ */ e(
-      N,
+      x,
       {
-        onClick: R,
-        disabled: x.length === 0,
-        children: i ? `Insert Selected (${x.length})` : "Insert"
+        onClick: B,
+        disabled: N.length === 0,
+        children: i ? `Insert Selected (${N.length})` : "Insert"
       }
     ) })
   ] });
@@ -3364,7 +3364,7 @@ function Yi({
   isSelected: n,
   onClick: s
 }) {
-  const [l, i] = u(!1), r = t.mimeType.startsWith("image/");
+  const [l, i] = d(!1), r = t.mimeType.startsWith("image/");
   return /* @__PURE__ */ a(
     "button",
     {
@@ -3425,54 +3425,54 @@ function Zi({
   onDelete: i,
   onKeyAction: r
 }) {
-  const { session: o } = Ze(), [c, m] = u(!1), [p, y] = u(t.title), [_, h] = u(t.url), [D, z] = u(t.cssClass ?? ""), [$, M] = u(t.target ?? ""), [v, f] = u(t.image ?? ""), [g, x] = u(t.status), P = o?.permissions.includes("menus.publish") ?? !1, B = o?.permissions.includes("menus.unpublish") ?? !1, k = g === "published" ? B : P, {
+  const { session: o } = Ze(), [c, u] = d(!1), [m, y] = d(t.title), [_, h] = d(t.url), [E, z] = d(t.cssClass ?? ""), [O, R] = d(t.target ?? ""), [b, p] = d(t.image ?? ""), [g, N] = d(t.status), P = o?.permissions.includes("menus.publish") ?? !1, U = o?.permissions.includes("menus.unpublish") ?? !1, k = g === "published" ? U : P, {
     attributes: C,
-    listeners: b,
+    listeners: f,
     setNodeRef: I,
-    setActivatorNodeRef: R,
-    transform: H,
-    transition: L,
+    setActivatorNodeRef: B,
+    transform: V,
+    transition: M,
     isDragging: w
   } = qt({ id: t.id }), A = {
-    transform: Wt.Transform.toString(H),
-    transition: L,
+    transform: Wt.Transform.toString(V),
+    transition: M,
     marginLeft: `${t.depth * 30}px`
-  }, d = q(() => {
+  }, v = q(() => {
     l(t.id, {
-      title: p,
+      title: m,
       url: _,
-      cssClass: D,
-      target: $,
-      image: v,
+      cssClass: E,
+      target: O,
+      image: b,
       status: g
-    }), m(!1);
-  }, [t.id, p, _, D, $, v, g, l]), G = q(() => {
-    y(t.title), h(t.url), z(t.cssClass ?? ""), M(t.target ?? ""), f(t.image ?? ""), x(t.status), m(!1);
-  }, [t]), ie = q(() => {
-    y(t.title), h(t.url), z(t.cssClass ?? ""), M(t.target ?? ""), f(t.image ?? ""), x(t.status), m(!0);
-  }, [t]), j = q(
-    (O) => {
+    }), u(!1);
+  }, [t.id, m, _, E, O, b, g, l]), Q = q(() => {
+    y(t.title), h(t.url), z(t.cssClass ?? ""), R(t.target ?? ""), p(t.image ?? ""), N(t.status), u(!1);
+  }, [t]), T = q(() => {
+    y(t.title), h(t.url), z(t.cssClass ?? ""), R(t.target ?? ""), p(t.image ?? ""), N(t.status), u(!0);
+  }, [t]), $ = q(
+    (j) => {
       if (!c)
-        switch (O.key) {
+        switch (j.key) {
           case "ArrowUp":
-            O.preventDefault(), r(t.id, "moveUp");
+            j.preventDefault(), r(t.id, "moveUp");
             break;
           case "ArrowDown":
-            O.preventDefault(), r(t.id, "moveDown");
+            j.preventDefault(), r(t.id, "moveDown");
             break;
           case "Tab":
-            O.preventDefault(), O.shiftKey ? r(t.id, "outdent") : r(t.id, "indent");
+            j.preventDefault(), j.shiftKey ? r(t.id, "outdent") : r(t.id, "indent");
             break;
           case "Enter":
-            O.preventDefault(), ie();
+            j.preventDefault(), T();
             break;
           case "Delete":
-            O.preventDefault(), confirm("Delete this menu item?") && i(t.id);
+            j.preventDefault(), confirm("Delete this menu item?") && i(t.id);
             break;
         }
     },
-    [c, t.id, r, ie, i]
-  ), Y = t.depth >= n - 1;
+    [c, t.id, r, T, i]
+  ), J = t.depth >= n - 1;
   return /* @__PURE__ */ a(
     "div",
     {
@@ -3482,21 +3482,21 @@ function Zi({
       className: S(
         "rounded-sm border bg-background transition-shadow",
         w && "opacity-50 shadow-lg",
-        Y && "border-amber-300/50"
+        J && "border-amber-300/50"
       ),
       role: "listitem",
       tabIndex: 0,
-      onKeyDown: j,
+      onKeyDown: $,
       "aria-label": `Menu item: ${t.title}`,
       children: [
         /* @__PURE__ */ a("div", { className: "flex items-center gap-2 p-3", children: [
           /* @__PURE__ */ e(
             "button",
             {
-              ref: R,
+              ref: B,
               className: "cursor-grab touch-none text-muted-foreground hover:text-foreground",
               "aria-label": "Drag to reorder",
-              ...b,
+              ...f,
               children: /* @__PURE__ */ e(Gt, { className: "h-4 w-4" })
             }
           ),
@@ -3515,21 +3515,21 @@ function Zi({
             /* @__PURE__ */ e("span", { className: "ml-2 text-xs text-muted-foreground truncate", children: t.url.length > 40 ? t.url.slice(0, 40) + "…" : t.url }),
             /* @__PURE__ */ e(Ue, { variant: t.status === "published" ? "secondary" : "outline", className: "ml-2", children: t.status === "published" ? "Published" : "Unpublished" })
           ] }),
-          Y && /* @__PURE__ */ e("span", { className: "text-xs text-amber-600", title: "Maximum depth reached", children: "Max depth" }),
+          J && /* @__PURE__ */ e("span", { className: "text-xs text-amber-600", title: "Maximum depth reached", children: "Max depth" }),
           /* @__PURE__ */ a("div", { className: "flex items-center gap-1", children: [
             /* @__PURE__ */ e(
-              N,
+              x,
               {
                 variant: "ghost",
                 size: "icon",
                 className: "h-7 w-7",
-                onClick: ie,
+                onClick: T,
                 "aria-label": "Edit menu item",
                 children: /* @__PURE__ */ e(pn, { className: "h-3.5 w-3.5" })
               }
             ),
             /* @__PURE__ */ e(
-              N,
+              x,
               {
                 variant: "ghost",
                 size: "icon",
@@ -3546,71 +3546,85 @@ function Zi({
         c && /* @__PURE__ */ a("div", { className: "border-t p-3 space-y-3", children: [
           /* @__PURE__ */ a("div", { className: "grid grid-cols-2 gap-3", children: [
             /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-              /* @__PURE__ */ e(E, { htmlFor: `edit-title-${t.id}`, children: "Title" }),
+              /* @__PURE__ */ e(L, { htmlFor: `edit-title-${t.id}`, children: "Title" }),
               /* @__PURE__ */ e(
-                V,
+                G,
                 {
                   id: `edit-title-${t.id}`,
-                  value: p,
-                  onChange: (O) => y(O.target.value),
+                  value: m,
+                  onChange: (j) => y(j.target.value),
                   placeholder: "Title"
                 }
               )
             ] }),
             /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-              /* @__PURE__ */ e(E, { children: "Image" }),
-              /* @__PURE__ */ e(Fe, { value: v || null, onChange: (O) => f(O?.url ?? ""), accept: "image/*" })
+              /* @__PURE__ */ e(L, { children: "Image" }),
+              /* @__PURE__ */ a("div", { className: "flex items-center gap-2", children: [
+                b ? /* @__PURE__ */ e("div", { className: "relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted", children: /* @__PURE__ */ e("img", { src: b, alt: "", className: "h-full w-full object-cover" }) }) : null,
+                /* @__PURE__ */ e(Fe, { value: b || null, onChange: (j) => p(j?.url ?? ""), accept: "image/*" }),
+                b ? /* @__PURE__ */ e(
+                  x,
+                  {
+                    type: "button",
+                    variant: "outline",
+                    "aria-label": "Remove image",
+                    className: "shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive",
+                    onClick: () => p(""),
+                    children: "Remove"
+                  }
+                ) : null
+              ] })
             ] }),
             /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-              /* @__PURE__ */ e(E, { htmlFor: `edit-url-${t.id}`, children: "URL" }),
+              /* @__PURE__ */ e(L, { htmlFor: `edit-url-${t.id}`, children: "URL" }),
               /* @__PURE__ */ e(
-                V,
+                G,
                 {
                   id: `edit-url-${t.id}`,
                   value: _,
-                  onChange: (O) => h(O.target.value),
+                  onChange: (j) => h(j.target.value),
                   placeholder: "/url"
                 }
               )
             ] }),
             /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-              /* @__PURE__ */ e(E, { htmlFor: `edit-css-${t.id}`, children: "CSS Class" }),
+              /* @__PURE__ */ e(L, { htmlFor: `edit-css-${t.id}`, children: "CSS Class" }),
               /* @__PURE__ */ e(
-                V,
+                G,
                 {
                   id: `edit-css-${t.id}`,
-                  value: D,
-                  onChange: (O) => z(O.target.value),
+                  value: E,
+                  onChange: (j) => z(j.target.value),
                   placeholder: "Optional CSS class"
                 }
               )
             ] }),
             /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-              /* @__PURE__ */ e(E, { htmlFor: `edit-target-${t.id}`, children: "Target" }),
+              /* @__PURE__ */ e(L, { htmlFor: `edit-target-${t.id}`, children: "Target" }),
               /* @__PURE__ */ e(
-                V,
+                G,
                 {
                   id: `edit-target-${t.id}`,
-                  value: $,
-                  onChange: (O) => M(O.target.value),
+                  value: O,
+                  onChange: (j) => R(j.target.value),
                   placeholder: "_blank, _self, etc."
                 }
               )
             ] }),
             /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-              /* @__PURE__ */ e(E, { htmlFor: `edit-status-${t.id}`, children: "Status" }),
-              /* @__PURE__ */ a("select", { id: `edit-status-${t.id}`, value: g, disabled: !k, onChange: (O) => x(O.target.value), className: "h-9 w-full rounded-sm border bg-background px-3 text-sm disabled:opacity-60", children: [
+              /* @__PURE__ */ e(L, { htmlFor: `edit-status-${t.id}`, children: "Status" }),
+              /* @__PURE__ */ a("select", { id: `edit-status-${t.id}`, value: g, disabled: !k, onChange: (j) => N(j.target.value), className: "h-9 w-full rounded-sm border bg-background px-3 text-sm disabled:opacity-60", children: [
                 /* @__PURE__ */ e("option", { value: "published", disabled: !P && g !== "published", children: "Published" }),
-                /* @__PURE__ */ e("option", { value: "draft", disabled: !B && g !== "draft", children: "Unpublished" })
+                /* @__PURE__ */ e("option", { value: "draft", disabled: !U && g !== "draft", children: "Unpublished" })
               ] })
             ] })
           ] }),
           /* @__PURE__ */ a("div", { className: "flex gap-2", children: [
-            /* @__PURE__ */ a(N, { size: "sm", onClick: d, children: [
+            /* @__PURE__ */ a(x, { size: "sm", onClick: v, children: [
               /* @__PURE__ */ e(Ht, { className: "h-3.5 w-3.5 mr-1" }),
               "Apply"
             ] }),
-            /* @__PURE__ */ a(N, { size: "sm", variant: "ghost", onClick: G, children: [
+            /* @__PURE__ */ a(x, { size: "sm", variant: "ghost", onClick: Q, children: [
               /* @__PURE__ */ e(Vt, { className: "h-3.5 w-3.5 mr-1" }),
               "Cancel"
             ] })
@@ -3661,171 +3675,171 @@ function el(t) {
   return l(s), s;
 }
 const St = 3, bt = 30, tl = Xn(function({ type: n, initialTree: s, onStatusChange: l }, i) {
-  const [r, o] = u(/* @__PURE__ */ new Set()), [c, m] = u(
+  const [r, o] = d(/* @__PURE__ */ new Set()), [c, u] = d(
     () => Da(s, null, 0, /* @__PURE__ */ new Set())
-  ), [p, y] = u(null), [_, h] = u(!1), [D, z] = u(!1), [$, M] = u(!1), [v, f] = u(""), [g, x] = u(""), P = $e(0), B = $e(null), k = Ot(() => c.map((j) => j.id), [c]), C = ka(
+  ), [m, y] = d(null), [_, h] = d(!1), [E, z] = d(!1), [O, R] = d(!1), [b, p] = d(""), [g, N] = d(""), P = Re(0), U = Re(null), k = Ot(() => c.map(($) => $.id), [c]), C = ka(
     jt(Sa, {
       activationConstraint: { distance: 8 }
     }),
     jt(Is, {
       coordinateGetter: Ds
     })
-  ), b = q(
-    (j) => {
-      o((Y) => {
-        const O = new Set(Y);
-        return O.has(j) ? O.delete(j) : O.add(j), O;
-      }), m((Y) => {
-        const O = sn(Y);
-        An(O);
+  ), f = q(
+    ($) => {
+      o((J) => {
+        const j = new Set(J);
+        return j.has($) ? j.delete($) : j.add($), j;
+      }), u((J) => {
+        const j = sn(J);
+        An(j);
         const X = new Set(r);
-        return X.has(j) ? X.delete(j) : X.add(j), o(X), al(O, X);
+        return X.has($) ? X.delete($) : X.add($), o(X), al(j, X);
       });
     },
     [r]
-  ), I = q((j) => {
-    y(String(j.active.id));
-    const Y = j.activatorEvent;
-    P.current = Y?.clientX ?? 0;
-  }, []), R = q(
-    (j) => {
-      const Y = j.delta;
-      if (Y && p) {
-        const O = Y.x, X = c.find((J) => J.id === p);
+  ), I = q(($) => {
+    y(String($.active.id));
+    const J = $.activatorEvent;
+    P.current = J?.clientX ?? 0;
+  }, []), B = q(
+    ($) => {
+      const J = $.delta;
+      if (J && m) {
+        const j = J.x, X = c.find((Y) => Y.id === m);
         if (!X) return;
-        let T = X.depth;
-        O > bt ? T = Math.min(X.depth + 1, St - 1) : O < -bt && (T = Math.max(X.depth - 1, 0)), B.current = T;
+        let D = X.depth;
+        j > bt ? D = Math.min(X.depth + 1, St - 1) : j < -bt && (D = Math.max(X.depth - 1, 0)), U.current = D;
       }
     },
-    [p, c]
-  ), H = q(
-    (j) => {
-      const { active: Y, over: O, delta: X } = j;
-      if (!O || Y.id === O.id) {
-        if (X && p) {
-          const K = X.x, Q = c.findIndex((de) => de.id === p);
-          if (Q === -1) {
-            y(null), B.current = null;
+    [m, c]
+  ), V = q(
+    ($) => {
+      const { active: J, over: j, delta: X } = $;
+      if (!j || J.id === j.id) {
+        if (X && m) {
+          const K = X.x, Z = c.findIndex((de) => de.id === m);
+          if (Z === -1) {
+            y(null), U.current = null;
             return;
           }
-          const Ne = c[Q];
-          if (K > bt && Q > 0) {
-            const de = ra(c, Q);
-            de && Ne.depth < St - 1 && (m((ce) => {
-              const U = [...ce];
-              return U[Q] = {
-                ...U[Q],
+          const Ne = c[Z];
+          if (K > bt && Z > 0) {
+            const de = ra(c, Z);
+            de && Ne.depth < St - 1 && (u((ce) => {
+              const F = [...ce];
+              return F[Z] = {
+                ...F[Z],
                 parentId: de.id,
                 depth: Ne.depth + 1
-              }, ct(U, Q), U;
+              }, ct(F, Z), F;
             }), h(!0));
-          } else K < -bt && Ne.depth > 0 && (m((de) => {
-            const ce = [...de], U = ce[Q].parentId, he = de.find((be) => be.id === U);
-            return ce[Q] = {
-              ...ce[Q],
+          } else K < -bt && Ne.depth > 0 && (u((de) => {
+            const ce = [...de], F = ce[Z].parentId, he = de.find((be) => be.id === F);
+            return ce[Z] = {
+              ...ce[Z],
               parentId: he?.parentId ?? null,
               depth: Math.max(0, Ne.depth - 1)
-            }, ct(ce, Q), ce;
+            }, ct(ce, Z), ce;
           }), h(!0));
         }
-        y(null), B.current = null;
+        y(null), U.current = null;
         return;
       }
-      const T = c.findIndex((K) => K.id === String(Y.id)), J = c.findIndex((K) => K.id === String(O.id));
-      T !== -1 && J !== -1 && (m((K) => {
-        const Q = xt(K, T, J), Ne = X?.x ?? 0, de = Q[J];
-        if (Ne > bt && J > 0) {
-          const ce = ra(Q, J);
-          ce && de.depth < St - 1 && (Q[J] = {
-            ...Q[J],
+      const D = c.findIndex((K) => K.id === String(J.id)), Y = c.findIndex((K) => K.id === String(j.id));
+      D !== -1 && Y !== -1 && (u((K) => {
+        const Z = xt(K, D, Y), Ne = X?.x ?? 0, de = Z[Y];
+        if (Ne > bt && Y > 0) {
+          const ce = ra(Z, Y);
+          ce && de.depth < St - 1 && (Z[Y] = {
+            ...Z[Y],
             parentId: ce.id,
             depth: de.depth + 1
-          }, ct(Q, J));
+          }, ct(Z, Y));
         } else if (Ne < -bt && de.depth > 0) {
-          const ce = Q.find((U) => U.id === de.parentId);
-          Q[J] = {
-            ...Q[J],
+          const ce = Z.find((F) => F.id === de.parentId);
+          Z[Y] = {
+            ...Z[Y],
             parentId: ce?.parentId ?? null,
             depth: Math.max(0, de.depth - 1)
-          }, ct(Q, J);
+          }, ct(Z, Y);
         } else {
-          const ce = K[J];
-          ce && (Q[J] = {
-            ...Q[J],
+          const ce = K[Y];
+          ce && (Z[Y] = {
+            ...Z[Y],
             parentId: ce.parentId,
             depth: ce.depth
           });
         }
-        return Q;
-      }), h(!0)), y(null), B.current = null;
+        return Z;
+      }), h(!0)), y(null), U.current = null;
     },
-    [p, c]
-  ), L = q(
-    async (j, Y) => {
-      m(
-        (O) => O.map(
-          (X) => X.id === j ? { ...X, title: Y.title, url: Y.url, cssClass: Y.cssClass || null, target: Y.target || null, image: Y.image || null, status: Y.status } : X
+    [m, c]
+  ), M = q(
+    async ($, J) => {
+      u(
+        (j) => j.map(
+          (X) => X.id === $ ? { ...X, title: J.title, url: J.url, cssClass: J.cssClass || null, target: J.target || null, image: J.image || null, status: J.status } : X
         )
       ), h(!0);
     },
     []
   ), w = q(
-    async (j) => {
-      const Y = await yn(`/api/admin/menus/${j}`);
-      Y.success ? (m((O) => {
-        const X = O.find((K) => K.id === j);
-        if (!X) return O;
-        const T = /* @__PURE__ */ new Set(), J = [j];
-        for (; J.length > 0; ) {
-          const K = J.pop();
-          for (const Q of O)
-            Q.parentId === K && (T.add(Q.id), J.push(Q.id));
+    async ($) => {
+      const J = await yn(`/api/admin/menus/${$}`);
+      J.success ? (u((j) => {
+        const X = j.find((K) => K.id === $);
+        if (!X) return j;
+        const D = /* @__PURE__ */ new Set(), Y = [$];
+        for (; Y.length > 0; ) {
+          const K = Y.pop();
+          for (const Z of j)
+            Z.parentId === K && (D.add(Z.id), Y.push(Z.id));
         }
-        return O.filter((K) => K.id !== j).map(
-          (K) => T.has(K.id) ? {
+        return j.filter((K) => K.id !== $).map(
+          (K) => D.has(K.id) ? {
             ...K,
-            parentId: K.parentId === j ? X.parentId : K.parentId,
+            parentId: K.parentId === $ ? X.parentId : K.parentId,
             depth: Math.max(0, K.depth - 1)
           } : K
         );
-      }), h(!0), W.success("delete", "menu item")) : W.error(Y.message);
+      }), h(!0), W.success("delete", "menu item")) : W.error(J.message);
     },
     []
   ), A = q(async () => {
-    if (!v.trim() || !g.trim()) return;
-    M(!0);
-    const j = await Le("/api/admin/menus", {
-      title: v.trim(),
+    if (!b.trim() || !g.trim()) return;
+    R(!0);
+    const $ = await Le("/api/admin/menus", {
+      title: b.trim(),
       url: g.trim(),
       type: n,
-      position: c.filter((Y) => Y.parentId === null).length
+      position: c.filter((J) => J.parentId === null).length
     });
-    if (j.success) {
-      const Y = {
-        id: j.data.id,
+    if ($.success) {
+      const J = {
+        id: $.data.id,
         parentId: null,
         depth: 0,
-        title: j.data.title,
-        url: j.data.url,
-        cssClass: j.data.cssClass ?? null,
-        target: j.data.target ?? null,
+        title: $.data.title,
+        url: $.data.url,
+        cssClass: $.data.cssClass ?? null,
+        target: $.data.target ?? null,
         image: null,
         status: "published",
         collapsed: !1,
         children: []
       };
-      m((O) => [...O, Y]), f(""), x(""), W.success("create", "menu item");
+      u((j) => [...j, J]), p(""), N(""), W.success("create", "menu item");
     } else
-      W.error(j.message);
-    M(!1);
-  }, [v, g, n, c]), d = q(async () => {
+      W.error($.message);
+    R(!1);
+  }, [b, g, n, c]), v = q(async () => {
     z(!0);
-    const j = sn(c), Y = el(j), O = await Le("/api/admin/menus/reorder", {
+    const $ = sn(c), J = el($), j = await Le("/api/admin/menus/reorder", {
       type: n,
-      tree: Y
+      tree: J
     });
-    if (O.success) {
-      for (const X of j)
+    if (j.success) {
+      for (const X of $)
         await rt(`/api/admin/menus/${X.id}`, {
           title: X.title,
           url: X.url,
@@ -3838,52 +3852,52 @@ const St = 3, bt = 30, tl = Xn(function({ type: n, initialTree: s, onStatusChang
         });
       h(!1), W.saved("menu");
     } else
-      W.error(O.message);
+      W.error(j.message);
     z(!1);
-  }, [c, r, n]), G = q(
-    (j, Y) => {
-      const O = c.findIndex((X) => X.id === j);
-      O !== -1 && (m((X) => {
-        const T = [...X], J = T[O];
-        switch (Y) {
+  }, [c, r, n]), Q = q(
+    ($, J) => {
+      const j = c.findIndex((X) => X.id === $);
+      j !== -1 && (u((X) => {
+        const D = [...X], Y = D[j];
+        switch (J) {
           case "moveUp":
-            if (O > 0)
-              return xt(T, O, O - 1);
+            if (j > 0)
+              return xt(D, j, j - 1);
             break;
           case "moveDown":
-            if (O < T.length - 1)
-              return xt(T, O, O + 1);
+            if (j < D.length - 1)
+              return xt(D, j, j + 1);
             break;
           case "indent": {
-            const K = ra(T, O);
-            K && J.depth < St - 1 && (T[O] = {
-              ...J,
+            const K = ra(D, j);
+            K && Y.depth < St - 1 && (D[j] = {
+              ...Y,
               parentId: K.id,
-              depth: J.depth + 1
-            }, ct(T, O));
+              depth: Y.depth + 1
+            }, ct(D, j));
             break;
           }
           case "outdent": {
-            if (J.depth > 0) {
-              const K = T.find((Q) => Q.id === J.parentId);
-              T[O] = {
-                ...J,
+            if (Y.depth > 0) {
+              const K = D.find((Z) => Z.id === Y.parentId);
+              D[j] = {
+                ...Y,
                 parentId: K?.parentId ?? null,
-                depth: J.depth - 1
-              }, ct(T, O);
+                depth: Y.depth - 1
+              }, ct(D, j);
             }
             break;
           }
         }
-        return T;
+        return D;
       }), h(!0));
     },
     [c]
-  ), ie = p ? c.find((j) => j.id === p) : null;
-  return ee(() => l?.({ hasChanges: _, saving: D }), [_, D, l]), Qn(i, () => ({ save: d }), [d]), /* @__PURE__ */ a("div", { className: "space-y-4", children: [
-    _ && /* @__PURE__ */ a("div", { className: "flex items-center gap-3 px-4", children: [
+  ), T = m ? c.find(($) => $.id === m) : null;
+  return te(() => l?.({ hasChanges: _, saving: E }), [_, E, l]), Qn(i, () => ({ save: v }), [v]), /* @__PURE__ */ a("div", { className: "space-y-4", children: [
+    _ && /* @__PURE__ */ a("div", { className: "flex items-center gap-3 px-4 mt-3", children: [
       /* @__PURE__ */ e(Ue, { variant: "secondary", className: "animate-pulse", children: "Unsaved changes" }),
-      /* @__PURE__ */ e(N, { onClick: d, disabled: D, children: D ? "Saving..." : "Save Menu" })
+      /* @__PURE__ */ e(x, { onClick: v, disabled: E, children: E ? "Saving..." : "Save Menu" })
     ] }),
     /* @__PURE__ */ a(Dt, { children: [
       /* @__PURE__ */ e(Et, { children: /* @__PURE__ */ e(je, { title: "Menu items", description: "Drag items to reorder. Drag right to nest, or left to outdent.", children: c.length === 0 ? /* @__PURE__ */ e("div", { className: "rounded-sm border border-dashed p-8 text-center", children: /* @__PURE__ */ e("p", { className: "text-muted-foreground", children: "No menu items yet. Add your first item from the panel." }) }) : /* @__PURE__ */ a(
@@ -3892,60 +3906,60 @@ const St = 3, bt = 30, tl = Xn(function({ type: n, initialTree: s, onStatusChang
           sensors: C,
           collisionDetection: _a,
           onDragStart: I,
-          onDragOver: R,
-          onDragEnd: H,
+          onDragOver: B,
+          onDragEnd: V,
           children: [
-            /* @__PURE__ */ e(Kt, { items: k, strategy: Aa, children: /* @__PURE__ */ e("div", { className: "space-y-2", role: "list", "aria-label": "Menu items", children: c.map((j) => /* @__PURE__ */ e(
+            /* @__PURE__ */ e(Kt, { items: k, strategy: Aa, children: /* @__PURE__ */ e("div", { className: "space-y-2", role: "list", "aria-label": "Menu items", children: c.map(($) => /* @__PURE__ */ e(
               Zi,
               {
-                item: j,
+                item: $,
                 maxDepth: St,
-                onToggleCollapse: b,
-                onEdit: L,
+                onToggleCollapse: f,
+                onEdit: M,
                 onDelete: w,
-                onKeyAction: G
+                onKeyAction: Q
               },
-              j.id
+              $.id
             )) }) }),
-            /* @__PURE__ */ e(Ts, { children: ie ? /* @__PURE__ */ a("div", { className: "rounded-sm border bg-background p-3 shadow-lg opacity-90", children: [
-              /* @__PURE__ */ e("span", { className: "font-medium", children: ie.title }),
-              /* @__PURE__ */ e("span", { className: "ml-2 text-xs text-muted-foreground truncate", children: ie.url })
+            /* @__PURE__ */ e(Ts, { children: T ? /* @__PURE__ */ a("div", { className: "rounded-sm border bg-background p-3 shadow-lg opacity-90", children: [
+              /* @__PURE__ */ e("span", { className: "font-medium", children: T.title }),
+              /* @__PURE__ */ e("span", { className: "ml-2 text-xs text-muted-foreground truncate", children: T.url })
             ] }) : null })
           ]
         }
       ) }) }),
       /* @__PURE__ */ e(Lt, { children: /* @__PURE__ */ a(je, { title: "Add menu item", description: "New items are added to the top level.", children: [
         /* @__PURE__ */ a("div", { className: "space-y-1.5", children: [
-          /* @__PURE__ */ e(E, { htmlFor: "new-title", children: "Title" }),
+          /* @__PURE__ */ e(L, { htmlFor: "new-title", children: "Title" }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "new-title",
               placeholder: "Menu item title",
-              value: v,
-              onChange: (j) => f(j.target.value),
-              onKeyDown: (j) => {
-                j.key === "Enter" && A();
+              value: b,
+              onChange: ($) => p($.target.value),
+              onKeyDown: ($) => {
+                $.key === "Enter" && A();
               }
             }
           )
         ] }),
         /* @__PURE__ */ a("div", { className: "space-y-1.5", children: [
-          /* @__PURE__ */ e(E, { htmlFor: "new-url", children: "URL" }),
+          /* @__PURE__ */ e(L, { htmlFor: "new-url", children: "URL" }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "new-url",
               placeholder: "/page-url",
               value: g,
-              onChange: (j) => x(j.target.value),
-              onKeyDown: (j) => {
-                j.key === "Enter" && A();
+              onChange: ($) => N($.target.value),
+              onKeyDown: ($) => {
+                $.key === "Enter" && A();
               }
             }
           )
         ] }),
-        /* @__PURE__ */ e(N, { className: "w-full", onClick: A, disabled: $ || !v.trim() || !g.trim(), children: $ ? "Adding..." : "Add" })
+        /* @__PURE__ */ e(x, { className: "w-full", onClick: A, disabled: O || !b.trim() || !g.trim(), children: O ? "Adding..." : "Add" })
       ] }) })
     ] })
   ] });
@@ -4044,7 +4058,7 @@ function il(t) {
   return l(s);
 }
 function ll() {
-  const t = rl(), [n, s] = u(null), [l, i] = u(null), [r, o] = u("navbar"), c = $e(null), [m, p] = u({ hasChanges: !1, saving: !1 }), y = q(async () => {
+  const t = rl(), [n, s] = d(null), [l, i] = d(null), [r, o] = d("navbar"), c = Re(null), [u, m] = d({ hasChanges: !1, saving: !1 }), y = q(async () => {
     i(null);
     try {
       const h = await ue("/api/admin/menus");
@@ -4053,7 +4067,7 @@ function ll() {
       i(h.message);
     }
   }, []);
-  if (ee(() => {
+  if (te(() => {
     y();
   }, [y]), l) return /* @__PURE__ */ e("main", { className: "p-6", children: /* @__PURE__ */ a("p", { className: "text-destructive", children: [
     "Error: ",
@@ -4068,13 +4082,13 @@ function ll() {
         actions: /* @__PURE__ */ a("div", { className: "flex items-center gap-2", children: [
           /* @__PURE__ */ a(Ie, { value: r, onValueChange: (h) => h && o(h), children: [
             /* @__PURE__ */ e(De, { className: "w-40", children: /* @__PURE__ */ e(Te, {}) }),
-            /* @__PURE__ */ e(Ee, { children: t.map((h) => /* @__PURE__ */ e(se, { value: h.type, children: h.label }, h.type)) })
+            /* @__PURE__ */ e(Ee, { children: t.map((h) => /* @__PURE__ */ e(re, { value: h.type, children: h.label }, h.type)) })
           ] }),
-          /* @__PURE__ */ e(N, { onClick: () => c.current?.save(), disabled: !m.hasChanges || m.saving, children: m.saving ? "Saving..." : "Save Menu" })
+          /* @__PURE__ */ e(x, { onClick: () => c.current?.save(), disabled: !u.hasChanges || u.saving, children: u.saving ? "Saving..." : "Save Menu" })
         ] })
       }
     ),
-    _ ? /* @__PURE__ */ e(tl, { ref: c, type: r, initialTree: _, onStatusChange: p }, r) : /* @__PURE__ */ e(ge, {})
+    _ ? /* @__PURE__ */ e(tl, { ref: c, type: r, initialTree: _, onStatusChange: m }, r) : /* @__PURE__ */ e(ge, {})
   ] });
 }
 const ol = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4082,67 +4096,67 @@ const ol = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   AdminMenusPage: ll
 }, Symbol.toStringTag, { value: "Module" }));
 function cl() {
-  const [t, n] = u(null), [s, l] = u(null), [i, r] = u([]), [o, c] = u(!1), m = dt(), p = Qe(), [y, _] = u(
-    new URLSearchParams(m.search).get("search") ?? ""
-  ), [h, D] = u(
-    new URLSearchParams(m.search).get("sortBy") ?? ""
-  ), [z, $] = u(
-    new URLSearchParams(m.search).get("sortOrder") ?? ""
+  const [t, n] = d(null), [s, l] = d(null), [i, r] = d([]), [o, c] = d(!1), u = dt(), m = Qe(), [y, _] = d(
+    new URLSearchParams(u.search).get("search") ?? ""
+  ), [h, E] = d(
+    new URLSearchParams(u.search).get("sortBy") ?? ""
+  ), [z, O] = d(
+    new URLSearchParams(u.search).get("sortOrder") ?? ""
   );
-  async function M() {
+  async function R() {
     l(null);
-    const w = await ue(`/api/admin/roles${m.search}`);
+    const w = await ue(`/api/admin/roles${u.search}`);
     n(w), r([]);
   }
-  ee(() => {
-    M().catch((w) => l(w.message));
-  }, [m.search]);
-  function v() {
-    p(Ce("/admin/roles", { search: y, sortBy: h, sortOrder: z }));
+  te(() => {
+    R().catch((w) => l(w.message));
+  }, [u.search]);
+  function b() {
+    m(Ce("/admin/roles", { search: y, sortBy: h, sortOrder: z }));
   }
-  function f(w) {
+  function p(w) {
     const A = h === w && z === "asc" ? "desc" : "asc";
-    D(w), $(A), p(Ce("/admin/roles", { search: y, sortBy: w, sortOrder: A }));
+    E(w), O(A), m(Ce("/admin/roles", { search: y, sortBy: w, sortOrder: A }));
   }
   function g(w) {
-    w.key === "Enter" && (w.preventDefault(), v());
+    w.key === "Enter" && (w.preventDefault(), b());
   }
-  const x = $e(!0);
-  ee(() => {
-    if (x.current) {
-      x.current = !1;
+  const N = Re(!0);
+  te(() => {
+    if (N.current) {
+      N.current = !1;
       return;
     }
     const w = setTimeout(() => {
-      v();
+      b();
     }, 400);
     return () => clearTimeout(w);
   }, [y]);
   const P = q((w) => {
     t?.roles && r(w ? t.roles.map((A) => A.id) : []);
-  }, [t]), B = q((w, A) => {
+  }, [t]), U = q((w, A) => {
     r(
-      (d) => A ? [...d, w] : d.filter((G) => G !== w)
+      (v) => A ? [...v, w] : v.filter((Q) => Q !== w)
     );
   }, []), k = t?.roles?.length > 0 && i.length === t.roles.length, C = i.length > 0;
-  async function b(w, A) {
+  async function f(w, A) {
     if (i.length === 0) return;
     c(!0);
-    const d = await Le(w, { ids: i });
-    c(!1), d.success ? (W.success("update", "role"), await M()) : W.error(d.message);
+    const v = await Le(w, { ids: i });
+    c(!1), v.success ? (W.success("update", "role"), await R()) : W.error(v.message);
   }
   const I = q(async () => {
-    i.length !== 0 && confirm(`Delete ${i.length} role(s)? This action cannot be undone.`) && await b("/api/admin/roles/bulk/delete");
-  }, [i]), R = q(async () => {
-    await b("/api/admin/roles/bulk/duplicate");
+    i.length !== 0 && confirm(`Delete ${i.length} role(s)? This action cannot be undone.`) && await f("/api/admin/roles/bulk/delete");
+  }, [i]), B = q(async () => {
+    await f("/api/admin/roles/bulk/duplicate");
   }, [i]);
   if (s) return /* @__PURE__ */ e("main", { className: "p-6", children: /* @__PURE__ */ a("p", { className: "text-destructive", children: [
     "Error: ",
     s
   ] }) });
   if (!t) return /* @__PURE__ */ e(ge, {});
-  const H = t.roles ?? [];
-  function L(w) {
+  const V = t.roles ?? [];
+  function M(w) {
     return Ce("/admin/roles", { search: y, sortBy: h, sortOrder: z, page: w });
   }
   return /* @__PURE__ */ a(et, { children: [
@@ -4151,7 +4165,7 @@ function cl() {
       {
         title: "Roles",
         search: /* @__PURE__ */ e(
-          V,
+          G,
           {
             placeholder: "Search by name or slug...",
             value: y,
@@ -4171,17 +4185,17 @@ function cl() {
         ] }),
         /* @__PURE__ */ a("div", { className: "ml-auto flex items-center gap-2", children: [
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
-              onClick: R,
+              onClick: B,
               disabled: o,
               children: "Duplicate"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "destructive",
               size: "sm",
@@ -4191,7 +4205,7 @@ function cl() {
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "ghost",
               size: "sm",
@@ -4216,7 +4230,7 @@ function cl() {
             "button",
             {
               type: "button",
-              onClick: () => f("name"),
+              onClick: () => p("name"),
               className: "inline-flex items-center gap-1 hover:text-foreground",
               children: [
                 "Name",
@@ -4230,7 +4244,7 @@ function cl() {
             "button",
             {
               type: "button",
-              onClick: () => f("createdAt"),
+              onClick: () => p("createdAt"),
               className: "inline-flex items-center gap-1 hover:text-foreground",
               children: [
                 "Created",
@@ -4239,19 +4253,19 @@ function cl() {
             }
           ) })
         ] }) }),
-        /* @__PURE__ */ e(Tt, { children: H.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(ne, { colSpan: 6, className: "px-4 py-8 text-center text-muted-foreground", children: "No roles found." }) }) : H.map((w) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3", children: /* @__PURE__ */ e(
+        /* @__PURE__ */ e(Tt, { children: V.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(se, { colSpan: 6, className: "px-4 py-8 text-center text-muted-foreground", children: "No roles found." }) }) : V.map((w) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
+          /* @__PURE__ */ e(se, { className: "px-4 py-3", children: /* @__PURE__ */ e(
             xe,
             {
               checked: i.includes(w.id),
-              onCheckedChange: (A) => B(w.id, A === !0),
+              onCheckedChange: (A) => U(w.id, A === !0),
               "aria-label": `Select ${w.name}`
             }
           ) }),
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ e(fe, { to: `/admin/roles/${w.id}/edit`, className: "underline", children: w.name }) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3 text-muted-foreground", children: w.slug }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(Ue, { variant: "secondary", children: w.userCount }) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(w.createdAt * 1e3).toLocaleDateString() })
+          /* @__PURE__ */ e(se, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ e(fe, { to: `/admin/roles/${w.id}/edit`, className: "underline", children: w.name }) }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3 text-muted-foreground", children: w.slug }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(Ue, { variant: "secondary", children: w.userCount }) }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(w.createdAt * 1e3).toLocaleDateString() })
         ] }, w.id)) })
       ] }),
       t.meta && /* @__PURE__ */ a("div", { className: "flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between", children: [
@@ -4264,8 +4278,8 @@ function cl() {
           t.meta.total
         ] }),
         /* @__PURE__ */ a("div", { className: "flex gap-2", children: [
-          t.meta.currentPage > 1 && /* @__PURE__ */ e(fe, { to: L(t.meta.currentPage - 1), className: "hover:text-foreground hover:underline", children: "Previous" }),
-          t.meta.currentPage < t.meta.lastPage && /* @__PURE__ */ e(fe, { to: L(t.meta.currentPage + 1), className: "hover:text-foreground hover:underline", children: "Next" })
+          t.meta.currentPage > 1 && /* @__PURE__ */ e(fe, { to: M(t.meta.currentPage - 1), className: "hover:text-foreground hover:underline", children: "Previous" }),
+          t.meta.currentPage < t.meta.lastPage && /* @__PURE__ */ e(fe, { to: M(t.meta.currentPage + 1), className: "hover:text-foreground hover:underline", children: "Next" })
         ] })
       ] })
     ] })
@@ -4276,33 +4290,33 @@ const dl = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   AdminRolesPage: cl
 }, Symbol.toStringTag, { value: "Module" }));
 function ul() {
-  const t = Qe(), { session: n, refreshSession: s } = Ze(), [l, i] = yt(), [r, o] = u({}), c = n?.user;
-  function m(p) {
-    p.preventDefault(), o({});
-    const y = new FormData(p.currentTarget), _ = String(y.get("name") ?? "").trim(), h = String(y.get("email") ?? "").trim(), D = String(y.get("password") ?? "");
+  const t = Qe(), { session: n, refreshSession: s } = Ze(), [l, i] = yt(), [r, o] = d({}), c = n?.user;
+  function u(m) {
+    m.preventDefault(), o({});
+    const y = new FormData(m.currentTarget), _ = String(y.get("name") ?? "").trim(), h = String(y.get("email") ?? "").trim(), E = String(y.get("password") ?? "");
     i(async () => {
       const z = { name: _, email: h };
-      D && (z.password = D);
-      const $ = await rt("/api/admin/auth/profile", z);
-      if (!$.success) {
-        $.errors ? o($.errors) : o({ _form: [$.message] }), W.error($.message);
+      E && (z.password = E);
+      const O = await rt("/api/admin/auth/profile", z);
+      if (!O.success) {
+        O.errors ? o(O.errors) : o({ _form: [O.message] }), W.error(O.message);
         return;
       }
       await s(), W.success("update", "profile");
     });
   }
-  return /* @__PURE__ */ a("form", { onSubmit: m, className: "", children: [
+  return /* @__PURE__ */ a("form", { onSubmit: u, className: "", children: [
     /* @__PURE__ */ e(
       Se,
       {
         title: "Profile",
         actions: /* @__PURE__ */ a("div", { className: "flex items-center gap-3", children: [
-          /* @__PURE__ */ a(N, { type: "submit", disabled: l, children: [
+          /* @__PURE__ */ a(x, { type: "submit", disabled: l, children: [
             l && /* @__PURE__ */ e(hn, { className: "mr-2 size-4 animate-spin" }),
             l ? "Saving…" : "Save Changes"
           ] }),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               type: "button",
               variant: "outline",
@@ -4318,12 +4332,12 @@ function ul() {
       /* @__PURE__ */ e(Et, { children: /* @__PURE__ */ a(je, { title: "Account information", description: "Update your name and email.", children: [
         r._form && /* @__PURE__ */ e("div", { className: "rounded-sm bg-destructive/10 p-3 text-sm text-destructive", children: r._form[0] }),
         /* @__PURE__ */ a("div", { className: "space-y-1.5", children: [
-          /* @__PURE__ */ a(E, { htmlFor: "profile-name", children: [
+          /* @__PURE__ */ a(L, { htmlFor: "profile-name", children: [
             "Name ",
             /* @__PURE__ */ e("span", { className: "text-destructive", children: "*" })
           ] }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "profile-name",
               name: "name",
@@ -4337,12 +4351,12 @@ function ul() {
           r.name && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: r.name[0] })
         ] }),
         /* @__PURE__ */ a("div", { className: "space-y-1.5", children: [
-          /* @__PURE__ */ a(E, { htmlFor: "profile-email", children: [
+          /* @__PURE__ */ a(L, { htmlFor: "profile-email", children: [
             "Email ",
             /* @__PURE__ */ e("span", { className: "text-destructive", children: "*" })
           ] }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "profile-email",
               name: "email",
@@ -4357,9 +4371,9 @@ function ul() {
         ] })
       ] }) }),
       /* @__PURE__ */ e(Lt, { children: /* @__PURE__ */ e(je, { title: "Password", description: "Leave empty to keep your current password.", children: /* @__PURE__ */ a("div", { className: "space-y-1.5", children: [
-        /* @__PURE__ */ e(E, { htmlFor: "profile-password", children: "New Password" }),
+        /* @__PURE__ */ e(L, { htmlFor: "profile-password", children: "New Password" }),
         /* @__PURE__ */ e(
-          V,
+          G,
           {
             id: "profile-password",
             name: "password",
@@ -4398,40 +4412,40 @@ function Ea(t) {
   return n.length > 200 && (n = n.slice(0, 200).replace(/-+$/, "")), n;
 }
 function zn({ category: t, mode: n, pageTitle: s, defaultType: l }) {
-  const { session: i } = Ze(), [r, o] = yt(), [c, m] = u({}), [p, y] = u(null), [_, h] = u(t?.name ?? ""), [D, z] = u(t?.slug ?? ""), [$, M] = u(!!t?.slug), [v, f] = u(t?.type ?? l ?? "post"), [g, x] = u(t?.description ?? ""), [P, B] = u(t?.image ?? ""), [k, C] = u(t?.status ?? "published"), b = i?.permissions.includes(`category.${v}.publish`) ?? !1, I = i?.permissions.includes(`category.${v}.unpublish`) ?? !1, R = k === "published" ? I : b;
-  ee(() => {
-    n === "create" && !b && C("draft");
-  }, [b, n]), ee(() => {
-    !$ && n === "create" && z(Ea(_));
-  }, [_, $, n]);
-  function H(w) {
-    M(!0), z(w);
+  const { session: i } = Ze(), [r, o] = yt(), [c, u] = d({}), [m, y] = d(null), [_, h] = d(t?.name ?? ""), [E, z] = d(t?.slug ?? ""), [O, R] = d(!!t?.slug), [b, p] = d(t?.type ?? l ?? "post"), [g, N] = d(t?.description ?? ""), [P, U] = d(t?.image ?? ""), [k, C] = d(t?.status ?? "published"), f = i?.permissions.includes(`category.${b}.publish`) ?? !1, I = i?.permissions.includes(`category.${b}.unpublish`) ?? !1, B = k === "published" ? I : f;
+  te(() => {
+    n === "create" && !f && C("draft");
+  }, [f, n]), te(() => {
+    !O && n === "create" && z(Ea(_));
+  }, [_, O, n]);
+  function V(w) {
+    R(!0), z(w);
   }
-  function L(w) {
-    w.preventDefault(), m({}), y(null);
+  function M(w) {
+    w.preventDefault(), u({}), y(null);
     const A = {
       name: _,
-      type: v,
+      type: b,
       status: k
     };
-    g.trim() && (A.description = g), P ? A.image = P : A.image = null, D && (A.slug = D), o(async () => {
-      let d;
-      n === "edit" && t ? d = await rt(`/api/admin/categories/${t.id}`, A) : d = await Le("/api/admin/categories", A), d.success ? (W.success(n === "edit" ? "update" : "create", "category"), Xe(`/admin/categories/${v}`)) : d.errors && Object.keys(d.errors).length > 0 ? (m(d.errors), W.error(d.message)) : (y(d.message), W.error(d.message));
+    g.trim() && (A.description = g), P ? A.image = P : A.image = null, E && (A.slug = E), o(async () => {
+      let v;
+      n === "edit" && t ? v = await rt(`/api/admin/categories/${t.id}`, A) : v = await Le("/api/admin/categories", A), v.success ? (W.success(n === "edit" ? "update" : "create", "category"), Xe(`/admin/categories/${b}`)) : v.errors && Object.keys(v.errors).length > 0 ? (u(v.errors), W.error(v.message)) : (y(v.message), W.error(v.message));
     });
   }
-  return /* @__PURE__ */ a("form", { onSubmit: L, className: "", children: [
+  return /* @__PURE__ */ a("form", { onSubmit: M, className: "", children: [
     /* @__PURE__ */ e(
       Se,
       {
         title: s || "Categories",
         actions: /* @__PURE__ */ a("div", { className: "flex items-center gap-3", children: [
-          /* @__PURE__ */ e(N, { type: "submit", disabled: r, children: r ? n === "edit" ? "Saving…" : "Creating…" : n === "edit" ? "Save Changes" : "Create Category" }),
+          /* @__PURE__ */ e(x, { type: "submit", disabled: r, children: r ? n === "edit" ? "Saving…" : "Creating…" : n === "edit" ? "Save Changes" : "Create Category" }),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               type: "button",
               variant: "outline",
-              onClick: () => Xe(`/admin/categories/${v}`),
+              onClick: () => Xe(`/admin/categories/${b}`),
               disabled: r,
               children: "Cancel"
             }
@@ -4439,16 +4453,16 @@ function zn({ category: t, mode: n, pageTitle: s, defaultType: l }) {
         ] })
       }
     ),
-    p && /* @__PURE__ */ e("div", { className: "mx-4 rounded-sm border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive", children: p }),
+    m && /* @__PURE__ */ e("div", { className: "mx-4 rounded-sm border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive", children: m }),
     /* @__PURE__ */ a(Dt, { children: [
       /* @__PURE__ */ e(Et, { children: /* @__PURE__ */ a(je, { title: "Basic information", children: [
         /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ a(E, { htmlFor: "name", children: [
+          /* @__PURE__ */ a(L, { htmlFor: "name", children: [
             "Name ",
             /* @__PURE__ */ e("span", { className: "text-destructive", children: "*" })
           ] }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "name",
               value: _,
@@ -4461,29 +4475,29 @@ function zn({ category: t, mode: n, pageTitle: s, defaultType: l }) {
           c.name && /* @__PURE__ */ e("p", { id: "name-error", className: "text-xs text-destructive", children: c.name[0] })
         ] }),
         /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ e(E, { htmlFor: "slug", children: "Slug" }),
+          /* @__PURE__ */ e(L, { htmlFor: "slug", children: "Slug" }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "slug",
-              value: D,
-              onChange: (w) => H(w.target.value),
+              value: E,
+              onChange: (w) => V(w.target.value),
               placeholder: "category-url-slug",
               "aria-invalid": !!c.slug,
               "aria-describedby": c.slug ? "slug-error" : void 0
             }
           ),
           c.slug && /* @__PURE__ */ e("p", { id: "slug-error", className: "text-xs text-destructive", children: c.slug[0] }),
-          !$ && n === "create" && /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Auto-generated from name. Edit to customize." })
+          !O && n === "create" && /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Auto-generated from name. Edit to customize." })
         ] }),
         /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ e(E, { htmlFor: "description", children: "Description" }),
+          /* @__PURE__ */ e(L, { htmlFor: "description", children: "Description" }),
           /* @__PURE__ */ e(
             Oe,
             {
               id: "description",
               value: g,
-              onChange: (w) => x(w.target.value),
+              onChange: (w) => N(w.target.value),
               placeholder: "Optional description",
               rows: 4,
               "aria-invalid": !!c.description,
@@ -4495,12 +4509,12 @@ function zn({ category: t, mode: n, pageTitle: s, defaultType: l }) {
       ] }) }),
       /* @__PURE__ */ a(Lt, { children: [
         /* @__PURE__ */ e(je, { title: "Status", children: /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ e(E, { htmlFor: "status", children: "Visibility" }),
-          /* @__PURE__ */ a("select", { id: "status", value: k, disabled: !R, onChange: (w) => C(w.target.value), className: "h-9 rounded-sm border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60", children: [
-            /* @__PURE__ */ e("option", { value: "published", disabled: !b && k !== "published", children: "Published" }),
+          /* @__PURE__ */ e(L, { htmlFor: "status", children: "Visibility" }),
+          /* @__PURE__ */ a("select", { id: "status", value: k, disabled: !B, onChange: (w) => C(w.target.value), className: "h-9 rounded-sm border bg-background px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60", children: [
+            /* @__PURE__ */ e("option", { value: "published", disabled: !f && k !== "published", children: "Published" }),
             /* @__PURE__ */ e("option", { value: "draft", disabled: !I && k !== "draft", children: "Unpublished" })
           ] }),
-          !R && /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Your role cannot change this status." })
+          !B && /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Your role cannot change this status." })
         ] }) }),
         /* @__PURE__ */ a(je, { title: "Image", children: [
           /* @__PURE__ */ e("div", { className: "rounded-sm border border-dashed bg-muted/30 p-4", children: /* @__PURE__ */ a("div", { className: "flex items-start gap-4", children: [
@@ -4518,7 +4532,7 @@ function zn({ category: t, mode: n, pageTitle: s, defaultType: l }) {
                 {
                   value: P || null,
                   onChange: (w) => {
-                    B(w ? w.url : "");
+                    U(w ? w.url : "");
                   },
                   accept: "image/*"
                 },
@@ -4526,13 +4540,14 @@ function zn({ category: t, mode: n, pageTitle: s, defaultType: l }) {
               ),
               /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Choose an image from the media library." }),
               P && /* @__PURE__ */ e(
-                N,
+                x,
                 {
                   type: "button",
-                  variant: "ghost",
+                  variant: "outline",
                   size: "sm",
-                  className: "w-fit",
-                  onClick: () => B(""),
+                  "aria-label": "Remove image",
+                  className: "w-fit text-destructive hover:bg-destructive/10 hover:text-destructive",
+                  onClick: () => U(""),
                   children: "Remove"
                 }
               )
@@ -4545,8 +4560,8 @@ function zn({ category: t, mode: n, pageTitle: s, defaultType: l }) {
   ] });
 }
 function hl() {
-  const { type: t = "post" } = Ve(), [n, s] = u(!0);
-  return ee(() => {
+  const { type: t = "post" } = Ve(), [n, s] = d(!0);
+  return te(() => {
     const l = setTimeout(() => s(!1), 0);
     return () => clearTimeout(l);
   }, []), n ? /* @__PURE__ */ e(ge, {}) : /* @__PURE__ */ e(He, { children: /* @__PURE__ */ e(
@@ -4559,8 +4574,8 @@ function hl() {
   ) });
 }
 function gl({ id: t }) {
-  const { type: n = "post" } = Ve(), [s, l] = u(null), [i, r] = u(!0);
-  return ee(() => {
+  const { type: n = "post" } = Ve(), [s, l] = d(null), [i, r] = d(!0);
+  return te(() => {
     ue(`/api/admin/categories/${t}`).then((o) => {
       l(o), r(!1);
     });
@@ -4582,14 +4597,14 @@ const In = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
 function pl({ detailTemplate: t, values: n, onChange: s }) {
   const l = Zt(), i = t ? l.templates.find((r) => r.id === t && r.kind === "detail")?.fieldSlots ?? [] : [];
   return i.length === 0 ? null : /* @__PURE__ */ e("div", { className: "space-y-4", children: i.map((r) => /* @__PURE__ */ a("div", { className: "space-y-1.5", children: [
-    /* @__PURE__ */ e(E, { htmlFor: `template-field-${r.key}`, children: r.label }),
+    /* @__PURE__ */ e(L, { htmlFor: `template-field-${r.key}`, children: r.label }),
     r.type === "rich-text" ? /* @__PURE__ */ e(Oe, { id: `template-field-${r.key}`, value: String(n[r.key] ?? ""), onChange: (o) => s({ ...n, [r.key]: o.target.value }) }) : r.type === "boolean" ? /* @__PURE__ */ e("input", { id: `template-field-${r.key}`, type: "checkbox", checked: n[r.key] === !0, onChange: (o) => s({ ...n, [r.key]: o.target.checked }), className: "rounded-sm border-input" }) : r.type === "image" ? /* @__PURE__ */ a("div", { className: "space-y-2", children: [
       /* @__PURE__ */ e(Fe, { value: typeof n[r.key] == "string" ? String(n[r.key]) : null, onChange: (o) => s({ ...n, [r.key]: o?.url ?? "" }), accept: "image/*" }),
       typeof n[r.key] == "string" && String(n[r.key]) && /* @__PURE__ */ a("div", { className: "flex items-start gap-3", children: [
         /* @__PURE__ */ e("img", { src: n[r.key], alt: r.label, className: "h-32 w-48 rounded-sm border object-cover" }),
-        /* @__PURE__ */ e(N, { type: "button", variant: "outline", onClick: () => s({ ...n, [r.key]: "" }), children: "Remove image" })
+        /* @__PURE__ */ e(x, { type: "button", variant: "outline", onClick: () => s({ ...n, [r.key]: "" }), children: "Remove image" })
       ] })
-    ] }) : /* @__PURE__ */ e(V, { id: `template-field-${r.key}`, type: r.type === "number" ? "number" : r.type === "date" ? "date" : "text", value: String(n[r.key] ?? ""), onChange: (o) => s({ ...n, [r.key]: r.type === "number" && o.target.value ? Number(o.target.value) : o.target.value }) })
+    ] }) : /* @__PURE__ */ e(G, { id: `template-field-${r.key}`, type: r.type === "number" ? "number" : r.type === "date" ? "date" : "text", value: String(n[r.key] ?? ""), onChange: (o) => s({ ...n, [r.key]: r.type === "number" && o.target.value ? Number(o.target.value) : o.target.value }) })
   ] }, r.key)) });
 }
 const fl = [];
@@ -4657,27 +4672,27 @@ function xl({
   value: t,
   onItemChange: n
 }) {
-  const [s, l] = u(() => va(t));
-  ee(() => {
+  const [s, l] = d(() => va(t));
+  te(() => {
     l(va(t));
   }, [t]);
   function i(r) {
     l(r), n(r);
   }
   return /* @__PURE__ */ a("div", { className: "flex flex-col gap-1 sm:col-span-2", children: [
-    /* @__PURE__ */ e(E, { className: "text-xs", children: "Links" }),
+    /* @__PURE__ */ e(L, { className: "text-xs", children: "Links" }),
     /* @__PURE__ */ e("div", { className: "space-y-2", children: s.map((r, o) => /* @__PURE__ */ a(
       "div",
       {
         className: "grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-2",
         children: [
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               value: r.label,
               onChange: (c) => i(
                 s.map(
-                  (m, p) => p === o ? { ...m, label: c.target.value } : m
+                  (u, m) => m === o ? { ...u, label: c.target.value } : u
                 )
               ),
               placeholder: "Label",
@@ -4685,13 +4700,13 @@ function xl({
             }
           ),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               type: "url",
               value: r.url,
               onChange: (c) => i(
                 s.map(
-                  (m, p) => p === o ? { ...m, url: c.target.value } : m
+                  (u, m) => m === o ? { ...u, url: c.target.value } : u
                 )
               ),
               placeholder: "https://...",
@@ -4710,50 +4725,71 @@ function ia({
   onItemChange: s
 }) {
   const l = Zn(), i = Dn[t] || t, r = n != null ? String(n) : "";
-  return t === "links" ? /* @__PURE__ */ e(xl, { value: n, onItemChange: s }) : t === "form_inquiry" ? /* @__PURE__ */ a("div", { className: "flex items-center gap-2 sm:col-span-2", children: [
-    /* @__PURE__ */ e(
-      xe,
-      {
-        id: l,
-        checked: n === !0,
-        onCheckedChange: (o) => s(o === !0)
-      }
-    ),
-    /* @__PURE__ */ e(E, { htmlFor: l, className: "cursor-pointer text-xs", children: "Show inquiry form" })
-  ] }) : t === "text" || t === "embed" || t === "answer" ? /* @__PURE__ */ a("div", { className: "flex flex-col gap-1 sm:col-span-2", children: [
-    /* @__PURE__ */ e(E, { className: "text-xs", children: i }),
-    /* @__PURE__ */ e(
-      Oe,
-      {
-        value: r,
-        onChange: (o) => s(o.target.value || null),
-        placeholder: i,
-        rows: 2,
-        className: "text-sm"
-      }
-    )
-  ] }) : t === "image" || t === "bg_image" ? /* @__PURE__ */ a("div", { className: "flex flex-col gap-1", children: [
-    /* @__PURE__ */ e(E, { className: "text-xs", children: i }),
-    /* @__PURE__ */ a("div", { className: "flex items-start gap-2", children: [
-      r && /* @__PURE__ */ e("div", { className: "relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted", children: /* @__PURE__ */ e(
-        "img",
+  if (t === "links")
+    return /* @__PURE__ */ e(xl, { value: n, onItemChange: s });
+  if (t === "form_inquiry")
+    return /* @__PURE__ */ a("div", { className: "flex items-center gap-2 sm:col-span-2", children: [
+      /* @__PURE__ */ e(
+        xe,
         {
-          src: r,
-          alt: "",
-          className: "h-full w-full object-cover"
+          id: l,
+          checked: n === !0,
+          onCheckedChange: (o) => s(o === !0)
         }
-      ) }),
-      /* @__PURE__ */ e("div", { className: "flex-1", children: /* @__PURE__ */ e(
-        Fe,
+      ),
+      /* @__PURE__ */ e(L, { htmlFor: l, className: "cursor-pointer text-xs", children: "Show inquiry form" })
+    ] });
+  if (t === "text" || t === "embed" || t === "answer")
+    return /* @__PURE__ */ a("div", { className: "flex flex-col gap-1 sm:col-span-2", children: [
+      /* @__PURE__ */ e(L, { className: "text-xs", children: i }),
+      /* @__PURE__ */ e(
+        Oe,
         {
-          value: n ? String(n) : null,
-          onChange: (o) => s(o ? o.url : null),
-          accept: "image/*"
+          value: r,
+          onChange: (o) => s(o.target.value || null),
+          placeholder: i,
+          rows: 2,
+          className: "text-sm"
         }
-      ) })
-    ] })
-  ] }) : t === "bg_color" ? /* @__PURE__ */ a("div", { className: "flex flex-col gap-1", children: [
-    /* @__PURE__ */ e(E, { className: "text-xs", children: i }),
+      )
+    ] });
+  if (t === "image" || t === "bg_image") {
+    const o = !!r;
+    return /* @__PURE__ */ a("div", { className: "flex flex-col gap-1", children: [
+      /* @__PURE__ */ e(L, { className: "text-xs", children: i }),
+      /* @__PURE__ */ a("div", { className: "flex items-center gap-2", children: [
+        o && /* @__PURE__ */ e("div", { className: "relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted", children: /* @__PURE__ */ e(
+          "img",
+          {
+            src: r,
+            alt: "",
+            className: "h-full w-full object-cover"
+          }
+        ) }),
+        /* @__PURE__ */ e(
+          Fe,
+          {
+            value: o ? r : null,
+            onChange: (c) => s(c ? c.url : null),
+            accept: "image/*"
+          }
+        ),
+        o && /* @__PURE__ */ e(
+          x,
+          {
+            type: "button",
+            variant: "outline",
+            "aria-label": `Remove ${i.toLowerCase()}`,
+            className: "text-destructive hover:bg-destructive/10 hover:text-destructive",
+            onClick: () => s(null),
+            children: "Remove"
+          }
+        )
+      ] })
+    ] });
+  }
+  return t === "bg_color" ? /* @__PURE__ */ a("div", { className: "flex flex-col gap-1", children: [
+    /* @__PURE__ */ e(L, { className: "text-xs", children: i }),
     /* @__PURE__ */ a("div", { className: "flex items-center gap-2", children: [
       /* @__PURE__ */ e(
         "input",
@@ -4765,7 +4801,7 @@ function ia({
         }
       ),
       /* @__PURE__ */ e(
-        V,
+        G,
         {
           value: r,
           onChange: (o) => s(o.target.value || null),
@@ -4775,9 +4811,9 @@ function ia({
       )
     ] })
   ] }) : t === "style_css_inline" ? /* @__PURE__ */ a("div", { className: "flex flex-col gap-1 sm:col-span-2", children: [
-    /* @__PURE__ */ e(E, { className: "text-xs", children: i }),
+    /* @__PURE__ */ e(L, { className: "text-xs", children: i }),
     /* @__PURE__ */ e(
-      V,
+      G,
       {
         value: r,
         onChange: (o) => s(o.target.value || null),
@@ -4786,9 +4822,9 @@ function ia({
       }
     )
   ] }) : /* @__PURE__ */ a("div", { className: "flex flex-col gap-1", children: [
-    /* @__PURE__ */ e(E, { className: "text-xs", children: i }),
+    /* @__PURE__ */ e(L, { className: "text-xs", children: i }),
     /* @__PURE__ */ e(
-      V,
+      G,
       {
         value: r,
         onChange: (o) => s(o.target.value || null),
@@ -4807,18 +4843,18 @@ function Nl({
   onRemove: r,
   isExpanded: o,
   onToggleExpanded: c,
-  onDuplicate: m
+  onDuplicate: u
 }) {
-  const { attributes: p, listeners: y, setNodeRef: _, transform: h, transition: D, isDragging: z } = qt({ id: t }), $ = Object.keys(l || n), M = $.filter((g) => ["style_css", "style_css_inline", "style_id"].includes(g)), v = $.filter((g) => ["bg_color", "bg_image"].includes(g)), f = [
-    { value: "text", label: "Text", fields: $.filter((g) => ["caption", "title", "text"].includes(g)) },
-    { value: "image", label: "Image", fields: $.filter((g) => ["image", "alt_image"].includes(g)) },
-    ...$.filter((g) => !["caption", "title", "text", "image", "alt_image", "style_css", "style_css_inline", "style_id", "bg_color", "bg_image"].includes(g)).map((g) => ({ value: g, label: Dn[g] || g, fields: [g] }))
+  const { attributes: m, listeners: y, setNodeRef: _, transform: h, transition: E, isDragging: z } = qt({ id: t }), O = Object.keys(l || n), R = O.filter((g) => ["style_css", "style_css_inline", "style_id"].includes(g)), b = O.filter((g) => ["bg_color", "bg_image"].includes(g)), p = [
+    { value: "text", label: "Text", fields: O.filter((g) => ["caption", "title", "text"].includes(g)) },
+    { value: "image", label: "Image", fields: O.filter((g) => ["image", "alt_image"].includes(g)) },
+    ...O.filter((g) => !["caption", "title", "text", "image", "alt_image", "style_css", "style_css_inline", "style_id", "bg_color", "bg_image"].includes(g)).map((g) => ({ value: g, label: Dn[g] || g, fields: [g] }))
   ].filter((g) => g.fields.length > 0);
   return /* @__PURE__ */ a(
     "div",
     {
       ref: _,
-      style: { transform: Wt.Transform.toString(h), transition: D },
+      style: { transform: Wt.Transform.toString(h), transition: E },
       className: `overflow-hidden rounded-sm border ${z ? "z-10 opacity-50" : ""}`,
       children: [
         /* @__PURE__ */ a("div", { className: "flex items-center justify-between border-b px-3 py-2.5", children: [
@@ -4829,7 +4865,7 @@ function Nl({
                 type: "button",
                 className: "cursor-grab text-muted-foreground hover:text-foreground",
                 "aria-label": "Drag to reorder item",
-                ...p,
+                ...m,
                 ...y,
                 children: /* @__PURE__ */ e(Gt, { className: "h-3.5 w-3.5" })
               }
@@ -4841,23 +4877,23 @@ function Nl({
           ] }),
           /* @__PURE__ */ a("div", { className: "flex items-center gap-0.5", children: [
             /* @__PURE__ */ e(
-              N,
+              x,
               {
                 type: "button",
                 variant: "ghost",
                 size: "icon-sm",
                 "aria-label": "Duplicate column",
                 onClick: (g) => {
-                  g.stopPropagation(), m(s);
+                  g.stopPropagation(), u(s);
                 },
                 children: /* @__PURE__ */ e(ya, { className: "h-3.5 w-3.5 text-muted-foreground" })
               }
             ),
-            (M.length > 0 || v.length > 0) && /* @__PURE__ */ a(ut, { children: [
+            (R.length > 0 || b.length > 0) && /* @__PURE__ */ a(ut, { children: [
               /* @__PURE__ */ e(
                 Mt,
                 {
-                  render: /* @__PURE__ */ e(N, { type: "button", variant: "ghost", size: "icon-sm", "aria-label": "Open style settings", children: /* @__PURE__ */ e(wa, { className: "h-3.5 w-3.5 text-muted-foreground" }) })
+                  render: /* @__PURE__ */ e(x, { type: "button", variant: "ghost", size: "icon-sm", "aria-label": "Open style settings", children: /* @__PURE__ */ e(wa, { className: "h-3.5 w-3.5 text-muted-foreground" }) })
                 }
               ),
               /* @__PURE__ */ a(mt, { children: [
@@ -4865,19 +4901,19 @@ function Nl({
                   /* @__PURE__ */ e(gt, { children: "Style settings" }),
                   /* @__PURE__ */ e(Ta, { children: "Set background and custom styling for this column." })
                 ] }),
-                /* @__PURE__ */ a(Ut, { defaultValue: M.length > 0 ? "style" : "background", className: "gap-0", children: [
+                /* @__PURE__ */ a(Ut, { defaultValue: R.length > 0 ? "style" : "background", className: "gap-0", children: [
                   /* @__PURE__ */ a(Ft, { className: "w-full justify-start", "aria-label": "Style settings", children: [
-                    M.length > 0 && /* @__PURE__ */ e(qe, { value: "style", className: "shrink-0 px-2 text-xs", children: "Style" }),
-                    v.length > 0 && /* @__PURE__ */ e(qe, { value: "background", className: "shrink-0 px-2 text-xs", children: "Background" })
+                    R.length > 0 && /* @__PURE__ */ e(qe, { value: "style", className: "shrink-0 px-2 text-xs", children: "Style" }),
+                    b.length > 0 && /* @__PURE__ */ e(qe, { value: "background", className: "shrink-0 px-2 text-xs", children: "Background" })
                   ] }),
-                  M.length > 0 && /* @__PURE__ */ e(Ke, { value: "style", className: "p-4", children: /* @__PURE__ */ e("div", { className: "space-y-4", children: M.map((g) => /* @__PURE__ */ e(ia, { field: g, value: n[g] ?? null, onItemChange: (x) => i(s, g, x) }, g)) }) }),
-                  v.length > 0 && /* @__PURE__ */ e(Ke, { value: "background", className: "p-4", children: /* @__PURE__ */ e("div", { className: "space-y-4", children: v.map((g) => /* @__PURE__ */ e(ia, { field: g, value: n[g] ?? null, onItemChange: (x) => i(s, g, x) }, g)) }) })
+                  R.length > 0 && /* @__PURE__ */ e(Ke, { value: "style", className: "p-4", children: /* @__PURE__ */ e("div", { className: "space-y-4", children: R.map((g) => /* @__PURE__ */ e(ia, { field: g, value: n[g] ?? null, onItemChange: (N) => i(s, g, N) }, g)) }) }),
+                  b.length > 0 && /* @__PURE__ */ e(Ke, { value: "background", className: "p-4", children: /* @__PURE__ */ e("div", { className: "space-y-4", children: b.map((g) => /* @__PURE__ */ e(ia, { field: g, value: n[g] ?? null, onItemChange: (N) => i(s, g, N) }, g)) }) })
                 ] }),
                 /* @__PURE__ */ e(Ct, { showCloseButton: !0 })
               ] })
             ] }),
             /* @__PURE__ */ e(
-              N,
+              x,
               {
                 type: "button",
                 variant: "ghost",
@@ -4889,19 +4925,19 @@ function Nl({
                 children: /* @__PURE__ */ e(we, { className: "h-3.5 w-3.5 text-destructive" })
               }
             ),
-            /* @__PURE__ */ e(N, { type: "button", variant: "ghost", size: "icon-sm", "aria-label": o ? "Collapse column" : "Expand column", onClick: c, children: o ? /* @__PURE__ */ e(fn, { className: "h-3.5 w-3.5 text-muted-foreground" }) : /* @__PURE__ */ e(wt, { className: "h-3.5 w-3.5 text-muted-foreground" }) })
+            /* @__PURE__ */ e(x, { type: "button", variant: "ghost", size: "icon-sm", "aria-label": o ? "Collapse column" : "Expand column", onClick: c, children: o ? /* @__PURE__ */ e(fn, { className: "h-3.5 w-3.5 text-muted-foreground" }) : /* @__PURE__ */ e(wt, { className: "h-3.5 w-3.5 text-muted-foreground" }) })
           ] })
         ] }),
-        o && f.length > 0 ? /* @__PURE__ */ a(Ut, { defaultValue: f[0].value, className: "gap-0", children: [
-          /* @__PURE__ */ e(Ft, { className: "w-full justify-start", "aria-label": `Column ${s + 1} fields`, children: f.map((g) => /* @__PURE__ */ e(qe, { value: g.value, className: "shrink-0 px-2 text-xs", children: g.label }, g.value)) }),
-          f.map((g) => /* @__PURE__ */ e(Ke, { value: g.value, className: "p-4", children: /* @__PURE__ */ e("div", { className: "space-y-4", children: g.fields.map((x) => /* @__PURE__ */ e(
+        o && p.length > 0 ? /* @__PURE__ */ a(Ut, { defaultValue: p[0].value, className: "gap-0", children: [
+          /* @__PURE__ */ e(Ft, { className: "w-full justify-start", "aria-label": `Column ${s + 1} fields`, children: p.map((g) => /* @__PURE__ */ e(qe, { value: g.value, className: "shrink-0 px-2 text-xs", children: g.label }, g.value)) }),
+          p.map((g) => /* @__PURE__ */ e(Ke, { value: g.value, className: "p-4", children: /* @__PURE__ */ e("div", { className: "space-y-4", children: g.fields.map((N) => /* @__PURE__ */ e(
             ia,
             {
-              field: x,
-              value: n[x] ?? null,
-              onItemChange: (P) => i(s, x, P)
+              field: N,
+              value: n[N] ?? null,
+              onItemChange: (P) => i(s, N, P)
             },
-            x
+            N
           )) }) }, g.value))
         ] }) : o && /* @__PURE__ */ e("p", { className: "p-4 text-xs text-muted-foreground", children: "No template fields defined for this section." })
       ]
@@ -4930,39 +4966,39 @@ function wl({
   template: r,
   onToggleExpanded: o,
   onRemove: c,
-  onDuplicate: m,
-  onUpdateField: p,
+  onDuplicate: u,
+  onUpdateField: m,
   onUpdateItemField: y,
   collapsedItems: _,
   onToggleItemExpanded: h,
-  onCollapseItems: D,
+  onCollapseItems: E,
   onExpandItems: z
 }) {
-  const $ = Tn(), M = yl(l, t, i), v = r ?? $.find((d) => d.type === t.type) ?? null, f = !!v?.contentType, g = v?.itemMode !== "none", x = v?.itemMode === "single", P = new Set(v?.sectionFields ?? ["caption", "title", "text"]), B = t.links?.[0] ?? { label: "", url: "" }, [k, C] = u([]), b = k.find(
-    (d) => d.id === t.category || d.name === t.category
-  ), { attributes: I, listeners: R, setNodeRef: H, transform: L, transition: w, isDragging: A } = qt({ id: t._instanceId });
-  return ee(() => {
-    if (!f) {
-      C([]);
+  const O = Tn(), R = yl(l, t, i), b = r ?? O.find((T) => T.type === t.type) ?? null, p = !!b?.contentType, g = b?.itemMode !== "none", N = b?.itemMode === "single", P = new Set(b?.sectionFields ?? ["caption", "title", "text"]), U = b?.columns, k = U ? U.desktop ?? U.tablet ?? U.mobile : void 0, C = t.links?.[0] ?? { label: "", url: "" }, [f, I] = d([]), B = f.find(
+    (T) => T.id === t.category || T.name === t.category
+  ), { attributes: V, listeners: M, setNodeRef: w, transform: A, transition: v, isDragging: Q } = qt({ id: t._instanceId });
+  return te(() => {
+    if (!p) {
+      I([]);
       return;
     }
-    ue(`/api/admin/categories?type=${encodeURIComponent(t.type)}`).then((d) => C(Array.isArray(d) ? d : [])).catch(() => C([]));
-  }, [t.type, f]), /* @__PURE__ */ a(Pe, { ref: H, style: { transform: Wt.Transform.toString(L), transition: w }, className: `gap-0 overflow-hidden rounded-sm border-border/70 bg-card py-0 shadow-sm ${A ? "opacity-60" : ""}`, children: [
+    ue(`/api/admin/categories?type=${encodeURIComponent(t.type)}`).then((T) => I(Array.isArray(T) ? T : [])).catch(() => I([]));
+  }, [t.type, p]), /* @__PURE__ */ a(Pe, { ref: w, style: { transform: Wt.Transform.toString(A), transition: v }, className: `gap-0 overflow-hidden rounded-sm border-border/70 bg-card py-0 shadow-sm ${Q ? "opacity-60" : ""}`, children: [
     /* @__PURE__ */ a(_e, { className: "flex flex-row items-center justify-between border-b py-3 px-3 cursor-pointer select-none", onClick: o, children: [
       /* @__PURE__ */ a("div", { className: "flex items-center gap-2", children: [
-        /* @__PURE__ */ e("button", { type: "button", className: "cursor-grab text-muted-foreground hover:text-foreground", "aria-label": "Drag to reorder", ...I, ...R, children: /* @__PURE__ */ e(Gt, { className: "h-4 w-4" }) }),
-        /* @__PURE__ */ e(Ae, { className: "text-sm", children: v?.label ?? t.type ?? `Section #${n + 1}` })
+        /* @__PURE__ */ e("button", { type: "button", className: "cursor-grab text-muted-foreground hover:text-foreground", "aria-label": "Drag to reorder", ...V, ...M, children: /* @__PURE__ */ e(Gt, { className: "h-4 w-4" }) }),
+        /* @__PURE__ */ e(Ae, { className: "text-sm", children: b?.label ?? t.type ?? `Section #${n + 1}` })
       ] }),
       /* @__PURE__ */ a("div", { className: "flex items-center gap-1", children: [
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
             size: "icon-sm",
             "aria-label": "Duplicate section",
-            onClick: (d) => {
-              d.stopPropagation(), m();
+            onClick: (T) => {
+              T.stopPropagation(), u();
             },
             children: /* @__PURE__ */ e(ya, { className: "h-4 w-4 text-muted-foreground" })
           }
@@ -4972,13 +5008,13 @@ function wl({
             Mt,
             {
               render: /* @__PURE__ */ e(
-                N,
+                x,
                 {
                   type: "button",
                   variant: "ghost",
                   size: "icon-sm",
                   "aria-label": "Open section style settings",
-                  onClick: (d) => d.stopPropagation(),
+                  onClick: (T) => T.stopPropagation(),
                   children: /* @__PURE__ */ e(wa, { className: "h-4 w-4 text-muted-foreground" })
                 }
               )
@@ -4992,100 +5028,108 @@ function wl({
             /* @__PURE__ */ a(Ut, { defaultValue: "style", className: "gap-0", children: [
               /* @__PURE__ */ a(Ft, { className: "w-full justify-start", "aria-label": "Section settings", children: [
                 /* @__PURE__ */ e(qe, { value: "style", className: "shrink-0 px-2 text-xs", children: "Style" }),
-                f && /* @__PURE__ */ e(qe, { value: "filter", className: "shrink-0 px-2 text-xs", children: "Filter" }),
+                p && /* @__PURE__ */ e(qe, { value: "filter", className: "shrink-0 px-2 text-xs", children: "Filter" }),
                 P.has("image") && /* @__PURE__ */ e(qe, { value: "image", className: "shrink-0 px-2 text-xs", children: "Image" }),
                 P.has("links") && /* @__PURE__ */ e(qe, { value: "link", className: "shrink-0 px-2 text-xs", children: "Link" }),
                 (P.has("bg_color") || P.has("bg_image")) && /* @__PURE__ */ e(qe, { value: "background", className: "shrink-0 px-2 text-xs", children: "Background" })
               ] }),
               /* @__PURE__ */ e(Ke, { value: "style", className: "p-1 pt-4", children: /* @__PURE__ */ a("div", { className: "space-y-4", children: [
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Custom Class" }),
-                  /* @__PURE__ */ e(V, { value: t.style_css ?? "", onChange: (d) => p("style_css", d.target.value || null), placeholder: "custom-class" })
+                  /* @__PURE__ */ e(L, { children: "Custom Class" }),
+                  /* @__PURE__ */ e(G, { value: t.style_css ?? "", onChange: (T) => m("style_css", T.target.value || null), placeholder: "custom-class" })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Custom Style" }),
-                  /* @__PURE__ */ e(V, { value: t.style_css_inline ?? "", onChange: (d) => p("style_css_inline", d.target.value || null), placeholder: "color: red;" })
+                  /* @__PURE__ */ e(L, { children: "Custom Style" }),
+                  /* @__PURE__ */ e(G, { value: t.style_css_inline ?? "", onChange: (T) => m("style_css_inline", T.target.value || null), placeholder: "color: red;" })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Custom ID" }),
-                  /* @__PURE__ */ e(V, { value: t.style_id ?? "", onChange: (d) => p("style_id", d.target.value || null), placeholder: "#my-id" })
+                  /* @__PURE__ */ e(L, { children: "Custom ID" }),
+                  /* @__PURE__ */ e(G, { value: t.style_id ?? "", onChange: (T) => m("style_id", T.target.value || null), placeholder: "#my-id" })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Alignment" }),
-                  /* @__PURE__ */ a(Ie, { value: t.alignment ?? "", onValueChange: (d) => p("alignment", d || null), children: [
+                  /* @__PURE__ */ e(L, { children: "Alignment" }),
+                  /* @__PURE__ */ a(Ie, { value: t.alignment ?? "", onValueChange: (T) => m("alignment", T || null), children: [
                     /* @__PURE__ */ e(De, { children: /* @__PURE__ */ e(Te, { placeholder: "Select alignment" }) }),
                     /* @__PURE__ */ a(Ee, { children: [
-                      /* @__PURE__ */ e(se, { value: "left", children: "Left" }),
-                      /* @__PURE__ */ e(se, { value: "center", children: "Center" }),
-                      /* @__PURE__ */ e(se, { value: "right", children: "Right" })
+                      /* @__PURE__ */ e(re, { value: "left", children: "Left" }),
+                      /* @__PURE__ */ e(re, { value: "center", children: "Center" }),
+                      /* @__PURE__ */ e(re, { value: "right", children: "Right" })
                     ] })
                   ] })
                 ] })
               ] }) }),
-              f && /* @__PURE__ */ e(Ke, { value: "filter", className: "p-1 pt-4", children: /* @__PURE__ */ a("div", { className: "grid gap-4 sm:grid-cols-2", children: [
+              p && /* @__PURE__ */ e(Ke, { value: "filter", className: "p-1 pt-4", children: /* @__PURE__ */ a("div", { className: "grid gap-4 sm:grid-cols-2", children: [
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Category" }),
-                  /* @__PURE__ */ a(Ie, { value: b?.id ?? t.category ?? "all", onValueChange: (d) => p("category", d === "all" ? null : d), children: [
-                    /* @__PURE__ */ e(De, { children: /* @__PURE__ */ e(Te, { children: b?.name ?? "All categories" }) }),
+                  /* @__PURE__ */ e(L, { children: "Category" }),
+                  /* @__PURE__ */ a(Ie, { value: B?.id ?? t.category ?? "all", onValueChange: (T) => m("category", T === "all" ? null : T), children: [
+                    /* @__PURE__ */ e(De, { children: /* @__PURE__ */ e(Te, { children: B?.name ?? "All categories" }) }),
                     /* @__PURE__ */ a(Ee, { children: [
-                      /* @__PURE__ */ e(se, { value: "all", children: "All categories" }),
-                      k.map((d) => /* @__PURE__ */ e(se, { value: d.id, children: d.name }, d.id))
+                      /* @__PURE__ */ e(re, { value: "all", children: "All categories" }),
+                      f.map((T) => /* @__PURE__ */ e(re, { value: T.id, children: T.name }, T.id))
                     ] })
                   ] })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Sort By" }),
-                  /* @__PURE__ */ a(Ie, { value: t.sort_by ?? "created_at", onValueChange: (d) => p("sort_by", d), children: [
+                  /* @__PURE__ */ e(L, { children: "Sort By" }),
+                  /* @__PURE__ */ a(Ie, { value: t.sort_by ?? "created_at", onValueChange: (T) => m("sort_by", T), children: [
                     /* @__PURE__ */ e(De, { children: /* @__PURE__ */ e(Te, {}) }),
                     /* @__PURE__ */ a(Ee, { children: [
-                      /* @__PURE__ */ e(se, { value: "created_at", children: "Created at" }),
-                      /* @__PURE__ */ e(se, { value: "title", children: "Title" })
+                      /* @__PURE__ */ e(re, { value: "created_at", children: "Created at" }),
+                      /* @__PURE__ */ e(re, { value: "title", children: "Title" })
                     ] })
                   ] })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Order" }),
-                  /* @__PURE__ */ a(Ie, { value: t.sort_order ?? "desc", onValueChange: (d) => p("sort_order", d), children: [
+                  /* @__PURE__ */ e(L, { children: "Order" }),
+                  /* @__PURE__ */ a(Ie, { value: t.sort_order ?? "desc", onValueChange: (T) => m("sort_order", T), children: [
                     /* @__PURE__ */ e(De, { children: /* @__PURE__ */ e(Te, {}) }),
                     /* @__PURE__ */ a(Ee, { children: [
-                      /* @__PURE__ */ e(se, { value: "asc", children: "Ascending" }),
-                      /* @__PURE__ */ e(se, { value: "desc", children: "Descending" })
+                      /* @__PURE__ */ e(re, { value: "asc", children: "Ascending" }),
+                      /* @__PURE__ */ e(re, { value: "desc", children: "Descending" })
                     ] })
                   ] })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Limit" }),
-                  /* @__PURE__ */ e(V, { type: "number", min: 0, value: t.limit ?? "", onChange: (d) => p("limit", d.target.value ? Number(d.target.value) : null), placeholder: "Max items" })
+                  /* @__PURE__ */ e(L, { children: "Limit" }),
+                  /* @__PURE__ */ e(G, { type: "number", min: 0, value: t.limit ?? "", onChange: (T) => m("limit", T.target.value ? Number(T.target.value) : null), placeholder: "Max items" })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Sort" }),
-                  /* @__PURE__ */ e(V, { type: "number", min: 0, value: t.sort, onChange: (d) => p("sort", Number(d.target.value) || 0) })
+                  /* @__PURE__ */ e(L, { children: "Sort" }),
+                  /* @__PURE__ */ e(G, { type: "number", min: 0, value: t.sort, onChange: (T) => m("sort", Number(T.target.value) || 0) })
                 ] })
               ] }) }),
               P.has("image") && /* @__PURE__ */ e(Ke, { value: "image", className: "p-1 pt-4", children: /* @__PURE__ */ a("div", { className: "grid gap-4 sm:grid-cols-2", children: [
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Image" }),
-                  /* @__PURE__ */ e(Fe, { value: t.image ?? null, onChange: (d) => p("image", d ? d.url : null), accept: "image/*" })
+                  /* @__PURE__ */ e(L, { children: "Image" }),
+                  /* @__PURE__ */ a("div", { className: "flex items-center gap-2", children: [
+                    t.image && /* @__PURE__ */ e("div", { className: "relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted", children: /* @__PURE__ */ e("img", { src: t.image, alt: "", className: "h-full w-full object-cover" }) }),
+                    /* @__PURE__ */ e(Fe, { value: t.image ?? null, onChange: (T) => m("image", T ? T.url : null), accept: "image/*" }),
+                    t.image && /* @__PURE__ */ e(x, { type: "button", variant: "outline", "aria-label": "Remove image", className: "shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive", onClick: () => m("image", null), children: "Remove" })
+                  ] })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Alt Image" }),
-                  /* @__PURE__ */ e(V, { value: t.alt_image ?? "", onChange: (d) => p("alt_image", d.target.value || null), placeholder: "Alt text" })
+                  /* @__PURE__ */ e(L, { children: "Alt Image" }),
+                  /* @__PURE__ */ e(G, { value: t.alt_image ?? "", onChange: (T) => m("alt_image", T.target.value || null), placeholder: "Alt text" })
                 ] })
               ] }) }),
               P.has("links") && /* @__PURE__ */ e(Ke, { value: "link", className: "p-1 pt-4", children: /* @__PURE__ */ a("div", { className: "grid gap-2 sm:grid-cols-3", children: [
-                /* @__PURE__ */ e(V, { value: B.label, onChange: (d) => p("links", [{ ...B, label: d.target.value }]), placeholder: "Label" }),
-                /* @__PURE__ */ e(V, { value: B.url, onChange: (d) => p("links", [{ ...B, url: d.target.value }]), placeholder: "https://...", className: "sm:col-span-2" })
+                /* @__PURE__ */ e(G, { value: C.label, onChange: (T) => m("links", [{ ...C, label: T.target.value }]), placeholder: "Label" }),
+                /* @__PURE__ */ e(G, { value: C.url, onChange: (T) => m("links", [{ ...C, url: T.target.value }]), placeholder: "https://...", className: "sm:col-span-2" })
               ] }) }),
               (P.has("bg_color") || P.has("bg_image")) && /* @__PURE__ */ e(Ke, { value: "background", className: "p-1 pt-4", children: /* @__PURE__ */ a("div", { className: "grid gap-4 sm:grid-cols-2", children: [
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Background Image" }),
-                  /* @__PURE__ */ e(Fe, { value: t.bg_image ?? null, onChange: (d) => p("bg_image", d ? d.url : null), accept: "image/*" })
+                  /* @__PURE__ */ e(L, { children: "Background Image" }),
+                  /* @__PURE__ */ a("div", { className: "flex items-center gap-2", children: [
+                    t.bg_image && /* @__PURE__ */ e("div", { className: "relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted", children: /* @__PURE__ */ e("img", { src: t.bg_image, alt: "", className: "h-full w-full object-cover" }) }),
+                    /* @__PURE__ */ e(Fe, { value: t.bg_image ?? null, onChange: (T) => m("bg_image", T ? T.url : null), accept: "image/*" }),
+                    t.bg_image && /* @__PURE__ */ e(x, { type: "button", variant: "outline", "aria-label": "Remove background image", className: "shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive", onClick: () => m("bg_image", null), children: "Remove" })
+                  ] })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Background Color" }),
+                  /* @__PURE__ */ e(L, { children: "Background Color" }),
                   /* @__PURE__ */ a("div", { className: "flex items-center gap-2", children: [
-                    /* @__PURE__ */ e("input", { type: "color", value: t.bg_color ?? "#ffffff", onChange: (d) => p("bg_color", d.target.value || null), className: "h-9 w-10 rounded-sm border p-1" }),
-                    /* @__PURE__ */ e(V, { value: t.bg_color ?? "", onChange: (d) => p("bg_color", d.target.value || null), placeholder: "#000000" })
+                    /* @__PURE__ */ e("input", { type: "color", value: t.bg_color ?? "#ffffff", onChange: (T) => m("bg_color", T.target.value || null), className: "h-9 w-10 rounded-sm border p-1" }),
+                    /* @__PURE__ */ e(G, { value: t.bg_color ?? "", onChange: (T) => m("bg_color", T.target.value || null), placeholder: "#000000" })
                   ] })
                 ] })
               ] }) })
@@ -5093,8 +5137,8 @@ function wl({
             /* @__PURE__ */ e(Ct, { showCloseButton: !0 })
           ] })
         ] }),
-        /* @__PURE__ */ e(N, { type: "button", variant: "ghost", size: "icon-sm", onClick: (d) => {
-          d.stopPropagation(), c();
+        /* @__PURE__ */ e(x, { type: "button", variant: "ghost", size: "icon-sm", onClick: (T) => {
+          T.stopPropagation(), c();
         }, children: /* @__PURE__ */ e(we, { className: "h-4 w-4 text-destructive" }) }),
         s ? /* @__PURE__ */ e(fn, { className: "h-4 w-4 text-muted-foreground" }) : /* @__PURE__ */ e(wt, { className: "h-4 w-4 text-muted-foreground" })
       ] })
@@ -5102,45 +5146,45 @@ function wl({
     s && /* @__PURE__ */ a(ze, { className: "space-y-5 px-3 py-4", children: [
       (P.has("caption") || P.has("title") || P.has("text")) && /* @__PURE__ */ a("div", { className: "space-y-4", children: [
         P.has("caption") && /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ e(E, { children: "Caption" }),
-          /* @__PURE__ */ e(V, { value: t.caption ?? "", onChange: (d) => p("caption", d.target.value || null), placeholder: "Enter your caption..." })
+          /* @__PURE__ */ e(L, { children: "Caption" }),
+          /* @__PURE__ */ e(G, { value: t.caption ?? "", onChange: (T) => m("caption", T.target.value || null), placeholder: "Enter your caption..." })
         ] }),
         P.has("title") && /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ e(E, { children: "Heading" }),
-          /* @__PURE__ */ e(V, { value: t.title ?? "", onChange: (d) => p("title", d.target.value || null), placeholder: "Enter your heading..." })
+          /* @__PURE__ */ e(L, { children: "Heading" }),
+          /* @__PURE__ */ e(G, { value: t.title ?? "", onChange: (T) => m("title", T.target.value || null), placeholder: "Enter your heading..." })
         ] }),
         P.has("text") && /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ e(E, { children: "Text" }),
-          /* @__PURE__ */ e(Oe, { value: t.text ?? "", onChange: (d) => p("text", d.target.value || null), placeholder: "Enter your text...", rows: 3 })
+          /* @__PURE__ */ e(L, { children: "Text" }),
+          /* @__PURE__ */ e(Oe, { value: t.text ?? "", onChange: (T) => m("text", T.target.value || null), placeholder: "Enter your text...", rows: 3 })
         ] })
       ] }),
       g && /* @__PURE__ */ a("div", { className: "space-y-3 border-t pt-5", children: [
         /* @__PURE__ */ a("div", { className: "flex items-center justify-between", children: [
           /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-            /* @__PURE__ */ a(E, { className: "text-sm font-semibold", children: [
+            /* @__PURE__ */ a(L, { className: "text-sm font-semibold", children: [
               "Items",
-              v?.columns ? ` · up to ${v.columns.desktop ?? v.columns.tablet ?? v.columns.mobile} columns per row` : ""
+              k ? ` · up to ${k} columns per row` : ""
             ] }),
             /* @__PURE__ */ a("div", { className: "flex items-center gap-3 text-xs font-medium text-muted-foreground", children: [
-              /* @__PURE__ */ e("button", { type: "button", onClick: D, className: "hover:text-foreground", children: "Collapse all" }),
+              /* @__PURE__ */ e("button", { type: "button", onClick: E, className: "hover:text-foreground", children: "Collapse all" }),
               /* @__PURE__ */ e("button", { type: "button", onClick: z, className: "hover:text-foreground", children: "Expand all" })
             ] })
           ] }),
           /* @__PURE__ */ a(
-            N,
+            x,
             {
               type: "button",
               variant: "outline",
               size: "sm",
-              disabled: x && (t.item?.length ?? 0) >= 1,
-              onClick: (d) => {
-                d.stopPropagation();
-                const G = M ? ba(M) : {};
-                p("item", [...t.item ?? [], G]);
+              disabled: N && (t.item?.length ?? 0) >= 1,
+              onClick: (T) => {
+                T.stopPropagation();
+                const $ = R ? ba(R) : {};
+                m("item", [...t.item ?? [], $]);
               },
               className: "gap-1",
               children: [
-                /* @__PURE__ */ e(Re, { className: "h-3.5 w-3.5" }),
+                /* @__PURE__ */ e($e, { className: "h-3.5 w-3.5" }),
                 "Add Item"
               ]
             }
@@ -5149,25 +5193,25 @@ function wl({
         t.item && t.item.length > 0 ? /* @__PURE__ */ e(
           Kt,
           {
-            items: (t.item ?? []).map((d, G) => `${t._instanceId}-item-${G}`),
+            items: (t.item ?? []).map((T, $) => `${t._instanceId}-item-${$}`),
             strategy: Aa,
-            children: /* @__PURE__ */ e("div", { className: "grid gap-3 lg:grid-cols-2", children: t.item.map((d, G) => /* @__PURE__ */ e(
+            children: /* @__PURE__ */ e("div", { className: "grid gap-3 lg:grid-cols-2", children: t.item.map((T, $) => /* @__PURE__ */ e(
               Nl,
               {
-                id: `${t._instanceId}-item-${G}`,
-                item: d,
-                itemIdx: G,
-                itemTemplate: M,
+                id: `${t._instanceId}-item-${$}`,
+                item: T,
+                itemIdx: $,
+                itemTemplate: R,
                 onUpdateItemField: y,
-                onRemove: (ie) => p(
+                onRemove: (J) => m(
                   "item",
-                  (t.item ?? []).filter((j, Y) => Y !== ie)
+                  (t.item ?? []).filter((j, X) => X !== J)
                 ),
-                isExpanded: !_.has(`${t._instanceId}-item-${G}`),
-                onToggleExpanded: () => h(`${t._instanceId}-item-${G}`),
-                onDuplicate: (ie) => p("item", [...t.item ?? [], { ...(t.item ?? [])[ie] }])
+                isExpanded: !_.has(`${t._instanceId}-item-${$}`),
+                onToggleExpanded: () => h(`${t._instanceId}-item-${$}`),
+                onDuplicate: (J) => m("item", [...t.item ?? [], { ...(t.item ?? [])[J] }])
               },
-              `${t._instanceId}-item-${G}`
+              `${t._instanceId}-item-${$}`
             )) })
           }
         ) : /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: 'No items added. Click "Add Item" to create one.' })
@@ -5209,31 +5253,31 @@ function Cl(t) {
   };
 }
 function En({ embeddedSections: t, onChange: n }) {
-  const s = Tn(), [l] = u(() => s.map(Cl)), [i, r] = u(!1), [o, c] = u(/* @__PURE__ */ new Set()), [m, p] = u(/* @__PURE__ */ new Set()), [y, _] = u(/* @__PURE__ */ new Map()), h = ka(
+  const s = Tn(), [l] = d(() => s.map(Cl)), [i, r] = d(!1), [o, c] = d(/* @__PURE__ */ new Set()), [u, m] = d(/* @__PURE__ */ new Set()), [y, _] = d(/* @__PURE__ */ new Map()), h = ka(
     jt(Sa, { activationConstraint: { distance: 6 } })
   );
-  function D(k) {
-    const C = l.find((d) => d.id === k);
+  function E(k) {
+    const C = l.find((v) => v.id === k);
     if (!C) return;
-    let b = null, I = null, R = null;
-    const H = C.template?.itemMode !== "none";
+    let f = null, I = null, B = null;
+    const V = C.template?.itemMode !== "none";
     try {
-      C.links && (b = JSON.parse(C.links));
+      C.links && (f = JSON.parse(C.links));
     } catch {
     }
-    const L = C.template?.demo?.items;
-    H && L?.length && (R = { ...C.item }, I = L.map((d) => ({
-      ...d,
-      links: Array.isArray(d.links) ? d.links.map((G) => ({ ...G })) : d.links
+    const M = C.template?.demo?.items;
+    V && M?.length && (B = { ...C.item }, I = M.map((v) => ({
+      ...v,
+      links: Array.isArray(v.links) ? v.links.map((Q) => ({ ...Q })) : v.links
     })));
     try {
-      if (H && !I && C.item) {
-        const d = typeof C.item == "string" ? JSON.parse(C.item) : C.item;
-        d && !Array.isArray(d) ? (R = { ...d }, I = [ba({ ...d })]) : Array.isArray(d) && (I = d, R = d.length > 0 ? { ...d[0] } : null);
+      if (V && !I && C.item) {
+        const v = typeof C.item == "string" ? JSON.parse(C.item) : C.item;
+        v && !Array.isArray(v) ? (B = { ...v }, I = [ba({ ...v })]) : Array.isArray(v) && (I = v, B = v.length > 0 ? { ...v[0] } : null);
       }
     } catch {
     }
-    H && !I && R && (I = [ba(R)]);
+    V && !I && B && (I = [ba(B)]);
     const w = {
       _instanceId: `sec-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       id: C.id,
@@ -5254,18 +5298,18 @@ function En({ embeddedSections: t, onChange: n }) {
       sort_by: C.sort_by,
       sort_order: C.sort_order,
       category: C.category,
-      links: b,
-      item: H ? I && I.length > 0 ? I : [] : null
+      links: f,
+      item: V ? I && I.length > 0 ? I : [] : null
     }, A = t.length;
-    n([...t, w]), r(!1), H && R && _((d) => new Map(d).set(A, R)), c((d) => new Set(d).add(A));
+    n([...t, w]), r(!1), V && B && _((v) => new Map(v).set(A, B)), c((v) => new Set(v).add(A));
   }
   function z(k) {
-    n(t.filter((C, b) => b !== k));
+    n(t.filter((C, f) => f !== k));
   }
-  function $(k) {
+  function O(k) {
     const C = t[k];
     if (!C) return;
-    const b = {
+    const f = {
       ...C,
       _instanceId: `sec-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       links: C.links?.map((I) => ({ ...I })) ?? null,
@@ -5273,76 +5317,76 @@ function En({ embeddedSections: t, onChange: n }) {
     };
     n([
       ...t.slice(0, k + 1),
-      b,
+      f,
       ...t.slice(k + 1)
     ]), c((I) => {
-      const R = /* @__PURE__ */ new Set();
-      return I.forEach((H) => R.add(H > k ? H + 1 : H)), R.add(k + 1), R;
+      const B = /* @__PURE__ */ new Set();
+      return I.forEach((V) => B.add(V > k ? V + 1 : V)), B.add(k + 1), B;
     }), _((I) => {
-      const R = /* @__PURE__ */ new Map();
-      I.forEach((L, w) => {
-        R.set(w > k ? w + 1 : w, L);
+      const B = /* @__PURE__ */ new Map();
+      I.forEach((M, w) => {
+        B.set(w > k ? w + 1 : w, M);
       });
-      const H = I.get(k);
-      return H && R.set(k + 1, { ...H }), R;
+      const V = I.get(k);
+      return V && B.set(k + 1, { ...V }), B;
     });
   }
-  function M(k, C, b) {
-    n(t.map((I, R) => R === k ? { ...I, [C]: b } : I));
+  function R(k, C, f) {
+    n(t.map((I, B) => B === k ? { ...I, [C]: f } : I));
   }
-  function v(k, C, b, I) {
+  function b(k, C, f, I) {
     n(
-      t.map((R, H) => H !== k || !R.item ? R : {
-        ...R,
-        item: R.item.map((L, w) => w === C ? { ...L, [b]: I } : L)
+      t.map((B, V) => V !== k || !B.item ? B : {
+        ...B,
+        item: B.item.map((M, w) => w === C ? { ...M, [f]: I } : M)
       })
     );
   }
-  function f(k) {
+  function p(k) {
     c((C) => {
-      const b = new Set(C);
-      return b.has(k) ? b.delete(k) : b.add(k), b;
+      const f = new Set(C);
+      return f.has(k) ? f.delete(k) : f.add(k), f;
     });
   }
   function g(k) {
-    p((C) => {
-      const b = new Set(C);
-      return b.has(k) ? b.delete(k) : b.add(k), b;
+    m((C) => {
+      const f = new Set(C);
+      return f.has(k) ? f.delete(k) : f.add(k), f;
     });
   }
-  function x() {
-    c(/* @__PURE__ */ new Set()), p(new Set(
+  function N() {
+    c(/* @__PURE__ */ new Set()), m(new Set(
       t.flatMap(
-        (k) => (k.item ?? []).map((C, b) => `${k._instanceId}-item-${b}`)
+        (k) => (k.item ?? []).map((C, f) => `${k._instanceId}-item-${f}`)
       )
     ));
   }
   function P() {
-    c(new Set(t.map((k, C) => C))), p(/* @__PURE__ */ new Set());
+    c(new Set(t.map((k, C) => C))), m(/* @__PURE__ */ new Set());
   }
-  function B(k) {
-    const { active: C, over: b } = k;
-    if (!b || C.id === b.id) return;
-    const I = String(C.id), R = String(b.id);
-    if (!I.includes("-item-") && !R.includes("-item-")) {
-      const H = t.findIndex((w) => w._instanceId === I), L = t.findIndex((w) => w._instanceId === R);
-      if (H === -1 || L === -1) return;
-      n(xt(t, H, L));
+  function U(k) {
+    const { active: C, over: f } = k;
+    if (!f || C.id === f.id) return;
+    const I = String(C.id), B = String(f.id);
+    if (!I.includes("-item-") && !B.includes("-item-")) {
+      const V = t.findIndex((w) => w._instanceId === I), M = t.findIndex((w) => w._instanceId === B);
+      if (V === -1 || M === -1) return;
+      n(xt(t, V, M));
       return;
     }
-    if (I.includes("-item-") && R.includes("-item-")) {
-      const H = I.split("-item-")[0], L = R.split("-item-")[0];
-      if (H !== L) return;
-      const w = t.findIndex((j) => j._instanceId === H);
+    if (I.includes("-item-") && B.includes("-item-")) {
+      const V = I.split("-item-")[0], M = B.split("-item-")[0];
+      if (V !== M) return;
+      const w = t.findIndex(($) => $._instanceId === V);
       if (w === -1) return;
       const A = t[w];
       if (!A.item) return;
-      const d = parseInt(I.split("-item-")[1], 10), G = parseInt(R.split("-item-")[1], 10);
-      if (isNaN(d) || isNaN(G)) return;
-      const ie = xt(A.item, d, G);
+      const v = parseInt(I.split("-item-")[1], 10), Q = parseInt(B.split("-item-")[1], 10);
+      if (isNaN(v) || isNaN(Q)) return;
+      const T = xt(A.item, v, Q);
       n(
         t.map(
-          (j, Y) => Y === w ? { ...j, item: ie } : j
+          ($, J) => J === w ? { ...$, item: T } : $
         )
       );
       return;
@@ -5350,15 +5394,15 @@ function En({ embeddedSections: t, onChange: n }) {
   }
   return /* @__PURE__ */ a("div", { className: "space-y-3", children: [
     t.length > 0 && /* @__PURE__ */ a("div", { className: "flex items-center gap-3 px-0.5 text-xs font-medium", children: [
-      /* @__PURE__ */ e("button", { type: "button", onClick: x, className: "text-muted-foreground transition-colors hover:text-foreground", children: "Collapse all" }),
+      /* @__PURE__ */ e("button", { type: "button", onClick: N, className: "text-muted-foreground transition-colors hover:text-foreground", children: "Collapse all" }),
       /* @__PURE__ */ e("button", { type: "button", onClick: P, className: "text-muted-foreground transition-colors hover:text-foreground", children: "Expand all" })
     ] }),
     /* @__PURE__ */ a(ut, { open: i, onOpenChange: r, children: [
       /* @__PURE__ */ e(
         Mt,
         {
-          render: /* @__PURE__ */ a(N, { type: "button", variant: "outline", className: "gap-1.5", children: [
-            /* @__PURE__ */ e(Re, { className: "h-3.5 w-3.5" }),
+          render: /* @__PURE__ */ a(x, { type: "button", variant: "outline", className: "gap-1.5", children: [
+            /* @__PURE__ */ e($e, { className: "h-3.5 w-3.5" }),
             "Add Section"
           ] })
         }
@@ -5370,12 +5414,12 @@ function En({ embeddedSections: t, onChange: n }) {
         ] }),
         /* @__PURE__ */ a("div", { className: "max-h-[60vh] space-y-2 overflow-y-auto pr-1", children: [
           l.map((k) => /* @__PURE__ */ e(
-            N,
+            x,
             {
               type: "button",
               variant: "outline",
               className: "h-auto w-full justify-start px-3 py-3 text-left",
-              onClick: () => D(k.id),
+              onClick: () => E(k.id),
               children: /* @__PURE__ */ a("span", { className: "flex flex-col items-start gap-0.5", children: [
                 /* @__PURE__ */ e("span", { children: k.template?.label ?? k.type }),
                 k.template?.description && /* @__PURE__ */ e("span", { className: "text-xs font-normal text-muted-foreground", children: k.template.description })
@@ -5387,7 +5431,7 @@ function En({ embeddedSections: t, onChange: n }) {
         ] })
       ] })
     ] }),
-    t.length > 0 && /* @__PURE__ */ e(Pa, { sensors: h, collisionDetection: _a, onDragEnd: B, children: /* @__PURE__ */ e(Kt, { items: t.map((k) => k._instanceId), strategy: Aa, children: /* @__PURE__ */ e("div", { className: "space-y-3", children: t.map((k, C) => /* @__PURE__ */ e(
+    t.length > 0 && /* @__PURE__ */ e(Pa, { sensors: h, collisionDetection: _a, onDragEnd: U, children: /* @__PURE__ */ e(Kt, { items: t.map((k) => k._instanceId), strategy: Aa, children: /* @__PURE__ */ e("div", { className: "space-y-3", children: t.map((k, C) => /* @__PURE__ */ e(
       wl,
       {
         section: k,
@@ -5395,18 +5439,18 @@ function En({ embeddedSections: t, onChange: n }) {
         isExpanded: o.has(C),
         itemTemplate: y.get(C) ?? null,
         availableSections: l,
-        template: s.find((b) => b.type === k.type) ?? null,
-        onToggleExpanded: () => f(C),
+        template: s.find((f) => f.type === k.type) ?? null,
+        onToggleExpanded: () => p(C),
         onRemove: () => z(C),
-        onDuplicate: () => $(C),
-        onUpdateField: (b, I) => M(C, b, I),
-        onUpdateItemField: (b, I, R) => v(C, b, I, R),
-        collapsedItems: m,
+        onDuplicate: () => O(C),
+        onUpdateField: (f, I) => R(C, f, I),
+        onUpdateItemField: (f, I, B) => b(C, f, I, B),
+        collapsedItems: u,
         onToggleItemExpanded: g,
-        onCollapseItems: () => p((b) => /* @__PURE__ */ new Set([...b, ...(k.item ?? []).map((I, R) => `${k._instanceId}-item-${R}`)])),
-        onExpandItems: () => p((b) => {
-          const I = new Set(b);
-          return (k.item ?? []).forEach((R, H) => I.delete(`${k._instanceId}-item-${H}`)), I;
+        onCollapseItems: () => m((f) => /* @__PURE__ */ new Set([...f, ...(k.item ?? []).map((I, B) => `${k._instanceId}-item-${B}`)])),
+        onExpandItems: () => m((f) => {
+          const I = new Set(f);
+          return (k.item ?? []).forEach((B, V) => I.delete(`${k._instanceId}-item-${V}`)), I;
         })
       },
       k._instanceId
@@ -5428,10 +5472,10 @@ function kl({
     }
     return document.addEventListener("mousedown", _), () => document.removeEventListener("mousedown", _);
   }, []);
-  function m(_) {
+  function u(_) {
     n.includes(_) ? s(n.filter((h) => h !== _)) : s([...n, _]);
   }
-  function p(_) {
+  function m(_) {
     s(n.filter((h) => h !== _));
   }
   const y = t.filter((_) => n.includes(_.value)).map((_) => _.label);
@@ -5463,8 +5507,8 @@ function kl({
                       type: "button",
                       onClick: (h) => {
                         h.stopPropagation();
-                        const D = t.find((z) => z.label === _);
-                        D && p(D.value);
+                        const E = t.find((z) => z.label === _);
+                        E && m(E.value);
                       },
                       className: "ml-1 rounded-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2",
                       children: /* @__PURE__ */ e(Vt, { className: "h-3 w-3 text-muted-foreground hover:text-foreground" })
@@ -5497,7 +5541,7 @@ function kl({
         "button",
         {
           type: "button",
-          onClick: () => m(_.value),
+          onClick: () => u(_.value),
           className: S(
             "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
             "hover:bg-accent hover:text-accent-foreground",
@@ -5525,24 +5569,24 @@ function kl({
 }
 const Sl = me(async () => ({ default: (await Promise.resolve().then(() => Un)).TiptapEditor }));
 function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i }) {
-  const { session: r } = Ze(), [o, c] = yt(), [m, p] = u({}), [y, _] = u(null), [h, D] = u(t?.title ?? ""), [z, $] = u(t?.status === "published" ? "published" : "draft"), [M, v] = u(t?.publishedAt ?? null), [f, g] = u(!1), x = z === "published" && !!M && M > Date.now(), [P, B] = u(t?.slug ?? ""), [k, C] = u(!!t?.slug), [b, I] = u(t?.type ?? i ?? "post"), R = r?.permissions.includes(`content.${b}.publish`) ?? !1, H = r?.permissions.includes(`content.${b}.unpublish`) ?? !1, [L, w] = u(t?.excerpt ?? ""), [A, d] = u(t?.description ?? ""), [G, ie] = u(() => {
+  const { session: r } = Ze(), [o, c] = yt(), [u, m] = d({}), [y, _] = d(null), [h, E] = d(t?.title ?? ""), [z, O] = d(t?.status === "published" ? "published" : "draft"), [R, b] = d(t?.publishedAt ?? null), [p, g] = d(!1), N = z === "published" && !!R && R > Date.now(), [P, U] = d(t?.slug ?? ""), [k, C] = d(!!t?.slug), [f, I] = d(t?.type ?? i ?? "post"), B = r?.permissions.includes(`content.${f}.publish`) ?? !1, V = r?.permissions.includes(`content.${f}.unpublish`) ?? !1, [M, w] = d(t?.excerpt ?? ""), [A, v] = d(t?.description ?? ""), [Q, T] = d(() => {
     if (t?.tags)
       try {
-        const F = JSON.parse(t.tags);
-        return Array.isArray(F) ? F.join(", ") : "";
+        const H = JSON.parse(t.tags);
+        return Array.isArray(H) ? H.join(", ") : "";
       } catch {
         return "";
       }
     return "";
-  }), [j, Y] = u(() => t?.categories?.map((F) => F.id) ?? []), [O, X] = u(t?.metaTitle ?? ""), [T, J] = u(t?.metaDescription ?? ""), [K, Q] = u(t?.featuredImage ?? ""), [Ne, de] = u(() => {
+  }), [$, J] = d(() => t?.categories?.map((H) => H.id) ?? []), [j, X] = d(t?.metaTitle ?? ""), [D, Y] = d(t?.metaDescription ?? ""), [K, Z] = d(t?.featuredImage ?? ""), [Ne, de] = d(() => {
     if (!t?.gallery) return [];
     try {
-      const F = JSON.parse(t.gallery);
-      return Array.isArray(F) ? F.filter((pe) => typeof pe == "string") : [];
+      const H = JSON.parse(t.gallery);
+      return Array.isArray(H) ? H.filter((pe) => typeof pe == "string") : [];
     } catch {
       return [];
     }
-  }), [ce, U] = u(() => {
+  }), [ce, F] = d(() => {
     if (t?.customFieldValues)
       try {
         return JSON.parse(t.customFieldValues);
@@ -5550,51 +5594,51 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
         return {};
       }
     return {};
-  }), [he, be] = u(() => {
+  }), [he, be] = d(() => {
     if (t?.sections)
       try {
-        const F = JSON.parse(t.sections);
-        return (Array.isArray(F) ? F : []).map((te) => ({
-          ...te,
-          _instanceId: te._instanceId || `sec-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+        const H = JSON.parse(t.sections);
+        return (Array.isArray(H) ? H : []).map((ae) => ({
+          ...ae,
+          _instanceId: ae._instanceId || `sec-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
         }));
       } catch {
         return [];
       }
     return [];
-  }), [ea, Fn] = u(!1), [Hn, Vn] = u(null), Gn = ka(
+  }), [ea, Fn] = d(!1), [Hn, Vn] = d(null), Gn = ka(
     jt(Sa, { activationConstraint: { distance: 6 } })
   );
-  ee(() => {
-    !k && s === "create" && B(Ea(h));
-  }, [h, k, s]), ee(() => {
-    const F = Zt();
+  te(() => {
+    !k && s === "create" && U(Ea(h));
+  }, [h, k, s]), te(() => {
+    const H = Zt();
     let pe = !1;
-    const te = F.contentTypes.find((re) => re.slug === b)?.detailTemplate;
-    return pe || (Vn(te ?? null), Fn(te ? F.templates.find((re) => re.id === te && re.kind === "detail")?.sectionsEnabled === !0 : !1)), () => {
+    const ae = H.contentTypes.find((ie) => ie.slug === f)?.detailTemplate;
+    return pe || (Vn(ae ?? null), Fn(ae ? H.templates.find((ie) => ie.id === ae && ie.kind === "detail")?.sectionsEnabled === !0 : !1)), () => {
       pe = !0;
     };
-  }, [b]);
-  function qn(F) {
-    C(!0), B(F);
+  }, [f]);
+  function qn(H) {
+    C(!0), U(H);
   }
-  function Kn(F) {
-    const { active: pe, over: te } = F;
-    !te || pe.id === te.id || de((re) => {
-      const $t = re.indexOf(String(pe.id)), La = re.indexOf(String(te.id));
-      return $t === -1 || La === -1 ? re : xt(re, $t, La);
+  function Kn(H) {
+    const { active: pe, over: ae } = H;
+    !ae || pe.id === ae.id || de((ie) => {
+      const Rt = ie.indexOf(String(pe.id)), La = ie.indexOf(String(ae.id));
+      return Rt === -1 || La === -1 ? ie : xt(ie, Rt, La);
     });
   }
-  function Wn(F) {
-    F.preventDefault(), p({}), _(null);
-    const pe = G.split(",").map((re) => re.trim()).filter((re) => re.length > 0), te = {
+  function Wn(H) {
+    H.preventDefault(), m({}), _(null);
+    const pe = Q.split(",").map((ie) => ie.trim()).filter((ie) => ie.length > 0), ae = {
       title: h,
-      type: b,
+      type: f,
       status: z
     };
-    L.trim() && (te.excerpt = L), A.trim() && (te.description = A), O.trim() && (te.metaTitle = O), T.trim() && (te.metaDescription = T), K.trim() && (te.featuredImage = K), P && (te.slug = P), pe.length > 0 && (te.tags = pe), j.length > 0 && (te.categoryIds = j), Object.keys(ce).length > 0 && (te.customFieldValues = ce), he.length > 0 && (te.sections = he.map(({ _instanceId: re, ...$t }) => $t)), Ne.length > 0 && (te.gallery = Ne), z === "published" && M && (te.publishedAt = M), c(async () => {
-      let re;
-      s === "edit" && t ? re = await rt(`/api/admin/posts/${t.id}`, te) : re = await Le("/api/admin/posts", te), re.success ? (W.success(s === "edit" ? "update" : "create", b), Xe(`/admin/posts/${b}`)) : re.errors && Object.keys(re.errors).length > 0 ? (p(re.errors), W.error(re.message)) : (_(re.message), W.error(re.message));
+    M.trim() && (ae.excerpt = M), A.trim() && (ae.description = A), j.trim() && (ae.metaTitle = j), D.trim() && (ae.metaDescription = D), K.trim() && (ae.featuredImage = K), P && (ae.slug = P), pe.length > 0 && (ae.tags = pe), $.length > 0 && (ae.categoryIds = $), Object.keys(ce).length > 0 && (ae.customFieldValues = ce), he.length > 0 && (ae.sections = he.map(({ _instanceId: ie, ...Rt }) => Rt)), Ne.length > 0 && (ae.gallery = Ne), z === "published" && R && (ae.publishedAt = R), c(async () => {
+      let ie;
+      s === "edit" && t ? ie = await rt(`/api/admin/posts/${t.id}`, ae) : ie = await Le("/api/admin/posts", ae), ie.success ? (W.success(s === "edit" ? "update" : "create", f), Xe(`/admin/posts/${f}`)) : ie.errors && Object.keys(ie.errors).length > 0 ? (m(ie.errors), W.error(ie.message)) : (_(ie.message), W.error(ie.message));
     });
   }
   return /* @__PURE__ */ a("form", { onSubmit: Wn, className: "", children: [
@@ -5603,9 +5647,9 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
       {
         title: l || "Projects",
         actions: /* @__PURE__ */ a("div", { className: "flex items-center gap-3", children: [
-          /* @__PURE__ */ e(N, { type: "submit", disabled: o, children: o ? s === "edit" ? "Saving…" : "Creating…" : s === "edit" ? "Save Changes" : `Create ${b.charAt(0).toUpperCase() + b.slice(1)}` }),
+          /* @__PURE__ */ e(x, { type: "submit", disabled: o, children: o ? s === "edit" ? "Saving…" : "Creating…" : s === "edit" ? "Save Changes" : `Create ${f.charAt(0).toUpperCase() + f.slice(1)}` }),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               type: "button",
               variant: "outline",
@@ -5623,61 +5667,61 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
         /* @__PURE__ */ a("div", { className: "space-y-4", children: [
           /* @__PURE__ */ a(Pe, { className: "overflow-hidden border-border/60 shadow-sm", children: [
             /* @__PURE__ */ e(_e, { className: "", children: /* @__PURE__ */ a(Ae, { className: "text-base", children: [
-              b.charAt(0).toUpperCase() + b.slice(1),
+              f.charAt(0).toUpperCase() + f.slice(1),
               " Details"
             ] }) }),
             /* @__PURE__ */ a(ze, { className: "space-y-5", children: [
               /* @__PURE__ */ a("div", { className: "space-y-5", children: [
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { htmlFor: "title", children: "Title" }),
+                  /* @__PURE__ */ e(L, { htmlFor: "title", children: "Title" }),
                   /* @__PURE__ */ e(
-                    V,
+                    G,
                     {
                       id: "title",
                       value: h,
-                      onChange: (F) => D(F.target.value),
-                      placeholder: `${b.charAt(0).toUpperCase() + b.slice(1)} title`,
-                      "aria-invalid": !!m.title,
-                      "aria-describedby": m.title ? "title-error" : void 0
+                      onChange: (H) => E(H.target.value),
+                      placeholder: `${f.charAt(0).toUpperCase() + f.slice(1)} title`,
+                      "aria-invalid": !!u.title,
+                      "aria-describedby": u.title ? "title-error" : void 0
                     }
                   ),
-                  m.title && /* @__PURE__ */ e("p", { id: "title-error", className: "text-xs text-destructive", children: m.title[0] })
+                  u.title && /* @__PURE__ */ e("p", { id: "title-error", className: "text-xs text-destructive", children: u.title[0] })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { htmlFor: "slug", children: "Slug" }),
+                  /* @__PURE__ */ e(L, { htmlFor: "slug", children: "Slug" }),
                   /* @__PURE__ */ e(
-                    V,
+                    G,
                     {
                       id: "slug",
                       value: P,
-                      onChange: (F) => qn(F.target.value),
-                      placeholder: `${b}-url-slug`,
-                      "aria-invalid": !!m.slug,
-                      "aria-describedby": m.slug ? "slug-error" : void 0
+                      onChange: (H) => qn(H.target.value),
+                      placeholder: `${f}-url-slug`,
+                      "aria-invalid": !!u.slug,
+                      "aria-describedby": u.slug ? "slug-error" : void 0
                     }
                   ),
-                  m.slug && /* @__PURE__ */ e("p", { id: "slug-error", className: "text-xs text-destructive", children: m.slug[0] }),
+                  u.slug && /* @__PURE__ */ e("p", { id: "slug-error", className: "text-xs text-destructive", children: u.slug[0] }),
                   !k && s === "create" && /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Auto-generated from title. Edit to customize." })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5 md:col-span-2", children: [
-                  /* @__PURE__ */ e(E, { htmlFor: "excerpt", children: "Excerpt" }),
+                  /* @__PURE__ */ e(L, { htmlFor: "excerpt", children: "Excerpt" }),
                   /* @__PURE__ */ e(
                     Oe,
                     {
                       id: "excerpt",
-                      value: L,
-                      onChange: (F) => w(F.target.value),
-                      placeholder: `Brief summary of the ${b}...`,
+                      value: M,
+                      onChange: (H) => w(H.target.value),
+                      placeholder: `Brief summary of the ${f}...`,
                       rows: 3,
-                      "aria-invalid": !!m.excerpt,
-                      "aria-describedby": m.excerpt ? "excerpt-error" : void 0
+                      "aria-invalid": !!u.excerpt,
+                      "aria-describedby": u.excerpt ? "excerpt-error" : void 0
                     }
                   ),
-                  m.excerpt && /* @__PURE__ */ e("p", { id: "excerpt-error", className: "text-xs text-destructive", children: m.excerpt[0] })
+                  u.excerpt && /* @__PURE__ */ e("p", { id: "excerpt-error", className: "text-xs text-destructive", children: u.excerpt[0] })
                 ] })
               ] }),
               /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                /* @__PURE__ */ e(E, { children: "Content" }),
+                /* @__PURE__ */ e(L, { children: "Content" }),
                 /* @__PURE__ */ e(
                   xa,
                   {
@@ -5686,40 +5730,40 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
                       Sl,
                       {
                         content: A,
-                        onChange: d,
-                        placeholder: `Write your ${b} content here...`
+                        onChange: v,
+                        placeholder: `Write your ${f} content here...`
                       }
                     )
                   }
                 ),
-                m.description && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: m.description[0] })
+                u.description && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: u.description[0] })
               ] }),
               /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                /* @__PURE__ */ e(E, { htmlFor: "gallery", children: "Gallery" }),
+                /* @__PURE__ */ e(L, { htmlFor: "gallery", children: "Gallery" }),
                 /* @__PURE__ */ a("div", { className: "rounded-sm border border-dashed bg-muted/30 p-4 space-y-3", children: [
                   /* @__PURE__ */ e(
                     Fe,
                     {
                       value: Ne[0] ?? null,
-                      onChange: (F) => {
-                        if (!F) {
+                      onChange: (H) => {
+                        if (!H) {
                           de([]);
                           return;
                         }
-                        de((pe) => [F.url, ...pe.filter((te) => te !== F.url)]);
+                        de((pe) => [H.url, ...pe.filter((ae) => ae !== H.url)]);
                       },
-                      onSelect: (F) => {
+                      onSelect: (H) => {
                         de((pe) => {
-                          const te = [...pe];
-                          for (const re of F)
-                            te.includes(re.url) || te.push(re.url);
-                          return te;
+                          const ae = [...pe];
+                          for (const ie of H)
+                            ae.includes(ie.url) || ae.push(ie.url);
+                          return ae;
                         });
                       },
                       accept: "image/*",
                       multiple: !0,
                       maxFiles: 20,
-                      trigger: /* @__PURE__ */ e(N, { type: "button", variant: "outline", className: "gap-2", children: "Add Media" })
+                      trigger: /* @__PURE__ */ e(x, { type: "button", variant: "outline", className: "gap-2", children: "Add Media" })
                     }
                   ),
                   /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Add multiple images and reorder them visually. Stored as JSON." }),
@@ -5729,18 +5773,18 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
                       sensors: Gn,
                       collisionDetection: _a,
                       onDragEnd: Kn,
-                      children: /* @__PURE__ */ e(Kt, { items: Ne, strategy: Es, children: /* @__PURE__ */ e("div", { className: "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2", children: Ne.map((F) => /* @__PURE__ */ e(
+                      children: /* @__PURE__ */ e(Kt, { items: Ne, strategy: Es, children: /* @__PURE__ */ e("div", { className: "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2", children: Ne.map((H) => /* @__PURE__ */ e(
                         Pl,
                         {
-                          url: F,
-                          onRemove: () => de((pe) => pe.filter((te) => te !== F))
+                          url: H,
+                          onRemove: () => de((pe) => pe.filter((ae) => ae !== H))
                         },
-                        F
+                        H
                       )) }) })
                     }
                   )
                 ] }),
-                m.gallery && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: m.gallery[0] })
+                u.gallery && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: u.gallery[0] })
               ] })
             ] })
           ] }),
@@ -5748,46 +5792,46 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
             /* @__PURE__ */ e(_e, { className: "", children: /* @__PURE__ */ e(Ae, { className: "text-base", children: "SEO" }) }),
             /* @__PURE__ */ a(ze, { className: "space-y-5", children: [
               /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                /* @__PURE__ */ e(E, { htmlFor: "metaTitle", children: "Meta Title" }),
+                /* @__PURE__ */ e(L, { htmlFor: "metaTitle", children: "Meta Title" }),
                 /* @__PURE__ */ e(
-                  V,
+                  G,
                   {
                     id: "metaTitle",
-                    value: O,
-                    onChange: (F) => X(F.target.value),
+                    value: j,
+                    onChange: (H) => X(H.target.value),
                     placeholder: "SEO title (max 60 characters)",
                     maxLength: 60,
-                    "aria-invalid": !!m.metaTitle,
-                    "aria-describedby": m.metaTitle ? "metaTitle-error" : void 0
+                    "aria-invalid": !!u.metaTitle,
+                    "aria-describedby": u.metaTitle ? "metaTitle-error" : void 0
                   }
                 ),
                 /* @__PURE__ */ a("div", { className: "flex justify-between", children: [
-                  m.metaTitle ? /* @__PURE__ */ e("p", { id: "metaTitle-error", className: "text-xs text-destructive", children: m.metaTitle[0] }) : /* @__PURE__ */ e("span", {}),
+                  u.metaTitle ? /* @__PURE__ */ e("p", { id: "metaTitle-error", className: "text-xs text-destructive", children: u.metaTitle[0] }) : /* @__PURE__ */ e("span", {}),
                   /* @__PURE__ */ a("span", { className: "text-xs text-muted-foreground", children: [
-                    O.length,
+                    j.length,
                     "/60"
                   ] })
                 ] })
               ] }),
               /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                /* @__PURE__ */ e(E, { htmlFor: "metaDescription", children: "Meta Description" }),
+                /* @__PURE__ */ e(L, { htmlFor: "metaDescription", children: "Meta Description" }),
                 /* @__PURE__ */ e(
                   Oe,
                   {
                     id: "metaDescription",
-                    value: T,
-                    onChange: (F) => J(F.target.value),
+                    value: D,
+                    onChange: (H) => Y(H.target.value),
                     placeholder: "SEO description (max 160 characters)",
                     maxLength: 160,
                     rows: 4,
-                    "aria-invalid": !!m.metaDescription,
-                    "aria-describedby": m.metaDescription ? "metaDescription-error" : void 0
+                    "aria-invalid": !!u.metaDescription,
+                    "aria-describedby": u.metaDescription ? "metaDescription-error" : void 0
                   }
                 ),
                 /* @__PURE__ */ a("div", { className: "flex justify-between", children: [
-                  m.metaDescription ? /* @__PURE__ */ e("p", { id: "metaDescription-error", className: "text-xs text-destructive", children: m.metaDescription[0] }) : /* @__PURE__ */ e("span", {}),
+                  u.metaDescription ? /* @__PURE__ */ e("p", { id: "metaDescription-error", className: "text-xs text-destructive", children: u.metaDescription[0] }) : /* @__PURE__ */ e("span", {}),
                   /* @__PURE__ */ a("span", { className: "text-xs text-muted-foreground", children: [
-                    T.length,
+                    D.length,
                     "/160"
                   ] })
                 ] })
@@ -5804,7 +5848,7 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
                   onChange: be
                 }
               ),
-              m.sections && /* @__PURE__ */ e("p", { className: "text-xs text-destructive mt-2", children: m.sections[0] })
+              u.sections && /* @__PURE__ */ e("p", { className: "text-xs text-destructive mt-2", children: u.sections[0] })
             ] })
           ] })
         ] }),
@@ -5812,30 +5856,30 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
           /* @__PURE__ */ a(Pe, { className: "overflow-hidden border-border/60 shadow-sm", children: [
             /* @__PURE__ */ e(_e, { children: /* @__PURE__ */ e(Ae, { className: "text-base", children: "Visibility" }) }),
             /* @__PURE__ */ a(ze, { className: "space-y-3", children: [
-              /* @__PURE__ */ a("button", { type: "button", disabled: !R, className: "flex items-center gap-2 text-sm disabled:opacity-50", onClick: () => {
-                $("published"), v(null);
+              /* @__PURE__ */ a("button", { type: "button", disabled: !B, className: "flex items-center gap-2 text-sm disabled:opacity-50", onClick: () => {
+                O("published"), b(null);
               }, children: [
-                /* @__PURE__ */ e("span", { className: `size-4 rounded-full border-4 ${z === "published" && !x ? "border-foreground" : "border-transparent ring-1 ring-border"}` }),
+                /* @__PURE__ */ e("span", { className: `size-4 rounded-full border-4 ${z === "published" && !N ? "border-foreground" : "border-transparent ring-1 ring-border"}` }),
                 "Publish"
               ] }),
-              /* @__PURE__ */ a("button", { type: "button", disabled: !H, className: "flex items-center gap-2 text-sm disabled:opacity-50", onClick: () => {
-                $("draft"), v(null);
+              /* @__PURE__ */ a("button", { type: "button", disabled: !V, className: "flex items-center gap-2 text-sm disabled:opacity-50", onClick: () => {
+                O("draft"), b(null);
               }, children: [
-                /* @__PURE__ */ e("span", { className: `size-4 rounded-full border-4 ${z === "draft" || x ? "border-foreground" : "border-transparent ring-1 ring-border"}` }),
+                /* @__PURE__ */ e("span", { className: `size-4 rounded-full border-4 ${z === "draft" || N ? "border-foreground" : "border-transparent ring-1 ring-border"}` }),
                 "Draft"
               ] }),
-              x ? /* @__PURE__ */ a("div", { className: "ml-6 flex items-start justify-between gap-2 text-sm text-muted-foreground", children: [
+              N ? /* @__PURE__ */ a("div", { className: "ml-6 flex items-start justify-between gap-2 text-sm text-muted-foreground", children: [
                 /* @__PURE__ */ a("span", { children: [
                   "Will publish on ",
-                  new Date(M).toLocaleString()
+                  new Date(R).toLocaleString()
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex", children: [
-                  /* @__PURE__ */ e(N, { type: "button", variant: "ghost", size: "icon-sm", "aria-label": "Edit publish date", disabled: !R, onClick: () => g(!0), children: /* @__PURE__ */ e(pn, {}) }),
-                  /* @__PURE__ */ e(N, { type: "button", variant: "ghost", size: "icon-sm", "aria-label": "Remove publish date", disabled: !H, onClick: () => {
-                    $("draft"), v(null);
+                  /* @__PURE__ */ e(x, { type: "button", variant: "ghost", size: "icon-sm", "aria-label": "Edit publish date", disabled: !B, onClick: () => g(!0), children: /* @__PURE__ */ e(pn, {}) }),
+                  /* @__PURE__ */ e(x, { type: "button", variant: "ghost", size: "icon-sm", "aria-label": "Remove publish date", disabled: !V, onClick: () => {
+                    O("draft"), b(null);
                   }, children: /* @__PURE__ */ e(we, {}) })
                 ] })
-              ] }) : /* @__PURE__ */ e(N, { type: "button", variant: "ghost", size: "sm", className: "ml-5", disabled: !R, onClick: () => g(!0), children: "Schedule publish" })
+              ] }) : /* @__PURE__ */ e(x, { type: "button", variant: "ghost", size: "sm", className: "ml-5", disabled: !B, onClick: () => g(!0), children: "Schedule publish" })
             ] })
           ] }),
           /* @__PURE__ */ a(Pe, { className: "overflow-hidden border-border/60 shadow-sm", children: [
@@ -5855,8 +5899,8 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
                     Fe,
                     {
                       value: K,
-                      onChange: (F) => {
-                        Q(F ? F.url : "");
+                      onChange: (H) => {
+                        Z(H ? H.url : "");
                       },
                       accept: "image/*"
                     },
@@ -5864,72 +5908,73 @@ function Ln({ post: t, categories: n = [], mode: s, pageTitle: l, defaultType: i
                   ),
                   /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Choose a hero image from the media library." }),
                   K && /* @__PURE__ */ e(
-                    N,
+                    x,
                     {
                       type: "button",
-                      variant: "ghost",
+                      variant: "outline",
                       size: "sm",
-                      className: "w-fit",
-                      onClick: () => Q(""),
+                      "aria-label": "Remove image",
+                      className: "w-fit text-destructive hover:bg-destructive/10 hover:text-destructive",
+                      onClick: () => Z(""),
                       children: "Remove"
                     }
                   )
                 ] })
               ] }) }),
-              m.featuredImage && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: m.featuredImage[0] })
+              u.featuredImage && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: u.featuredImage[0] })
             ] })
           ] }),
           /* @__PURE__ */ a(Pe, { className: "overflow-hidden border-border/60 shadow-sm", children: [
             /* @__PURE__ */ e(_e, { children: /* @__PURE__ */ e(Ae, { className: "text-base", children: "Organization" }) }),
             /* @__PURE__ */ a(ze, { className: "flex flex-col gap-5", children: [
               /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                /* @__PURE__ */ e(E, { htmlFor: "tags", children: "Tags" }),
+                /* @__PURE__ */ e(L, { htmlFor: "tags", children: "Tags" }),
                 /* @__PURE__ */ e(
-                  V,
+                  G,
                   {
                     id: "tags",
-                    value: G,
-                    onChange: (F) => ie(F.target.value),
+                    value: Q,
+                    onChange: (H) => T(H.target.value),
                     placeholder: "tag1, tag2, tag3 (comma-separated)",
-                    "aria-invalid": !!m.tags,
-                    "aria-describedby": m.tags ? "tags-error" : void 0
+                    "aria-invalid": !!u.tags,
+                    "aria-describedby": u.tags ? "tags-error" : void 0
                   }
                 ),
-                m.tags && /* @__PURE__ */ e("p", { id: "tags-error", className: "text-xs text-destructive", children: m.tags[0] }),
-                G && /* @__PURE__ */ e("div", { className: "flex flex-wrap gap-1 mt-1", children: G.split(",").map((F) => F.trim()).filter((F) => F.length > 0).map((F, pe) => /* @__PURE__ */ e(Ue, { variant: "outline", className: "text-xs", children: F }, pe)) })
+                u.tags && /* @__PURE__ */ e("p", { id: "tags-error", className: "text-xs text-destructive", children: u.tags[0] }),
+                Q && /* @__PURE__ */ e("div", { className: "flex flex-wrap gap-1 mt-1", children: Q.split(",").map((H) => H.trim()).filter((H) => H.length > 0).map((H, pe) => /* @__PURE__ */ e(Ue, { variant: "outline", className: "text-xs", children: H }, pe)) })
               ] }),
               /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                /* @__PURE__ */ e(E, { children: "Categories" }),
+                /* @__PURE__ */ e(L, { children: "Categories" }),
                 n.length > 0 ? /* @__PURE__ */ e(
                   kl,
                   {
-                    options: n.map((F) => ({
-                      value: F.id,
-                      label: F.name
+                    options: n.map((H) => ({
+                      value: H.id,
+                      label: H.name
                     })),
-                    selected: j,
-                    onChange: Y,
+                    selected: $,
+                    onChange: J,
                     placeholder: "Select categories..."
                   }
                 ) : /* @__PURE__ */ e("p", { className: "text-sm text-muted-foreground", children: "No categories available. Create categories first." }),
-                m.categoryIds && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: m.categoryIds[0] })
+                u.categoryIds && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: u.categoryIds[0] })
               ] })
             ] })
           ] }),
           /* @__PURE__ */ a(Pe, { className: "overflow-hidden border-border/60 shadow-sm", children: [
             /* @__PURE__ */ e(_e, { children: /* @__PURE__ */ e(Ae, { className: "text-base", children: "Custom fields" }) }),
-            /* @__PURE__ */ e(ze, { children: /* @__PURE__ */ e(pl, { detailTemplate: Hn, values: ce, onChange: U }) })
+            /* @__PURE__ */ e(ze, { children: /* @__PURE__ */ e(pl, { detailTemplate: Hn, values: ce, onChange: F }) })
           ] })
         ] })
       ] })
     ] }) }),
-    /* @__PURE__ */ e(ut, { open: f, onOpenChange: g, children: /* @__PURE__ */ a(mt, { children: [
+    /* @__PURE__ */ e(ut, { open: p, onOpenChange: g, children: /* @__PURE__ */ a(mt, { children: [
       /* @__PURE__ */ e(ht, { children: /* @__PURE__ */ e(gt, { children: "Set visibility date" }) }),
-      /* @__PURE__ */ e("input", { type: "datetime-local", className: "w-full rounded-sm border px-3 py-2", value: M ? new Date(M - (/* @__PURE__ */ new Date()).getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : "", onChange: (F) => v(F.target.value ? new Date(F.target.value).getTime() : null) }),
+      /* @__PURE__ */ e("input", { type: "datetime-local", className: "w-full rounded-sm border px-3 py-2", value: R ? new Date(R - (/* @__PURE__ */ new Date()).getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : "", onChange: (H) => b(H.target.value ? new Date(H.target.value).getTime() : null) }),
       /* @__PURE__ */ a(Ct, { children: [
-        /* @__PURE__ */ e(N, { type: "button", variant: "outline", onClick: () => g(!1), children: "Cancel" }),
-        /* @__PURE__ */ e(N, { type: "button", disabled: !M, onClick: () => {
-          $("published"), g(!1);
+        /* @__PURE__ */ e(x, { type: "button", variant: "outline", onClick: () => g(!1), children: "Cancel" }),
+        /* @__PURE__ */ e(x, { type: "button", disabled: !R, onClick: () => {
+          O("published"), g(!1);
         }, children: "Set visibility date" })
       ] })
     ] }) })
@@ -5962,7 +6007,7 @@ function Pl({
               children: /* @__PURE__ */ e(Gt, { className: "h-4 w-4" })
             }
           ),
-          /* @__PURE__ */ e(N, { type: "button", variant: "ghost", size: "icon-sm", onClick: n, children: /* @__PURE__ */ e(we, { className: "h-3.5 w-3.5" }) })
+          /* @__PURE__ */ e(x, { type: "button", variant: "ghost", size: "icon-sm", onClick: n, children: /* @__PURE__ */ e(we, { className: "h-3.5 w-3.5" }) })
         ] }),
         /* @__PURE__ */ e("div", { className: "relative aspect-square", children: /* @__PURE__ */ e("img", { src: t, alt: "Gallery image", className: "object-cover h-full w-full" }) })
       ]
@@ -5970,8 +6015,8 @@ function Pl({
   );
 }
 function _l() {
-  const { type: t = "post" } = Ve(), [n, s] = u([]), [l, i] = u(!0);
-  return ee(() => {
+  const { type: t = "post" } = Ve(), [n, s] = d([]), [l, i] = d(!0);
+  return te(() => {
     const r = new URLSearchParams();
     r.set("type", t), ue(`/api/admin/categories?${r.toString()}`).then((o) => {
       s(o), i(!1);
@@ -5987,13 +6032,13 @@ function _l() {
   ) });
 }
 function Al({ id: t }) {
-  const { type: n = "post" } = Ve(), [s, l] = u(null), [i, r] = u([]), [o, c] = u(!0);
-  return ee(() => {
+  const { type: n = "post" } = Ve(), [s, l] = d(null), [i, r] = d([]), [o, c] = d(!0);
+  return te(() => {
     Promise.all([
       ue(`/api/admin/posts/${t}`),
       ue("/api/admin/categories")
-    ]).then(([m, p]) => {
-      l(m), r(p), c(!1);
+    ]).then(([u, m]) => {
+      l(u), r(m), c(!1);
     });
   }, [t]), o ? /* @__PURE__ */ e(ge, {}) : s ? /* @__PURE__ */ e(He, { children: /* @__PURE__ */ e(
     Ln,
@@ -6015,89 +6060,89 @@ const Mn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   AdminPostEditPage: Al
 }, Symbol.toStringTag, { value: "Module" }));
 function zl() {
-  const [t, n] = u(null), [s, l] = u(null), [i, r] = u([]), [o, c] = u(!1), [m, p] = u(!1), [y, _] = u(""), [h, D] = u(null), [z, $] = u(!1), M = dt(), v = Qe(), f = "page", g = "/admin/posts/page", [x, P] = u(
-    new URLSearchParams(M.search).get("search") ?? ""
-  ), [B, k] = u(
-    new URLSearchParams(M.search).get("status") ?? "all"
-  ), [C, b] = u(
-    new URLSearchParams(M.search).get("sortBy") ?? ""
-  ), [I, R] = u(
-    new URLSearchParams(M.search).get("sortOrder") ?? ""
+  const [t, n] = d(null), [s, l] = d(null), [i, r] = d([]), [o, c] = d(!1), [u, m] = d(!1), [y, _] = d(""), [h, E] = d(null), [z, O] = d(!1), R = dt(), b = Qe(), p = "page", g = "/admin/posts/page", [N, P] = d(
+    new URLSearchParams(R.search).get("search") ?? ""
+  ), [U, k] = d(
+    new URLSearchParams(R.search).get("status") ?? "all"
+  ), [C, f] = d(
+    new URLSearchParams(R.search).get("sortBy") ?? ""
+  ), [I, B] = d(
+    new URLSearchParams(R.search).get("sortOrder") ?? ""
   );
-  async function H() {
+  async function V() {
     l(null);
-    const U = new URLSearchParams();
-    x && U.set("search", x), B && B !== "all" && U.set("status", B), C && U.set("sortBy", C), I && U.set("sortOrder", I), U.set("type", f);
-    const he = U.toString() ? `?${U.toString()}` : "", be = await ue(`/api/admin/posts${he}`);
+    const F = new URLSearchParams();
+    N && F.set("search", N), U && U !== "all" && F.set("status", U), C && F.set("sortBy", C), I && F.set("sortOrder", I), F.set("type", p);
+    const he = F.toString() ? `?${F.toString()}` : "", be = await ue(`/api/admin/posts${he}`);
     n(be), r([]);
   }
-  ee(() => {
-    H().catch((U) => l(U.message));
-  }, [M.search, f]);
-  function L() {
-    v(Ce(g, { search: x, status: B, sortBy: C, sortOrder: I }));
+  te(() => {
+    V().catch((F) => l(F.message));
+  }, [R.search, p]);
+  function M() {
+    b(Ce(g, { search: N, status: U, sortBy: C, sortOrder: I }));
   }
-  function w(U) {
-    const he = C === U && I === "asc" ? "desc" : "asc";
-    b(U), R(he), v(Ce(g, { search: x, status: B, sortBy: U, sortOrder: he }));
+  function w(F) {
+    const he = C === F && I === "asc" ? "desc" : "asc";
+    f(F), B(he), b(Ce(g, { search: N, status: U, sortBy: F, sortOrder: he }));
   }
-  function A(U) {
-    U.key === "Enter" && (U.preventDefault(), L());
+  function A(F) {
+    F.key === "Enter" && (F.preventDefault(), M());
   }
-  const d = $e(!0);
-  ee(() => {
-    if (d.current) {
-      d.current = !1;
+  const v = Re(!0);
+  te(() => {
+    if (v.current) {
+      v.current = !1;
       return;
     }
-    const U = setTimeout(() => {
-      L();
+    const F = setTimeout(() => {
+      M();
     }, 400);
-    return () => clearTimeout(U);
-  }, [x, B, f]);
-  const G = q((U) => {
-    t?.data && r(U ? t.data.map((he) => he.id) : []);
-  }, [t]), ie = q((U, he) => {
+    return () => clearTimeout(F);
+  }, [N, U, p]);
+  const Q = q((F) => {
+    t?.data && r(F ? t.data.map((he) => he.id) : []);
+  }, [t]), T = q((F, he) => {
     r(
-      (be) => he ? [...be, U] : be.filter((ea) => ea !== U)
+      (be) => he ? [...be, F] : be.filter((ea) => ea !== F)
     );
-  }, []), j = t?.data?.length > 0 && i.length === t.data.length, Y = i.length > 0;
-  function O(U) {
-    p(U), U || (_(""), D(null));
+  }, []), $ = t?.data?.length > 0 && i.length === t.data.length, J = i.length > 0;
+  function j(F) {
+    m(F), F || (_(""), E(null));
   }
-  async function X(U) {
-    U.preventDefault();
+  async function X(F) {
+    F.preventDefault();
     const he = y.trim();
     if (!he) {
-      D("Title is required.");
+      E("Title is required.");
       return;
     }
-    D(null), $(!0);
+    E(null), O(!0);
     const be = await Le("/api/admin/posts", {
       title: he,
-      type: f,
+      type: p,
       status: "draft"
     });
-    if ($(!1), be.success) {
-      W.success("create", "page"), v(`${g}/${be.data.id}/edit`);
+    if (O(!1), be.success) {
+      W.success("create", "page"), b(`${g}/${be.data.id}/edit`);
       return;
     }
-    D(be.errors?.title?.[0] ?? be.message), W.error(be.message);
+    E(be.errors?.title?.[0] ?? be.message), W.error(be.message);
   }
-  async function T(U, he) {
+  async function D(F, he) {
     if (i.length === 0) return;
     c(!0);
-    const be = await Le(U, { ids: i });
-    c(!1), be.success ? (W.success("update", "page"), await H()) : W.error(be.message);
+    const be = await Le(F, { ids: i });
+    c(!1), be.success ? (W.success("update", "page"), await V()) : W.error(be.message);
   }
-  const J = q(async () => {
-    i.length !== 0 && confirm(`Delete ${i.length} page(s)? This action cannot be undone.`) && await T("/api/admin/posts/bulk/delete");
+  const Y = q(async () => {
+    i.length !== 0 && confirm(`Delete ${i.length} page(s)? This action cannot be undone.`) && await D("/api/admin/posts/bulk/delete");
   }, [i]), K = q(async () => {
-    await T("/api/admin/posts/bulk/publish");
-  }, [i]), Q = q(async () => {
-    await T("/api/admin/posts/bulk/unpublish");
+    await D("/api/admin/posts/bulk/publish");
+  }, [i]), Z = q(async () => {
+    await D("/api/admin/posts/bulk/unpublish");
   }, [i]), Ne = q(async () => {
-    await T("/api/admin/posts/bulk/duplicate");
+    await D("/api/admin/posts/bulk/duplicate");
   }, [i]);
   if (s) return /* @__PURE__ */ e("main", { className: "p-6", children: /* @__PURE__ */ a("p", { className: "text-destructive", children: [
     "Error: ",
@@ -6105,8 +6150,8 @@ function zl() {
   ] }) });
   if (!t) return /* @__PURE__ */ e(ge, {});
   const de = t.data ?? [];
-  function ce(U) {
-    return Ce(g, { search: x, status: B, sortBy: C, sortOrder: I, page: U });
+  function ce(F) {
+    return Ce(g, { search: N, status: U, sortBy: C, sortOrder: I, page: F });
   }
   return /* @__PURE__ */ a(et, { children: [
     /* @__PURE__ */ e(
@@ -6114,33 +6159,33 @@ function zl() {
       {
         title: "Pages",
         search: /* @__PURE__ */ e(
-          V,
+          G,
           {
             placeholder: "Search by title...",
-            value: x,
-            onChange: (U) => P(U.target.value),
+            value: N,
+            onChange: (F) => P(F.target.value),
             onKeyDown: A,
             className: "max-w-xs"
           }
         ),
-        actions: /* @__PURE__ */ a(N, { type: "button", size: "lg", onClick: () => p(!0), children: [
+        actions: /* @__PURE__ */ a(x, { type: "button", size: "lg", onClick: () => m(!0), children: [
           "New ",
-          f.charAt(0).toUpperCase() + f.slice(1)
+          p.charAt(0).toUpperCase() + p.slice(1)
         ] })
       }
     ),
-    /* @__PURE__ */ e(ut, { open: m, onOpenChange: O, children: /* @__PURE__ */ a(mt, { children: [
+    /* @__PURE__ */ e(ut, { open: u, onOpenChange: j, children: /* @__PURE__ */ a(mt, { children: [
       /* @__PURE__ */ e(ht, { children: /* @__PURE__ */ e(gt, { children: "New Page" }) }),
       /* @__PURE__ */ a("form", { onSubmit: X, className: "space-y-4", children: [
         /* @__PURE__ */ a("div", { className: "space-y-1.5", children: [
-          /* @__PURE__ */ e(E, { htmlFor: "new-page-title", children: "Title" }),
+          /* @__PURE__ */ e(L, { htmlFor: "new-page-title", children: "Title" }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "new-page-title",
               value: y,
-              onChange: (U) => {
-                _(U.target.value), h && D(null);
+              onChange: (F) => {
+                _(F.target.value), h && E(null);
               },
               placeholder: "Page title",
               autoFocus: !0,
@@ -6151,33 +6196,33 @@ function zl() {
           h && /* @__PURE__ */ e("p", { id: "new-page-title-error", className: "text-xs text-destructive", children: h })
         ] }),
         /* @__PURE__ */ a(Ct, { children: [
-          /* @__PURE__ */ e(N, { type: "button", variant: "outline", onClick: () => O(!1), disabled: z, children: "Cancel" }),
-          /* @__PURE__ */ e(N, { type: "submit", disabled: z, children: z ? "Creating…" : "Create Page" })
+          /* @__PURE__ */ e(x, { type: "button", variant: "outline", onClick: () => j(!1), disabled: z, children: "Cancel" }),
+          /* @__PURE__ */ e(x, { type: "submit", disabled: z, children: z ? "Creating…" : "Create Page" })
         ] })
       ] })
     ] }) }),
     /* @__PURE__ */ a("div", { className: "p-4 space-y-4", children: [
       /* @__PURE__ */ a("div", { className: "flex flex-wrap items-center gap-3", children: [
-        /* @__PURE__ */ a(Ie, { value: B, onValueChange: (U) => {
-          U && k(U);
+        /* @__PURE__ */ a(Ie, { value: U, onValueChange: (F) => {
+          F && k(F);
         }, children: [
           /* @__PURE__ */ e(De, { className: "w-[140px]", children: /* @__PURE__ */ e(Te, { placeholder: "Status" }) }),
           /* @__PURE__ */ a(Ee, { children: [
-            /* @__PURE__ */ e(se, { value: "all", children: "All Status" }),
-            /* @__PURE__ */ e(se, { value: "draft", children: "Draft" }),
-            /* @__PURE__ */ e(se, { value: "published", children: "Published" })
+            /* @__PURE__ */ e(re, { value: "all", children: "All Status" }),
+            /* @__PURE__ */ e(re, { value: "draft", children: "Draft" }),
+            /* @__PURE__ */ e(re, { value: "published", children: "Published" })
           ] })
         ] }),
-        /* @__PURE__ */ e(N, { type: "button", variant: "secondary", size: "sm", onClick: L, children: "Filter" })
+        /* @__PURE__ */ e(x, { type: "button", variant: "secondary", size: "sm", onClick: M, children: "Filter" })
       ] }),
-      Y && /* @__PURE__ */ a("div", { className: "flex items-center gap-2 rounded-sm border bg-muted/30 px-4 py-2", children: [
+      J && /* @__PURE__ */ a("div", { className: "flex items-center gap-2 rounded-sm border bg-muted/30 px-4 py-2", children: [
         /* @__PURE__ */ a("span", { className: "text-sm text-muted-foreground", children: [
           i.length,
           " selected"
         ] }),
         /* @__PURE__ */ a("div", { className: "ml-auto flex items-center gap-2", children: [
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
@@ -6187,17 +6232,17 @@ function zl() {
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
-              onClick: Q,
+              onClick: Z,
               disabled: o,
               children: "Unpublish"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "outline",
               size: "sm",
@@ -6207,17 +6252,17 @@ function zl() {
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "destructive",
               size: "sm",
-              onClick: J,
+              onClick: Y,
               disabled: o,
               children: "Delete"
             }
           ),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               variant: "ghost",
               size: "sm",
@@ -6233,8 +6278,8 @@ function zl() {
           /* @__PURE__ */ e(oe, { className: "w-10 px-4 py-3", children: /* @__PURE__ */ e(
             xe,
             {
-              checked: j,
-              onCheckedChange: (U) => G(U === !0),
+              checked: $,
+              onCheckedChange: (F) => Q(F === !0),
               "aria-label": "Select all pages"
             }
           ) }),
@@ -6264,26 +6309,26 @@ function zl() {
             }
           ) })
         ] }) }),
-        /* @__PURE__ */ e(Tt, { children: de.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(ne, { colSpan: 5, className: "px-4 py-8 text-center text-muted-foreground", children: "No pages found." }) }) : de.map((U) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3", children: /* @__PURE__ */ e(
+        /* @__PURE__ */ e(Tt, { children: de.length === 0 ? /* @__PURE__ */ e(ke, { children: /* @__PURE__ */ e(se, { colSpan: 5, className: "px-4 py-8 text-center text-muted-foreground", children: "No pages found." }) }) : de.map((F) => /* @__PURE__ */ a(ke, { className: "hover:bg-muted/25", children: [
+          /* @__PURE__ */ e(se, { className: "px-4 py-3", children: /* @__PURE__ */ e(
             xe,
             {
-              checked: i.includes(U.id),
-              onCheckedChange: (he) => ie(U.id, he === !0),
-              "aria-label": `Select ${U.title}`
+              checked: i.includes(F.id),
+              onCheckedChange: (he) => T(F.id, he === !0),
+              "aria-label": `Select ${F.title}`
             }
           ) }),
-          /* @__PURE__ */ e(ne, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ e(fe, { to: `${g}/${U.id}/edit`, className: "underline", children: U.title }) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(
+          /* @__PURE__ */ e(se, { className: "px-4 py-3 font-medium", children: /* @__PURE__ */ e(fe, { to: `${g}/${F.id}/edit`, className: "underline", children: F.title }) }),
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3", children: /* @__PURE__ */ e(
             Ue,
             {
-              variant: U.status === "published" ? "default" : "secondary",
-              className: U.status === "published" ? "border-0 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300" : "capitalize",
-              children: U.status
+              variant: F.status === "published" ? "default" : "secondary",
+              className: F.status === "published" ? "border-0 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300" : "capitalize",
+              children: F.status
             }
           ) }),
-          /* @__PURE__ */ e(ne, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(U.updatedAt * 1e3).toLocaleDateString() })
-        ] }, U.id)) })
+          /* @__PURE__ */ e(se, { className: "w-px px-4 py-3 text-muted-foreground", children: new Date(F.updatedAt * 1e3).toLocaleDateString() })
+        ] }, F.id)) })
       ] }),
       t.meta && /* @__PURE__ */ a("div", { className: "flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between", children: [
         /* @__PURE__ */ a("span", { children: [
@@ -6318,22 +6363,22 @@ function Dl(t) {
     return [];
   }
 }
-function $n({ page: t, mode: n }) {
-  const [s, l] = yt(), [i, r] = u({}), [o, c] = u(null), [m, p] = u(!1), [y, _] = u(t?.title ?? ""), [h, D] = u(t?.slug ?? ""), [z, $] = u(!!t?.slug), [M, v] = u(t?.description ?? ""), [f, g] = u(
+function Rn({ page: t, mode: n }) {
+  const [s, l] = yt(), [i, r] = d({}), [o, c] = d(null), [u, m] = d(!1), [y, _] = d(t?.title ?? ""), [h, E] = d(t?.slug ?? ""), [z, O] = d(!!t?.slug), [R, b] = d(t?.description ?? ""), [p, g] = d(
     () => Dl(t?.sections)
   );
-  ee(() => {
-    !z && n === "create" && D(Ea(y));
+  te(() => {
+    !z && n === "create" && E(Ea(y));
   }, [y, z, n]);
-  function x(P) {
+  function N(P) {
     P.preventDefault(), r({}), c(null);
-    const B = {
+    const U = {
       title: y,
       type: "page",
       status: t?.status ?? "draft"
     };
-    h && (B.slug = h), M.trim() && (B.description = M), f.length > 0 && (B.sections = f.map(({ _instanceId: k, ...C }) => C)), l(async () => {
-      const k = n === "edit" && t ? await rt(`/api/admin/posts/${t.id}`, B) : await Le("/api/admin/posts", B);
+    h && (U.slug = h), R.trim() && (U.description = R), p.length > 0 && (U.sections = p.map(({ _instanceId: k, ...C }) => C)), l(async () => {
+      const k = n === "edit" && t ? await rt(`/api/admin/posts/${t.id}`, U) : await Le("/api/admin/posts", U);
       if (k.success) {
         W.success(n === "edit" ? "update" : "create", "post"), Xe("/admin/posts/page");
         return;
@@ -6341,18 +6386,18 @@ function $n({ page: t, mode: n }) {
       k.errors && Object.keys(k.errors).length > 0 ? r(k.errors) : c(k.message), W.error(k.message);
     });
   }
-  return /* @__PURE__ */ a("form", { onSubmit: x, className: "", children: [
+  return /* @__PURE__ */ a("form", { onSubmit: N, className: "", children: [
     /* @__PURE__ */ e(
       Se,
       {
         title: n === "edit" ? "Edit Page" : "Create Page",
         actions: /* @__PURE__ */ a("div", { className: "flex items-center gap-3", children: [
-          /* @__PURE__ */ e(N, { type: "submit", disabled: s, children: s ? n === "edit" ? "Saving…" : "Creating…" : n === "edit" ? "Save Changes" : "Create Page" }),
-          /* @__PURE__ */ a(ut, { open: m, onOpenChange: p, children: [
+          /* @__PURE__ */ e(x, { type: "submit", disabled: s, children: s ? n === "edit" ? "Saving…" : "Creating…" : n === "edit" ? "Save Changes" : "Create Page" }),
+          /* @__PURE__ */ a(ut, { open: u, onOpenChange: m, children: [
             /* @__PURE__ */ e(
               Mt,
               {
-                render: /* @__PURE__ */ a(N, { type: "button", variant: "outline", disabled: s, children: [
+                render: /* @__PURE__ */ a(x, { type: "button", variant: "outline", disabled: s, children: [
                   /* @__PURE__ */ e(wa, {}),
                   "Settings"
                 ] })
@@ -6363,29 +6408,29 @@ function $n({ page: t, mode: n }) {
               /* @__PURE__ */ a("div", { className: "space-y-5", children: [
                 /* @__PURE__ */ a("div", { className: "grid gap-5", children: [
                   /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                    /* @__PURE__ */ e(E, { htmlFor: "title", children: "Title" }),
-                    /* @__PURE__ */ e(V, { id: "title", value: y, onChange: (P) => _(P.target.value), placeholder: "Page title", "aria-invalid": !!i.title, "aria-describedby": i.title ? "title-error" : void 0 }),
+                    /* @__PURE__ */ e(L, { htmlFor: "title", children: "Title" }),
+                    /* @__PURE__ */ e(G, { id: "title", value: y, onChange: (P) => _(P.target.value), placeholder: "Page title", "aria-invalid": !!i.title, "aria-describedby": i.title ? "title-error" : void 0 }),
                     i.title && /* @__PURE__ */ e("p", { id: "title-error", className: "text-xs text-destructive", children: i.title[0] })
                   ] }),
                   /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                    /* @__PURE__ */ e(E, { htmlFor: "slug", children: "Slug" }),
-                    /* @__PURE__ */ e(V, { id: "slug", value: h, onChange: (P) => {
-                      $(!0), D(P.target.value);
+                    /* @__PURE__ */ e(L, { htmlFor: "slug", children: "Slug" }),
+                    /* @__PURE__ */ e(G, { id: "slug", value: h, onChange: (P) => {
+                      O(!0), E(P.target.value);
                     }, placeholder: "page-url-slug", "aria-invalid": !!i.slug, "aria-describedby": i.slug ? "slug-error" : void 0 }),
                     i.slug && /* @__PURE__ */ e("p", { id: "slug-error", className: "text-xs text-destructive", children: i.slug[0] }),
                     !z && n === "create" && /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Auto-generated from title. Edit to customize." })
                   ] })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-                  /* @__PURE__ */ e(E, { children: "Content" }),
-                  /* @__PURE__ */ e(xa, { fallback: /* @__PURE__ */ e("div", { className: "min-h-64 rounded-sm border bg-muted/20", "aria-busy": "true" }), children: /* @__PURE__ */ e(Tl, { content: M, onChange: v, placeholder: "Write your page content here..." }) }),
+                  /* @__PURE__ */ e(L, { children: "Content" }),
+                  /* @__PURE__ */ e(xa, { fallback: /* @__PURE__ */ e("div", { className: "min-h-64 rounded-sm border bg-muted/20", "aria-busy": "true" }), children: /* @__PURE__ */ e(Tl, { content: R, onChange: b, placeholder: "Write your page content here..." }) }),
                   i.description && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: i.description[0] })
                 ] })
               ] }),
-              /* @__PURE__ */ e(Ct, { children: /* @__PURE__ */ e(qi, { render: /* @__PURE__ */ e(N, { type: "button", variant: "outline" }), children: "Done" }) })
+              /* @__PURE__ */ e(Ct, { children: /* @__PURE__ */ e(qi, { render: /* @__PURE__ */ e(x, { type: "button", variant: "outline" }), children: "Done" }) })
             ] })
           ] }),
-          /* @__PURE__ */ e(N, { type: "button", variant: "outline", onClick: () => Xe("/admin/posts/page"), disabled: s, children: "Cancel" })
+          /* @__PURE__ */ e(x, { type: "button", variant: "outline", onClick: () => Xe("/admin/posts/page"), disabled: s, children: "Cancel" })
         ] })
       }
     ),
@@ -6394,7 +6439,7 @@ function $n({ page: t, mode: n }) {
       /* @__PURE__ */ a(Pe, { className: "overflow-hidden border-border/60 shadow-sm", children: [
         /* @__PURE__ */ e(_e, { children: /* @__PURE__ */ e(Ae, { className: "text-base", children: "Sections" }) }),
         /* @__PURE__ */ a(ze, { className: "", children: [
-          /* @__PURE__ */ e(En, { embeddedSections: f, onChange: g }),
+          /* @__PURE__ */ e(En, { embeddedSections: p, onChange: g }),
           i.sections && /* @__PURE__ */ e("p", { className: "mt-2 text-xs text-destructive", children: i.sections[0] })
         ] })
       ] })
@@ -6402,17 +6447,17 @@ function $n({ page: t, mode: n }) {
   ] });
 }
 function El() {
-  return /* @__PURE__ */ e($n, { mode: "create" });
+  return /* @__PURE__ */ e(Rn, { mode: "create" });
 }
 function Ll({ id: t }) {
-  const [n, s] = u(null), [l, i] = u(!0);
-  return ee(() => {
+  const [n, s] = d(null), [l, i] = d(!0);
+  return te(() => {
     ue(`/api/admin/posts/${t}`).then((r) => {
       s(r), i(!1);
     });
-  }, [t]), l ? /* @__PURE__ */ e(ge, {}) : n ? /* @__PURE__ */ e($n, { mode: "edit", page: n }) : /* @__PURE__ */ e("main", { className: "p-6", children: "Page not found." });
+  }, [t]), l ? /* @__PURE__ */ e(ge, {}) : n ? /* @__PURE__ */ e(Rn, { mode: "edit", page: n }) : /* @__PURE__ */ e("main", { className: "p-6", children: "Page not found." });
 }
-const Rn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const $n = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   AdminPageCreatePage: El,
   AdminPageEditPage: Ll
@@ -6424,37 +6469,37 @@ function Ml({
 }) {
   const l = Object.keys(t).sort();
   function i(c) {
-    n.includes(c) ? s(n.filter((m) => m !== c)) : s([...n, c]);
+    n.includes(c) ? s(n.filter((u) => u !== c)) : s([...n, c]);
   }
   function r(c) {
-    const m = t[c].map((y) => y.id);
-    if (m.every((y) => n.includes(y)))
-      s(n.filter((y) => !m.includes(y)));
+    const u = t[c].map((y) => y.id);
+    if (u.every((y) => n.includes(y)))
+      s(n.filter((y) => !u.includes(y)));
     else {
-      const y = /* @__PURE__ */ new Set([...n, ...m]);
+      const y = /* @__PURE__ */ new Set([...n, ...u]);
       s(Array.from(y));
     }
   }
   function o(c) {
-    return t[c].map((p) => p.id).every((p) => n.includes(p));
+    return t[c].map((m) => m.id).every((m) => n.includes(m));
   }
   return /* @__PURE__ */ e("div", { className: "grid gap-4 sm:grid-cols-2", children: l.map((c) => {
-    const m = t[c], p = o(c);
+    const u = t[c], m = o(c);
     return /* @__PURE__ */ a(Pe, { size: "sm", children: [
       /* @__PURE__ */ e(_e, { className: "border-b", children: /* @__PURE__ */ a("div", { className: "flex items-center justify-between", children: [
         /* @__PURE__ */ e(Ae, { className: "capitalize", children: c }),
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
             size: "xs",
             onClick: () => r(c),
-            children: p ? "Deselect All" : "Select All"
+            children: m ? "Deselect All" : "Select All"
           }
         )
       ] }) }),
-      /* @__PURE__ */ e(ze, { className: "pt-3", children: /* @__PURE__ */ e("div", { className: "flex flex-col gap-2", children: m.map((y) => /* @__PURE__ */ a(
+      /* @__PURE__ */ e(ze, { className: "pt-3", children: /* @__PURE__ */ e("div", { className: "flex flex-col gap-2", children: u.map((y) => /* @__PURE__ */ a(
         "label",
         {
           className: "flex items-center gap-2 text-sm cursor-pointer",
@@ -6475,29 +6520,29 @@ function Ml({
   }) });
 }
 function On({ mode: t, role: n, groupedPermissions: s, pageTitle: l }) {
-  const [i, r] = yt(), [o, c] = u({}), [m, p] = u(null), [y, _] = u(n?.name ?? ""), [h, D] = u(n?.description ?? ""), [z, $] = u(
-    () => n?.permissions?.map((v) => v.id) ?? []
+  const [i, r] = yt(), [o, c] = d({}), [u, m] = d(null), [y, _] = d(n?.name ?? ""), [h, E] = d(n?.description ?? ""), [z, O] = d(
+    () => n?.permissions?.map((b) => b.id) ?? []
   );
-  function M(v) {
-    v.preventDefault(), c({}), p(null), r(async () => {
-      const f = {
+  function R(b) {
+    b.preventDefault(), c({}), m(null), r(async () => {
+      const p = {
         name: y,
         description: h,
         permissionIds: z
       };
       let g;
-      t === "edit" && n ? g = await rt(`/api/admin/roles/${n.id}`, f) : g = await Le("/api/admin/roles", f), g.success ? (W.success(t === "edit" ? "update" : "create", "role"), Xe("/admin/roles")) : g.errors && Object.keys(g.errors).length > 0 ? (c(g.errors), W.error(g.message)) : (p(g.message), W.error(g.message));
+      t === "edit" && n ? g = await rt(`/api/admin/roles/${n.id}`, p) : g = await Le("/api/admin/roles", p), g.success ? (W.success(t === "edit" ? "update" : "create", "role"), Xe("/admin/roles")) : g.errors && Object.keys(g.errors).length > 0 ? (c(g.errors), W.error(g.message)) : (m(g.message), W.error(g.message));
     });
   }
-  return /* @__PURE__ */ a("form", { onSubmit: M, className: "", children: [
+  return /* @__PURE__ */ a("form", { onSubmit: R, className: "", children: [
     /* @__PURE__ */ e(
       Se,
       {
         title: l || "Roles",
         actions: /* @__PURE__ */ a("div", { className: "flex items-center gap-3", children: [
-          /* @__PURE__ */ e(N, { type: "submit", disabled: i, children: i ? t === "edit" ? "Saving…" : "Creating…" : t === "edit" ? "Save Changes" : "Create Role" }),
+          /* @__PURE__ */ e(x, { type: "submit", disabled: i, children: i ? t === "edit" ? "Saving…" : "Creating…" : t === "edit" ? "Save Changes" : "Create Role" }),
           /* @__PURE__ */ e(
-            N,
+            x,
             {
               type: "button",
               variant: "outline",
@@ -6509,21 +6554,21 @@ function On({ mode: t, role: n, groupedPermissions: s, pageTitle: l }) {
         ] })
       }
     ),
-    m && /* @__PURE__ */ e("div", { className: "mx-4 rounded-sm border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive", children: m }),
+    u && /* @__PURE__ */ e("div", { className: "mx-4 rounded-sm border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive", children: u }),
     /* @__PURE__ */ a(Dt, { children: [
       /* @__PURE__ */ e(Et, { children: /* @__PURE__ */ a(je, { title: "Permissions", description: "Select the permissions this role should have.", children: [
         o.permissionIds && /* @__PURE__ */ e("p", { className: "text-xs text-destructive", children: o.permissionIds[0] }),
-        /* @__PURE__ */ e(Ml, { groupedPermissions: s, selectedIds: z, onChange: $ })
+        /* @__PURE__ */ e(Ml, { groupedPermissions: s, selectedIds: z, onChange: O })
       ] }) }),
       /* @__PURE__ */ e(Lt, { children: /* @__PURE__ */ a(je, { title: "Role details", children: [
         /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ e(E, { htmlFor: "name", children: "Name" }),
+          /* @__PURE__ */ e(L, { htmlFor: "name", children: "Name" }),
           /* @__PURE__ */ e(
-            V,
+            G,
             {
               id: "name",
               value: y,
-              onChange: (v) => _(v.target.value),
+              onChange: (b) => _(b.target.value),
               placeholder: "e.g. Editor, Author, Moderator",
               "aria-invalid": !!o.name,
               "aria-describedby": o.name ? "name-error" : void 0
@@ -6532,13 +6577,13 @@ function On({ mode: t, role: n, groupedPermissions: s, pageTitle: l }) {
           o.name && /* @__PURE__ */ e("p", { id: "name-error", className: "text-xs text-destructive", children: o.name[0] })
         ] }),
         /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-          /* @__PURE__ */ e(E, { htmlFor: "description", children: "Description" }),
+          /* @__PURE__ */ e(L, { htmlFor: "description", children: "Description" }),
           /* @__PURE__ */ e(
             Oe,
             {
               id: "description",
               value: h,
-              onChange: (v) => D(v.target.value),
+              onChange: (b) => E(b.target.value),
               placeholder: "Brief description of this role's purpose...",
               rows: 3,
               "aria-invalid": !!o.description,
@@ -6557,9 +6602,9 @@ function Bn(t) {
     return n[l] || (n[l] = []), n[l].push(s), n;
   }, {});
 }
-function $l() {
-  const [t, n] = u(null), [s, l] = u(!0);
-  ee(() => {
+function Rl() {
+  const [t, n] = d(null), [s, l] = d(!0);
+  te(() => {
     ue("/api/admin/roles").then((r) => {
       n(r.permissions), l(!1);
     });
@@ -6577,28 +6622,28 @@ function $l() {
     }
   ) });
 }
-function Rl({ id: t }) {
-  const [n, s] = u(null), [l, i] = u(null), [r, o] = u(!0);
-  ee(() => {
+function $l({ id: t }) {
+  const [n, s] = d(null), [l, i] = d(null), [r, o] = d(!0);
+  te(() => {
     Promise.all([
       ue(`/api/admin/roles/${t}`),
       ue("/api/admin/roles")
-    ]).then(([p, y]) => {
-      s(p.role), i(y.permissions), o(!1);
+    ]).then(([m, y]) => {
+      s(m.role), i(y.permissions), o(!1);
     });
   }, [t]);
   const c = Ot(
     () => Bn(l ?? []),
     [l]
-  ), m = Ot(() => !n || !l ? null : {
+  ), u = Ot(() => !n || !l ? null : {
     ...n,
-    permissions: l.filter((p) => n.permissionIds.includes(p.id))
+    permissions: l.filter((m) => n.permissionIds.includes(m.id))
   }, [l, n]);
-  return r ? /* @__PURE__ */ e(ge, {}) : m ? /* @__PURE__ */ e(He, { children: /* @__PURE__ */ e(
+  return r ? /* @__PURE__ */ e(ge, {}) : u ? /* @__PURE__ */ e(He, { children: /* @__PURE__ */ e(
     On,
     {
       mode: "edit",
-      role: m,
+      role: u,
       groupedPermissions: c,
       pageTitle: "Edit Role"
     }
@@ -6606,8 +6651,8 @@ function Rl({ id: t }) {
 }
 const jn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  AdminRoleCreatePage: $l,
-  AdminRoleEditPage: Rl
+  AdminRoleCreatePage: Rl,
+  AdminRoleEditPage: $l
 }, Symbol.toStringTag, { value: "Module" })), Ol = Intl.supportedValuesOf?.("timeZone") ?? [
   "UTC",
   "America/New_York",
@@ -6712,70 +6757,70 @@ const jn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   { code: "yi", name: "Yiddish" }
 ];
 function Fl() {
-  const [t, n] = u(null), [s, l] = u(!0), [i, r] = u(!1), [o, c] = u(null);
-  async function m() {
+  const [t, n] = d(null), [s, l] = d(!0), [i, r] = d(!1), [o, c] = d(null);
+  async function u() {
     l(!0), c(null);
     try {
-      const f = await ue("/api/admin/settings");
-      n(f);
-    } catch (f) {
-      c(f instanceof Error ? f.message : "Failed to load settings");
+      const p = await ue("/api/admin/settings");
+      n(p);
+    } catch (p) {
+      c(p instanceof Error ? p.message : "Failed to load settings");
     } finally {
       l(!1);
     }
   }
-  ee(() => {
-    m();
+  te(() => {
+    u();
   }, []);
-  function p(f, g) {
-    t && n({ ...t, [f]: g });
+  function m(p, g) {
+    t && n({ ...t, [p]: g });
   }
   function y() {
-    t && p("links", [
+    t && m("links", [
       ...t.links,
       { platform: "", url: "https://", icon: "" }
     ]);
   }
-  function _(f, g, x) {
+  function _(p, g, N) {
     if (!t) return;
     const P = t.links.map(
-      (B, k) => k === f ? { ...B, [g]: x } : B
+      (U, k) => k === p ? { ...U, [g]: N } : U
     );
-    p("links", P);
+    m("links", P);
   }
-  function h(f) {
+  function h(p) {
     if (!t) return;
-    const g = t.links.filter((x, P) => P !== f);
-    p("links", g);
+    const g = t.links.filter((N, P) => P !== p);
+    m("links", g);
   }
-  function D() {
-    t && p("open_hours", [
+  function E() {
+    t && m("open_hours", [
       ...t.open_hours,
       { day: "Monday", open: "08:00", close: "17:00" }
     ]);
   }
-  function z(f, g, x) {
+  function z(p, g, N) {
     if (!t) return;
     const P = t.open_hours.map(
-      (B, k) => k === f ? { ...B, [g]: x } : B
+      (U, k) => k === p ? { ...U, [g]: N } : U
     );
-    p("open_hours", P);
+    m("open_hours", P);
   }
-  function $(f) {
+  function O(p) {
     if (!t) return;
-    const g = t.open_hours.filter((x, P) => P !== f);
-    p("open_hours", g);
+    const g = t.open_hours.filter((N, P) => P !== p);
+    m("open_hours", g);
   }
-  function M(f) {
+  function R(p) {
     if (!t) return;
-    const g = t.translate_countries, x = g.includes(f) ? g.filter((P) => P !== f) : [...g, f];
-    p("translate_countries", x);
+    const g = t.translate_countries, N = g.includes(p) ? g.filter((P) => P !== p) : [...g, p];
+    m("translate_countries", N);
   }
-  async function v() {
+  async function b() {
     if (t) {
       r(!0);
       try {
-        const f = {
+        const p = {
           title: t.title,
           description: t.description,
           meta_title: t.meta_title,
@@ -6790,10 +6835,10 @@ function Fl() {
           custom_javascript: t.custom_javascript,
           translate_countries: t.translate_countries,
           email_notifications: t.email_notifications.join(",")
-        }, g = await rt("/api/admin/settings", f);
+        }, g = await rt("/api/admin/settings", p);
         g.success ? (n(g.data), W.success("update", "settings")) : W.error(g.message);
-      } catch (f) {
-        W.error(f instanceof Error ? f.message : "Failed to save settings");
+      } catch (p) {
+        W.error(p instanceof Error ? p.message : "Failed to save settings");
       } finally {
         r(!1);
       }
@@ -6807,7 +6852,7 @@ function Fl() {
       Se,
       {
         title: "Settings",
-        actions: /* @__PURE__ */ a(N, { onClick: v, disabled: i, children: [
+        actions: /* @__PURE__ */ a(x, { onClick: b, disabled: i, children: [
           /* @__PURE__ */ e(ws, { className: "size-4" }),
           i ? "Saving..." : "Save Settings"
         ] })
@@ -6823,33 +6868,33 @@ function Fl() {
           children: [
             /* @__PURE__ */ a("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
               /* @__PURE__ */ a("div", { className: "space-y-2", children: [
-                /* @__PURE__ */ e(E, { htmlFor: "title", children: "Site Title" }),
+                /* @__PURE__ */ e(L, { htmlFor: "title", children: "Site Title" }),
                 /* @__PURE__ */ e(
-                  V,
+                  G,
                   {
                     id: "title",
                     value: t.title,
-                    onChange: (f) => p("title", f.target.value),
+                    onChange: (p) => m("title", p.target.value),
                     placeholder: "My Website"
                   }
                 )
               ] }),
               /* @__PURE__ */ a("div", { className: "space-y-2", children: [
-                /* @__PURE__ */ e(E, { htmlFor: "timezone", children: "Timezone" }),
-                /* @__PURE__ */ a(Ie, { value: t.timezone, onValueChange: (f) => f && p("timezone", f), children: [
+                /* @__PURE__ */ e(L, { htmlFor: "timezone", children: "Timezone" }),
+                /* @__PURE__ */ a(Ie, { value: t.timezone, onValueChange: (p) => p && m("timezone", p), children: [
                   /* @__PURE__ */ e(De, { id: "timezone", children: /* @__PURE__ */ e(Te, { placeholder: "Select timezone" }) }),
-                  /* @__PURE__ */ e(Ee, { children: Ol.map((f) => /* @__PURE__ */ e(se, { value: f, children: f }, f)) })
+                  /* @__PURE__ */ e(Ee, { children: Ol.map((p) => /* @__PURE__ */ e(re, { value: p, children: p }, p)) })
                 ] })
               ] })
             ] }),
             /* @__PURE__ */ a("div", { className: "space-y-2 mt-4", children: [
-              /* @__PURE__ */ e(E, { htmlFor: "description", children: "Site Description" }),
+              /* @__PURE__ */ e(L, { htmlFor: "description", children: "Site Description" }),
               /* @__PURE__ */ e(
                 Oe,
                 {
                   id: "description",
                   value: t.description,
-                  onChange: (f) => p("description", f.target.value),
+                  onChange: (p) => m("description", p.target.value),
                   placeholder: "A short description of your site",
                   rows: 3
                 }
@@ -6861,10 +6906,10 @@ function Fl() {
                 {
                   id: "maintenance_mode",
                   checked: t.maintenance_mode,
-                  onCheckedChange: (f) => p("maintenance_mode", f === !0)
+                  onCheckedChange: (p) => m("maintenance_mode", p === !0)
                 }
               ),
-              /* @__PURE__ */ e(E, { htmlFor: "maintenance_mode", className: "cursor-pointer", children: "Maintenance Mode (site shows maintenance page to visitors)" })
+              /* @__PURE__ */ e(L, { htmlFor: "maintenance_mode", className: "cursor-pointer", children: "Maintenance Mode (site shows maintenance page to visitors)" })
             ] })
           ]
         }
@@ -6877,25 +6922,25 @@ function Fl() {
           className: "lg:col-start-1 lg:row-start-3",
           children: /* @__PURE__ */ a("div", { className: "space-y-4", children: [
             /* @__PURE__ */ a("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ e(E, { htmlFor: "meta_title", children: "Meta Title" }),
+              /* @__PURE__ */ e(L, { htmlFor: "meta_title", children: "Meta Title" }),
               /* @__PURE__ */ e(
-                V,
+                G,
                 {
                   id: "meta_title",
                   value: t.meta_title,
-                  onChange: (f) => p("meta_title", f.target.value),
+                  onChange: (p) => m("meta_title", p.target.value),
                   placeholder: "Page title shown in browser tab"
                 }
               )
             ] }),
             /* @__PURE__ */ a("div", { className: "space-y-2", children: [
-              /* @__PURE__ */ e(E, { htmlFor: "meta_description", children: "Meta Description" }),
+              /* @__PURE__ */ e(L, { htmlFor: "meta_description", children: "Meta Description" }),
               /* @__PURE__ */ e(
                 Oe,
                 {
                   id: "meta_description",
                   value: t.meta_description,
-                  onChange: (f) => p("meta_description", f.target.value),
+                  onChange: (p) => m("meta_description", p.target.value),
                   placeholder: "Brief page description for search engines",
                   rows: 3
                 }
@@ -6912,7 +6957,7 @@ function Fl() {
           className: "lg:col-start-1 lg:row-start-2",
           children: /* @__PURE__ */ a("div", { className: "space-y-6", children: [
             /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-              /* @__PURE__ */ e(E, { children: "Logo" }),
+              /* @__PURE__ */ e(L, { children: "Logo" }),
               /* @__PURE__ */ e("div", { className: "rounded-sm border border-dashed bg-muted/30 p-4", children: /* @__PURE__ */ a("div", { className: "flex items-start gap-4", children: [
                 t.logo ? /* @__PURE__ */ e("div", { className: "relative h-24 w-24 shrink-0 overflow-hidden rounded-sm border bg-muted", children: /* @__PURE__ */ e(
                   "img",
@@ -6927,8 +6972,8 @@ function Fl() {
                     Fe,
                     {
                       value: t.logo || null,
-                      onChange: (f) => {
-                        p("logo", f ? f.url : "");
+                      onChange: (p) => {
+                        m("logo", p ? p.url : "");
                       },
                       accept: "image/*"
                     },
@@ -6936,13 +6981,14 @@ function Fl() {
                   ),
                   /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Choose a logo from the media library. Recommended: PNG or SVG." }),
                   t.logo && /* @__PURE__ */ e(
-                    N,
+                    x,
                     {
                       type: "button",
-                      variant: "ghost",
+                      variant: "outline",
                       size: "sm",
-                      className: "w-fit",
-                      onClick: () => p("logo", ""),
+                      "aria-label": "Remove logo",
+                      className: "w-fit text-destructive hover:bg-destructive/10 hover:text-destructive",
+                      onClick: () => m("logo", ""),
                       children: "Remove"
                     }
                   )
@@ -6950,7 +6996,7 @@ function Fl() {
               ] }) })
             ] }),
             /* @__PURE__ */ a("div", { className: "flex flex-col gap-1.5", children: [
-              /* @__PURE__ */ e(E, { children: "Favicon" }),
+              /* @__PURE__ */ e(L, { children: "Favicon" }),
               /* @__PURE__ */ e("div", { className: "rounded-sm border border-dashed bg-muted/30 p-4", children: /* @__PURE__ */ a("div", { className: "flex items-start gap-4", children: [
                 t.favicon ? /* @__PURE__ */ e("div", { className: "relative h-16 w-16 shrink-0 overflow-hidden rounded-sm border bg-muted", children: /* @__PURE__ */ e(
                   "img",
@@ -6965,8 +7011,8 @@ function Fl() {
                     Fe,
                     {
                       value: t.favicon || null,
-                      onChange: (f) => {
-                        p("favicon", f ? f.url : "");
+                      onChange: (p) => {
+                        m("favicon", p ? p.url : "");
                       },
                       accept: "image/*"
                     },
@@ -6974,13 +7020,14 @@ function Fl() {
                   ),
                   /* @__PURE__ */ e("p", { className: "text-xs text-muted-foreground", children: "Choose a favicon from the media library. Recommended: ICO or PNG (32x32)." }),
                   t.favicon && /* @__PURE__ */ e(
-                    N,
+                    x,
                     {
                       type: "button",
-                      variant: "ghost",
+                      variant: "outline",
                       size: "sm",
-                      className: "w-fit",
-                      onClick: () => p("favicon", ""),
+                      "aria-label": "Remove favicon",
+                      className: "w-fit text-destructive hover:bg-destructive/10 hover:text-destructive",
+                      onClick: () => m("favicon", ""),
                       children: "Remove"
                     }
                   )
@@ -6998,40 +7045,40 @@ function Fl() {
           className: "lg:col-span-2 lg:row-start-4",
           children: /* @__PURE__ */ a("div", { className: "space-y-3", children: [
             t.links.length === 0 && /* @__PURE__ */ e("p", { className: "text-sm text-muted-foreground", children: "No social media links added yet." }),
-            t.links.map((f, g) => /* @__PURE__ */ a("div", { className: "flex items-center gap-3 p-3 border rounded-sm bg-muted/30", children: [
+            t.links.map((p, g) => /* @__PURE__ */ a("div", { className: "flex items-center gap-3 p-3 border rounded-sm bg-muted/30", children: [
               /* @__PURE__ */ a("div", { className: "flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3", children: [
                 /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-                  /* @__PURE__ */ e(E, { className: "text-xs", children: "Platform" }),
-                  /* @__PURE__ */ a(Ie, { value: f.platform || void 0, onValueChange: (x) => x && _(g, "platform", x), children: [
+                  /* @__PURE__ */ e(L, { className: "text-xs", children: "Platform" }),
+                  /* @__PURE__ */ a(Ie, { value: p.platform || void 0, onValueChange: (N) => N && _(g, "platform", N), children: [
                     /* @__PURE__ */ e(De, { children: /* @__PURE__ */ e(Te, { placeholder: "Select platform..." }) }),
-                    /* @__PURE__ */ e(Ee, { children: Bl.map((x) => /* @__PURE__ */ e(se, { value: x, children: x }, x)) })
+                    /* @__PURE__ */ e(Ee, { children: Bl.map((N) => /* @__PURE__ */ e(re, { value: N, children: N }, N)) })
                   ] })
                 ] }),
                 /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-                  /* @__PURE__ */ e(E, { className: "text-xs", children: "URL" }),
+                  /* @__PURE__ */ e(L, { className: "text-xs", children: "URL" }),
                   /* @__PURE__ */ e(
-                    V,
+                    G,
                     {
-                      value: f.url,
-                      onChange: (x) => _(g, "url", x.target.value),
+                      value: p.url,
+                      onChange: (N) => _(g, "url", N.target.value),
                       placeholder: "https://..."
                     }
                   )
                 ] }),
                 /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-                  /* @__PURE__ */ e(E, { className: "text-xs", children: "Icon Class (optional)" }),
+                  /* @__PURE__ */ e(L, { className: "text-xs", children: "Icon Class (optional)" }),
                   /* @__PURE__ */ e(
-                    V,
+                    G,
                     {
-                      value: f.icon ?? "",
-                      onChange: (x) => _(g, "icon", x.target.value),
+                      value: p.icon ?? "",
+                      onChange: (N) => _(g, "icon", N.target.value),
                       placeholder: "e.g. icon-facebook"
                     }
                   )
                 ] })
               ] }),
               /* @__PURE__ */ e(
-                N,
+                x,
                 {
                   variant: "ghost",
                   size: "icon",
@@ -7041,8 +7088,8 @@ function Fl() {
                 }
               )
             ] }, g)),
-            /* @__PURE__ */ a(N, { variant: "outline", size: "sm", onClick: y, children: [
-              /* @__PURE__ */ e(Re, { className: "size-3" }),
+            /* @__PURE__ */ a(x, { variant: "outline", size: "sm", onClick: y, children: [
+              /* @__PURE__ */ e($e, { className: "size-3" }),
               " Add Social Link"
             ] })
           ] })
@@ -7056,48 +7103,48 @@ function Fl() {
           className: "lg:col-span-2 lg:row-start-5",
           children: /* @__PURE__ */ a("div", { className: "space-y-3", children: [
             t.open_hours.length === 0 && /* @__PURE__ */ e("p", { className: "text-sm text-muted-foreground", children: "No open hours added yet." }),
-            t.open_hours.map((f, g) => /* @__PURE__ */ a(
+            t.open_hours.map((p, g) => /* @__PURE__ */ a(
               "div",
               {
                 className: "flex items-center gap-3 p-3 border rounded-sm bg-muted/30",
                 children: [
                   /* @__PURE__ */ a("div", { className: "flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3", children: [
                     /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-                      /* @__PURE__ */ e(E, { className: "text-xs", children: "Day" }),
-                      /* @__PURE__ */ a(Ie, { value: f.day, onValueChange: (x) => x && z(g, "day", x), children: [
+                      /* @__PURE__ */ e(L, { className: "text-xs", children: "Day" }),
+                      /* @__PURE__ */ a(Ie, { value: p.day, onValueChange: (N) => N && z(g, "day", N), children: [
                         /* @__PURE__ */ e(De, { children: /* @__PURE__ */ e(Te, {}) }),
-                        /* @__PURE__ */ e(Ee, { children: jl.map((x) => /* @__PURE__ */ e(se, { value: x, children: x }, x)) })
+                        /* @__PURE__ */ e(Ee, { children: jl.map((N) => /* @__PURE__ */ e(re, { value: N, children: N }, N)) })
                       ] })
                     ] }),
                     /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-                      /* @__PURE__ */ e(E, { className: "text-xs", children: "Open Time" }),
+                      /* @__PURE__ */ e(L, { className: "text-xs", children: "Open Time" }),
                       /* @__PURE__ */ e(
-                        V,
+                        G,
                         {
                           type: "time",
-                          value: f.open,
-                          onChange: (x) => z(g, "open", x.target.value)
+                          value: p.open,
+                          onChange: (N) => z(g, "open", N.target.value)
                         }
                       )
                     ] }),
                     /* @__PURE__ */ a("div", { className: "space-y-1", children: [
-                      /* @__PURE__ */ e(E, { className: "text-xs", children: "Close Time" }),
+                      /* @__PURE__ */ e(L, { className: "text-xs", children: "Close Time" }),
                       /* @__PURE__ */ e(
-                        V,
+                        G,
                         {
                           type: "time",
-                          value: f.close,
-                          onChange: (x) => z(g, "close", x.target.value)
+                          value: p.close,
+                          onChange: (N) => z(g, "close", N.target.value)
                         }
                       )
                     ] })
                   ] }),
                   /* @__PURE__ */ e(
-                    N,
+                    x,
                     {
                       variant: "ghost",
                       size: "icon",
-                      onClick: () => $(g),
+                      onClick: () => O(g),
                       className: "shrink-0 text-destructive hover:text-destructive",
                       children: /* @__PURE__ */ e(we, { className: "size-4" })
                     }
@@ -7106,8 +7153,8 @@ function Fl() {
               },
               g
             )),
-            /* @__PURE__ */ a(N, { variant: "outline", size: "sm", onClick: D, children: [
-              /* @__PURE__ */ e(Re, { className: "size-3" }),
+            /* @__PURE__ */ a(x, { variant: "outline", size: "sm", onClick: E, children: [
+              /* @__PURE__ */ e($e, { className: "size-3" }),
               " Add Hours"
             ] })
           ] })
@@ -7120,15 +7167,15 @@ function Fl() {
           description: "Email addresses to receive notifications (separate with comma)",
           className: "lg:col-start-2 lg:row-start-1",
           children: /* @__PURE__ */ a("div", { className: "space-y-2", children: [
-            /* @__PURE__ */ e(E, { htmlFor: "email_notifications", children: "Recipient Emails" }),
+            /* @__PURE__ */ e(L, { htmlFor: "email_notifications", children: "Recipient Emails" }),
             /* @__PURE__ */ e(
-              V,
+              G,
               {
                 id: "email_notifications",
                 value: t.email_notifications.join(", "),
-                onChange: (f) => {
-                  const g = f.target.value.split(",").map((x) => x.trim()).filter(Boolean);
-                  p("email_notifications", g);
+                onChange: (p) => {
+                  const g = p.target.value.split(",").map((N) => N.trim()).filter(Boolean);
+                  m("email_notifications", g);
                 },
                 placeholder: "admin@example.com, editor@example.com"
               }
@@ -7145,7 +7192,7 @@ function Fl() {
           className: "lg:col-start-2 lg:row-start-2",
           children: /* @__PURE__ */ a("div", { className: "space-y-2", children: [
             /* @__PURE__ */ e("p", { className: "text-sm text-muted-foreground", children: "Select which languages to include in the Google Translate dropdown. Leave empty to disable." }),
-            /* @__PURE__ */ e("div", { className: "max-h-64 overflow-y-auto border rounded-sm p-3", children: /* @__PURE__ */ e("div", { className: "grid grid-cols-2 sm:grid-cols-3 gap-2", children: Ul.map((f) => /* @__PURE__ */ a(
+            /* @__PURE__ */ e("div", { className: "max-h-64 overflow-y-auto border rounded-sm p-3", children: /* @__PURE__ */ e("div", { className: "grid grid-cols-2 sm:grid-cols-3 gap-2", children: Ul.map((p) => /* @__PURE__ */ a(
               "label",
               {
                 className: "flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded-sm px-2 py-1",
@@ -7153,17 +7200,17 @@ function Fl() {
                   /* @__PURE__ */ e(
                     xe,
                     {
-                      checked: t.translate_countries.includes(f.code),
-                      onCheckedChange: () => M(f.code)
+                      checked: t.translate_countries.includes(p.code),
+                      onCheckedChange: () => R(p.code)
                     }
                   ),
-                  f.name,
+                  p.name,
                   " (",
-                  f.code,
+                  p.code,
                   ")"
                 ]
               },
-              f.code
+              p.code
             )) }) }),
             /* @__PURE__ */ a("p", { className: "text-xs text-muted-foreground", children: [
               t.translate_countries.length,
@@ -7181,13 +7228,13 @@ function Fl() {
           description: "Custom styles added site-wide",
           className: "lg:col-span-2 lg:row-start-6",
           children: /* @__PURE__ */ a("div", { className: "space-y-2", children: [
-            /* @__PURE__ */ e(E, { htmlFor: "custom_css", children: "CSS Code" }),
+            /* @__PURE__ */ e(L, { htmlFor: "custom_css", children: "CSS Code" }),
             /* @__PURE__ */ e(
               Oe,
               {
                 id: "custom_css",
                 value: t.custom_css,
-                onChange: (f) => p("custom_css", f.target.value),
+                onChange: (p) => m("custom_css", p.target.value),
                 placeholder: "/* Add your custom CSS here */",
                 rows: 8,
                 className: "font-mono text-sm"
@@ -7203,13 +7250,13 @@ function Fl() {
           description: "Custom scripts added before closing body tag",
           className: "lg:col-span-2 lg:row-start-7",
           children: /* @__PURE__ */ a("div", { className: "space-y-2", children: [
-            /* @__PURE__ */ e(E, { htmlFor: "custom_javascript", children: "JavaScript Code" }),
+            /* @__PURE__ */ e(L, { htmlFor: "custom_javascript", children: "JavaScript Code" }),
             /* @__PURE__ */ e(
               Oe,
               {
                 id: "custom_javascript",
                 value: t.custom_javascript,
-                onChange: (f) => p("custom_javascript", f.target.value),
+                onChange: (p) => m("custom_javascript", p.target.value),
                 placeholder: "// Add your custom JavaScript here",
                 rows: 8,
                 className: "font-mono text-sm"
@@ -7319,7 +7366,7 @@ function at({
     }
   );
 }
-function Z({
+function ee({
   className: t,
   inset: n,
   variant: s = "default",
@@ -7482,7 +7529,7 @@ function Gl({ editor: t }) {
           onPressedChange: () => t.chain().focus().toggleHeading({ level: 4 }).run(),
           "aria-label": "Heading 4",
           title: "Heading 4",
-          children: /* @__PURE__ */ e($a, { className: "size-4" })
+          children: /* @__PURE__ */ e(Ra, { className: "size-4" })
         }
       ),
       /* @__PURE__ */ e(
@@ -7493,7 +7540,7 @@ function Gl({ editor: t }) {
           onPressedChange: () => t.chain().focus().setParagraph().run(),
           "aria-label": "Paragraph",
           title: "Paragraph",
-          children: /* @__PURE__ */ e(Ra, { className: "size-4" })
+          children: /* @__PURE__ */ e($a, { className: "size-4" })
         }
       ),
       /* @__PURE__ */ e(it, { orientation: "vertical", className: "mx-1 h-6" })
@@ -7555,7 +7602,7 @@ function Gl({ editor: t }) {
         }
       ),
       /* @__PURE__ */ e(
-        N,
+        x,
         {
           type: "button",
           variant: "ghost",
@@ -7634,7 +7681,7 @@ function Gl({ editor: t }) {
           onChange: s,
           accept: "image/*",
           trigger: /* @__PURE__ */ e(
-            N,
+            x,
             {
               type: "button",
               variant: "ghost",
@@ -7647,7 +7694,7 @@ function Gl({ editor: t }) {
         }
       ),
       /* @__PURE__ */ e(
-        N,
+        x,
         {
           type: "button",
           variant: "ghost",
@@ -7680,27 +7727,27 @@ function Gl({ editor: t }) {
         /* @__PURE__ */ a(on, { align: "start", sideOffset: 4, children: [
           /* @__PURE__ */ e(at, { children: "Rows" }),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().addRowBefore().run(),
               children: [
-                /* @__PURE__ */ e(Re, { className: "size-4" }),
+                /* @__PURE__ */ e($e, { className: "size-4" }),
                 "Add Row Before"
               ]
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().addRowAfter().run(),
               children: [
-                /* @__PURE__ */ e(Re, { className: "size-4" }),
+                /* @__PURE__ */ e($e, { className: "size-4" }),
                 "Add Row After"
               ]
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               variant: "destructive",
               onClick: () => t.chain().focus().deleteRow().run(),
@@ -7713,27 +7760,27 @@ function Gl({ editor: t }) {
           /* @__PURE__ */ e(ot, {}),
           /* @__PURE__ */ e(at, { children: "Columns" }),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().addColumnBefore().run(),
               children: [
-                /* @__PURE__ */ e(Re, { className: "size-4" }),
+                /* @__PURE__ */ e($e, { className: "size-4" }),
                 "Add Column Before"
               ]
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().addColumnAfter().run(),
               children: [
-                /* @__PURE__ */ e(Re, { className: "size-4" }),
+                /* @__PURE__ */ e($e, { className: "size-4" }),
                 "Add Column After"
               ]
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               variant: "destructive",
               onClick: () => t.chain().focus().deleteColumn().run(),
@@ -7746,7 +7793,7 @@ function Gl({ editor: t }) {
           /* @__PURE__ */ e(ot, {}),
           /* @__PURE__ */ e(at, { children: "Cells" }),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().mergeCells().run(),
               disabled: !t.can().mergeCells(),
@@ -7757,7 +7804,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().splitCell().run(),
               disabled: !t.can().splitCell(),
@@ -7769,7 +7816,7 @@ function Gl({ editor: t }) {
           ),
           /* @__PURE__ */ e(ot, {}),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               variant: "destructive",
               onClick: () => t.chain().focus().deleteTable().run(),
@@ -7781,7 +7828,7 @@ function Gl({ editor: t }) {
           )
         ] })
       ] }) : /* @__PURE__ */ e(
-        N,
+        x,
         {
           type: "button",
           variant: "ghost",
@@ -7812,7 +7859,7 @@ function Gl({ editor: t }) {
         /* @__PURE__ */ a(on, { align: "start", sideOffset: 4, children: [
           /* @__PURE__ */ e(at, { children: "Headings" }),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().toggleHeading({ level: 1 }).run(),
               children: [
@@ -7822,7 +7869,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().toggleHeading({ level: 2 }).run(),
               children: [
@@ -7832,7 +7879,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().toggleHeading({ level: 3 }).run(),
               children: [
@@ -7842,21 +7889,21 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().toggleHeading({ level: 4 }).run(),
               children: [
-                /* @__PURE__ */ e($a, { className: "size-4" }),
+                /* @__PURE__ */ e(Ra, { className: "size-4" }),
                 "Heading 4"
               ]
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().setParagraph().run(),
               children: [
-                /* @__PURE__ */ e(Ra, { className: "size-4" }),
+                /* @__PURE__ */ e($a, { className: "size-4" }),
                 "Paragraph"
               ]
             }
@@ -7864,7 +7911,7 @@ function Gl({ editor: t }) {
           /* @__PURE__ */ e(ot, {}),
           /* @__PURE__ */ e(at, { children: "Blocks" }),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().toggleBlockquote().run(),
               children: [
@@ -7874,7 +7921,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().toggleCodeBlock().run(),
               children: [
@@ -7884,7 +7931,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().toggleBulletList().run(),
               children: [
@@ -7894,7 +7941,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().toggleOrderedList().run(),
               children: [
@@ -7904,7 +7951,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().toggleTaskList().run(),
               children: [
@@ -7914,7 +7961,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().setHorizontalRule().run(),
               children: [
@@ -7926,7 +7973,7 @@ function Gl({ editor: t }) {
           /* @__PURE__ */ e(ot, {}),
           /* @__PURE__ */ e(at, { children: "Alignment" }),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().setTextAlign("left").run(),
               children: [
@@ -7936,7 +7983,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().setTextAlign("center").run(),
               children: [
@@ -7946,7 +7993,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().setTextAlign("right").run(),
               children: [
@@ -7956,7 +8003,7 @@ function Gl({ editor: t }) {
             }
           ),
           /* @__PURE__ */ a(
-            Z,
+            ee,
             {
               onClick: () => t.chain().focus().setTextAlign("justify").run(),
               children: [
@@ -7967,11 +8014,11 @@ function Gl({ editor: t }) {
           ),
           /* @__PURE__ */ e(ot, {}),
           /* @__PURE__ */ e(at, { children: "Media" }),
-          /* @__PURE__ */ a(Z, { onClick: n, children: [
+          /* @__PURE__ */ a(ee, { onClick: n, children: [
             /* @__PURE__ */ e(ga, { className: "size-4" }),
             "Link"
           ] }),
-          /* @__PURE__ */ a(Z, { onClick: () => {
+          /* @__PURE__ */ a(ee, { onClick: () => {
             const r = window.prompt("Enter image URL:", "https://");
             if (!r) return;
             const o = window.prompt("Enter alt text:", "") || "";
@@ -7980,7 +8027,7 @@ function Gl({ editor: t }) {
             /* @__PURE__ */ e(Pt, { className: "size-4" }),
             "Insert Image"
           ] }),
-          /* @__PURE__ */ a(Z, { onClick: l, children: [
+          /* @__PURE__ */ a(ee, { onClick: l, children: [
             /* @__PURE__ */ e(Va, { className: "size-4" }),
             "YouTube Video"
           ] }),
@@ -7988,27 +8035,27 @@ function Gl({ editor: t }) {
           /* @__PURE__ */ e(at, { children: "Table" }),
           t.isActive("table") ? /* @__PURE__ */ a(He, { children: [
             /* @__PURE__ */ a(
-              Z,
+              ee,
               {
                 onClick: () => t.chain().focus().addRowBefore().run(),
                 children: [
-                  /* @__PURE__ */ e(Re, { className: "size-4" }),
+                  /* @__PURE__ */ e($e, { className: "size-4" }),
                   "Add Row Before"
                 ]
               }
             ),
             /* @__PURE__ */ a(
-              Z,
+              ee,
               {
                 onClick: () => t.chain().focus().addRowAfter().run(),
                 children: [
-                  /* @__PURE__ */ e(Re, { className: "size-4" }),
+                  /* @__PURE__ */ e($e, { className: "size-4" }),
                   "Add Row After"
                 ]
               }
             ),
             /* @__PURE__ */ a(
-              Z,
+              ee,
               {
                 variant: "destructive",
                 onClick: () => t.chain().focus().deleteRow().run(),
@@ -8019,27 +8066,27 @@ function Gl({ editor: t }) {
               }
             ),
             /* @__PURE__ */ a(
-              Z,
+              ee,
               {
                 onClick: () => t.chain().focus().addColumnBefore().run(),
                 children: [
-                  /* @__PURE__ */ e(Re, { className: "size-4" }),
+                  /* @__PURE__ */ e($e, { className: "size-4" }),
                   "Add Column Before"
                 ]
               }
             ),
             /* @__PURE__ */ a(
-              Z,
+              ee,
               {
                 onClick: () => t.chain().focus().addColumnAfter().run(),
                 children: [
-                  /* @__PURE__ */ e(Re, { className: "size-4" }),
+                  /* @__PURE__ */ e($e, { className: "size-4" }),
                   "Add Column After"
                 ]
               }
             ),
             /* @__PURE__ */ a(
-              Z,
+              ee,
               {
                 variant: "destructive",
                 onClick: () => t.chain().focus().deleteColumn().run(),
@@ -8050,7 +8097,7 @@ function Gl({ editor: t }) {
               }
             ),
             /* @__PURE__ */ a(
-              Z,
+              ee,
               {
                 onClick: () => t.chain().focus().mergeCells().run(),
                 disabled: !t.can().mergeCells(),
@@ -8061,7 +8108,7 @@ function Gl({ editor: t }) {
               }
             ),
             /* @__PURE__ */ a(
-              Z,
+              ee,
               {
                 onClick: () => t.chain().focus().splitCell().run(),
                 disabled: !t.can().splitCell(),
@@ -8072,7 +8119,7 @@ function Gl({ editor: t }) {
               }
             ),
             /* @__PURE__ */ a(
-              Z,
+              ee,
               {
                 variant: "destructive",
                 onClick: () => t.chain().focus().deleteTable().run(),
@@ -8082,7 +8129,7 @@ function Gl({ editor: t }) {
                 ]
               }
             )
-          ] }) : /* @__PURE__ */ a(Z, { onClick: i, children: [
+          ] }) : /* @__PURE__ */ a(ee, { onClick: i, children: [
             /* @__PURE__ */ e(aa, { className: "size-4" }),
             "Insert Table"
           ] })
@@ -8091,7 +8138,7 @@ function Gl({ editor: t }) {
       /* @__PURE__ */ e(it, { orientation: "vertical", className: "mx-1 h-6" })
     ] }),
     /* @__PURE__ */ e(
-      N,
+      x,
       {
         type: "button",
         variant: "ghost",
@@ -8104,7 +8151,7 @@ function Gl({ editor: t }) {
       }
     ),
     /* @__PURE__ */ e(
-      N,
+      x,
       {
         type: "button",
         variant: "ghost",
@@ -8193,7 +8240,7 @@ function Kl({ editor: t }) {
       className: "flex items-center gap-0.5 rounded-sm border bg-background p-1 shadow-md",
       children: [
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
@@ -8205,7 +8252,7 @@ function Kl({ editor: t }) {
           }
         ),
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
@@ -8217,7 +8264,7 @@ function Kl({ editor: t }) {
           }
         ),
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
@@ -8229,7 +8276,7 @@ function Kl({ editor: t }) {
           }
         ),
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
@@ -8241,7 +8288,7 @@ function Kl({ editor: t }) {
           }
         ),
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
@@ -8253,7 +8300,7 @@ function Kl({ editor: t }) {
           }
         ),
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
@@ -8265,7 +8312,7 @@ function Kl({ editor: t }) {
           }
         ),
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
@@ -8277,7 +8324,7 @@ function Kl({ editor: t }) {
           }
         ),
         /* @__PURE__ */ e(
-          N,
+          x,
           {
             type: "button",
             variant: "ghost",
@@ -8343,7 +8390,7 @@ function Jl({
         onValueChange: (i) => n({ language: i === "auto" ? "" : i }),
         children: [
           /* @__PURE__ */ e(De, { size: "sm", className: "h-6 w-auto min-w-[100px] border-none bg-transparent text-xs text-muted-foreground shadow-none", children: /* @__PURE__ */ e(Te, { placeholder: "Auto" }) }),
-          /* @__PURE__ */ e(Ee, { side: "bottom", align: "start", children: Wl.map((i) => /* @__PURE__ */ e(se, { value: i.value, children: i.label }, i.value)) })
+          /* @__PURE__ */ e(Ee, { side: "bottom", align: "start", children: Wl.map((i) => /* @__PURE__ */ e(re, { value: i.value, children: i.label }, i.value)) })
         ]
       }
     ) }),
@@ -8435,8 +8482,8 @@ function Xl({
     ],
     content: t,
     editable: l,
-    onUpdate: ({ editor: m }) => {
-      n(m.getHTML());
+    onUpdate: ({ editor: u }) => {
+      n(u.getHTML());
     },
     editorProps: {
       attributes: {

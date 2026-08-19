@@ -1,7 +1,7 @@
-import type { AdminRoute } from "zadm/router/route"
-import type { PostFilters } from "zadm/pkg/types/posts"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { PostFilters } from "@zaenpm/beaver/pkg/types/posts"
 
-import { handleCreatePost, handleListPosts } from "zadm/app/handlers"
+import { handleCreatePost, handleListPosts } from "@zaenpm/beaver/app/handlers"
 
 const VALID_SORT_BY = new Set(["title", "updatedAt"])
 const VALID_SORT_ORDER = new Set(["asc", "desc"])

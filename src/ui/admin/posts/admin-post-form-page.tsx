@@ -1,9 +1,9 @@
 
 import { useEffect, useState } from "react"
 import { useParams } from "react-router"
-import { adminApiGet } from "zadm/ui/admin/shared/api-client"
-import { AdminLoadingState } from "zadm/ui/admin/core/admin-loading-state"
-import { PostForm } from "zadm/ui/admin/posts/post-form"
+import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
+import { PostForm } from "@zaenpm/beaver/ui/admin/posts/post-form"
 
 export function AdminPostCreatePage() {
   const { type = "post" } = useParams()

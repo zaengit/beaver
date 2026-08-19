@@ -2,7 +2,7 @@
 import { useState } from "react"
 
 import { Check, FileIcon, Film, Music, FileText } from "lucide-react"
-import { cn } from "zadm/pkg/utils/ui"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

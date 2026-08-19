@@ -1,6 +1,6 @@
-import { verifyPassword } from "zadm/app/auth"
-import { getUserByEmail } from "zadm/app/services/users"
-import { loginSchema } from "zadm/app/validations/auth"
+import { verifyPassword } from "@zaenpm/beaver/app/auth"
+import { getUserByEmail } from "@zaenpm/beaver/app/services/users"
+import { loginSchema } from "@zaenpm/beaver/app/validations/auth"
 
 export async function handlePasswordLogin(body: unknown) {
   const parsed = loginSchema.safeParse(body)

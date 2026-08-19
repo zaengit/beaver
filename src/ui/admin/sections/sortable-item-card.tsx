@@ -2,9 +2,9 @@
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { ChevronDown, ChevronUp, Copy, GripVertical, Settings2, Trash2 } from "lucide-react"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "zadm/ui/admin/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "zadm/ui/admin/components/ui/tabs"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@zaenpm/beaver/ui/admin/components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@zaenpm/beaver/ui/admin/components/ui/tabs"
 import { ITEM_FIELD_LABELS } from "./section-embedder-types"
 import { ItemFieldRenderer } from "./section-embedder-item-fields"
 

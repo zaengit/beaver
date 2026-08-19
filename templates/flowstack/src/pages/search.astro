@@ -1,0 +1,52 @@
+---
+import PublicLayout from "@/layouts/PublicLayout.astro"
+import { searchPublishedPosts } from "@zaen3/beaver/server"
+
+const query = (Astro.url.searchParams.get("q") ?? "").trim().slice(0, 100)
+const result = query ? searchPublishedPosts(query, 1, 24) : null
+const posts = result?.success ? result.data.data : []
+
+function publicUrl(post: { type: string; slug: string }) {
+  if (post.type === "page") return post.slug === "home" ? "/" : `/${post.slug}`
+  return `/${post.type}/${post.slug}`
+}
+---
+
+<PublicLayout title={query ? `Search: ${query}` : "Search"}>
+  <main class="mx-auto max-w-5xl px-6 py-16 sm:py-20">
+    <h1 class="text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">Search</h1>
+    <form action="/search" class="mt-8 flex max-w-2xl gap-3">
+      <label class="sr-only" for="search-page-input">Search published content</label>
+      <input
+        id="search-page-input"
+        name="q"
+        value={query}
+        type="search"
+        placeholder="Search published content..."
+        class="min-w-0 flex-1 border border-slate-300 bg-white px-4 py-3 text-slate-950 outline-none focus:border-slate-950 focus:ring-1 focus:ring-slate-950"
+      />
+      <button class="bg-slate-950 px-5 py-3 font-semibold text-white hover:bg-slate-800">Search</button>
+    </form>
+
+    {query ? (
+      <p class="mt-8 text-slate-600">{result?.success ? result.data.meta.total : 0} result{result?.success && result.data.meta.total === 1 ? "" : "s"} for <span class="font-semibold text-slate-950">“{query}”</span></p>
+    ) : (
+      <p class="mt-8 text-slate-600">Enter a term to search published content.</p>
+    )}
+
+    {posts.length > 0 && (
+      <div class="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+        {posts.map((post) => (
+          <article class="py-6">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{post.type}</p>
+            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
+              <a href={publicUrl(post)} class="hover:underline">{post.title}</a>
+            </h2>
+            {post.excerpt && <p class="mt-2 leading-7 text-slate-600">{post.excerpt}</p>}
+            <a href={publicUrl(post)} class="mt-3 inline-flex text-sm font-semibold text-slate-950 underline-offset-4 hover:underline">View details</a>
+          </article>
+        ))}
+      </div>
+    )}
+  </main>
+</PublicLayout>

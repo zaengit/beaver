@@ -6,7 +6,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "zadm/ui/admin/components/ui/select"
+} from "@zaenpm/beaver/ui/admin/components/ui/select"
 
 // ─── Language List ───────────────────────────────────────────────────────────
 

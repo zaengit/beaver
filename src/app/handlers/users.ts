@@ -1,8 +1,8 @@
-import { adminCreated, adminError, adminSuccess } from "zadm/app/admin/api-response"
-import { requireAuth, requireAnyPermission, requirePermission } from "zadm/app/handlers/guard"
-import { mapServiceError } from "zadm/app/handlers/error-mapper"
-import { parseWithSchema } from "zadm/app/handlers/utils"
-import type { Session } from "zadm/app/handlers/types"
+import { adminCreated, adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
+import { requireAuth, requireAnyPermission, requirePermission } from "@zaenpm/beaver/app/handlers/guard"
+import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
+import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
+import type { Session } from "@zaenpm/beaver/app/handlers/types"
 import {
   bulkDeleteUsers,
   bulkDuplicateUsers,
@@ -12,8 +12,8 @@ import {
   getUser,
   listUsersPaginated,
   updateUser,
-} from "zadm/app/services/users"
-import { createUserSchema, updateUserSchema } from "zadm/app/validations/users"
+} from "@zaenpm/beaver/app/services/users"
+import { createUserSchema, updateUserSchema } from "@zaenpm/beaver/app/validations/users"
 
 // ---------------------------------------------------------------------------
 // Helpers

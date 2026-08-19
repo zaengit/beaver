@@ -1,5 +1,0 @@
----
-import SectionHeading from "./shared/section-heading.astro"
-const { section, contentItems = [] } = Astro.props as any
----
-<section id={section.style_id || undefined} class:list={["py-20", section.style_css]}><div class="mx-auto max-w-7xl px-6"><SectionHeading content={section} /><div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{contentItems.map((post: any) => <article class="border p-4"><h3 class="font-semibold"><a href={`/${post.type}/${post.slug}`}>{post.title}</a></h3>{post.excerpt && <p class="mt-2 text-sm text-slate-600">{post.excerpt}</p>}</article>)}</div></div></section>

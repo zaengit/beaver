@@ -1,0 +1,36 @@
+---
+import "@/styles/public.css"
+import { Footer } from "@/components/web/footer.tsx"
+import { Navbar } from "@/components/web/navbar.tsx"
+import { getMenuTree, getSiteSettings } from "@zaen3/beaver/server"
+
+interface Props {
+  title?: string
+  description?: string | null
+}
+
+const { title = "CMS", description } = Astro.props
+const settings = getSiteSettings()
+const navbarResult = getMenuTree("navbar")
+const footerResult = getMenuTree("footer")
+const navbarItems = navbarResult.success ? navbarResult.data : []
+const footerItems = footerResult.success ? footerResult.data : []
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    {(description || settings.meta_description) && <meta name="description" content={description || settings.meta_description} />}
+    {settings.favicon && <link rel="icon" href={settings.favicon} />}
+  </head>
+  <body class="min-h-screen bg-background text-foreground">
+    <div class="flex min-h-screen flex-col">
+      <Navbar items={navbarItems as never[]} siteName={settings.title} logo={settings.logo} client:load />
+      <div class="flex-1"><slot /></div>
+      <Footer items={footerItems as never[]} siteName={settings.title} />
+    </div>
+  </body>
+</html>

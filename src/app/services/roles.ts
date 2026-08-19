@@ -1,5 +1,5 @@
-import { generateId, getCurrentTimestamp, slugify } from "zadm/pkg/utils/index"
-import type { CreateRoleInput, UpdateRoleInput } from "zadm/app/validations/roles"
+import { generateId, getCurrentTimestamp, slugify } from "@zaenpm/beaver/pkg/utils/index"
+import type { CreateRoleInput, UpdateRoleInput } from "@zaenpm/beaver/app/validations/roles"
 import {
   findRoleByIdRecord,
   findRoleBySlugRecord,
@@ -11,9 +11,9 @@ import {
   deleteRoleRecord,
   getRolePermissionIdsRecord,
   type RoleRow,
-} from "zadm/app/repositories/roles"
-import type { ServiceResult } from "zadm/pkg/types"
-import { serviceSuccess, serviceNotFound, serviceConflict, serviceForbidden } from "zadm/app/services/utils"
+} from "@zaenpm/beaver/app/repositories/roles"
+import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
+import { serviceSuccess, serviceNotFound, serviceConflict, serviceForbidden } from "@zaenpm/beaver/app/services/utils"
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 

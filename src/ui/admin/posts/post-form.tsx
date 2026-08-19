@@ -16,35 +16,35 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Pencil, Trash2 } from "lucide-react"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { Textarea } from "zadm/ui/admin/components/ui/textarea"
-import { Badge } from "zadm/ui/admin/components/ui/badge"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "zadm/ui/admin/components/ui/dialog"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
+import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@zaenpm/beaver/ui/admin/components/ui/dialog"
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "zadm/ui/admin/components/ui/card"
-import { adminApiPost, adminApiPut } from "zadm/ui/admin/shared/api-client"
-import { navigateToPath } from "zadm/ui/admin/navigation"
-import { slugify } from "zadm/pkg/utils/slug"
-import { ContentTypeFieldsRenderer } from "zadm/ui/admin/posts/content-type-fields-renderer"
-import { SectionEmbedder, type EmbeddedSection } from "zadm/ui/admin/sections/section-embedder"
-import { getContentTypeRegistry } from "zadm/app/registry/content-types"
-import { MediaPicker } from "zadm/ui/admin/shared/media-picker"
-import { MultiSelect } from "zadm/ui/admin/components/ui/multi-select"
-import { adminToast } from "zadm/ui/admin/shared/admin-toast"
-import { useAdminSession } from "zadm/ui/admin/auth/admin-session-provider"
-import type { AdminToastEntity } from "zadm/ui/admin/shared/admin-toast"
+} from "@zaenpm/beaver/ui/admin/components/ui/card"
+import { adminApiPost, adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { navigateToPath } from "@zaenpm/beaver/ui/admin/navigation"
+import { slugify } from "@zaenpm/beaver/pkg/utils/slug"
+import { ContentTypeFieldsRenderer } from "@zaenpm/beaver/ui/admin/posts/content-type-fields-renderer"
+import { SectionEmbedder, type EmbeddedSection } from "@zaenpm/beaver/ui/admin/sections/section-embedder"
+import { getContentTypeRegistry } from "@zaenpm/beaver/app/registry/content-types"
+import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker"
+import { MultiSelect } from "@zaenpm/beaver/ui/admin/components/ui/multi-select"
+import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
+import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
+import type { AdminToastEntity } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
 import {
   AdminPageHeader
-} from "zadm/ui/admin/layout/admin-page-shell"
+} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
 
 const TiptapEditor = lazy(async () => {
-  const mod = await import("zadm/ui/admin/editor/tiptap-editor")
+  const mod = await import("@zaenpm/beaver/ui/admin/editor/tiptap-editor")
   return { default: mod.TiptapEditor }
 })
 
@@ -555,9 +555,10 @@ export function PostForm({ post, categories = [], mode, pageTitle, defaultType }
                         {featuredImage && (
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="w-fit"
+                            aria-label="Remove image"
+                            className="w-fit text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => setFeaturedImage("")}
                           >
                             Remove

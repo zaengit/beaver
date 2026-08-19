@@ -2,7 +2,7 @@
 import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
-import { cn } from "zadm/pkg/utils/ui"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
 import { ChevronRightIcon, CheckIcon } from "lucide-react"
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {

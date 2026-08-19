@@ -1,4 +1,4 @@
-import type { categories } from "zadm/app/db/schema"
+import type { categories } from "@zaenpm/beaver/app/db/schema"
 
 export const CATEGORY_TABLE = "categories"
 

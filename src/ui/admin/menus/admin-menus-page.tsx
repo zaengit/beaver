@@ -1,16 +1,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { adminApiGet } from "zadm/ui/admin/shared/api-client"
-import { AdminLoadingState } from "zadm/ui/admin/core/admin-loading-state"
+import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
 import {
   AdminPageShell,
   AdminPageHeader
-} from "zadm/ui/admin/layout/admin-page-shell"
-import { MenuBuilder, type MenuTree } from "zadm/ui/admin/menus/menu-builder"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "zadm/ui/admin/components/ui/select"
-import { getMenuGroupRegistry } from "zadm/app/registry/menu-groups"
-import { Button } from "zadm/ui/admin/components/ui/button"
+} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
+import { MenuBuilder, type MenuTree } from "@zaenpm/beaver/ui/admin/menus/menu-builder"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@zaenpm/beaver/ui/admin/components/ui/select"
+import { getMenuGroupRegistry } from "@zaenpm/beaver/app/registry/menu-groups"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
 
 interface MenuItem {
   id: string
@@ -71,7 +71,7 @@ export function AdminMenusPage() {
   const [data, setData] = useState<MenuItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [groupSlug, setGroupSlug] = useState("navbar")
-  const builderRef = useRef<import("zadm/ui/admin/menus/menu-builder").MenuBuilderHandle>(null)
+  const builderRef = useRef<import("@zaenpm/beaver/ui/admin/menus/menu-builder").MenuBuilderHandle>(null)
   const [builderStatus, setBuilderStatus] = useState({ hasChanges: false, saving: false })
 
   const loadMenus = useCallback(async () => {

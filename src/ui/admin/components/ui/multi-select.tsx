@@ -2,8 +2,8 @@
 import { Check, ChevronDown, X } from "lucide-react"
 import * as React from "react"
 
-import { Badge } from "zadm/ui/admin/components/ui/badge"
-import { cn } from "zadm/pkg/utils/ui"
+import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
 
 export interface MultiSelectOption {
   value: string

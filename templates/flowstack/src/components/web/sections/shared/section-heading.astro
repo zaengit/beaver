@@ -1,0 +1,41 @@
+---
+import type { Section, SectionItem } from "./types"
+
+interface Props {
+  content: Pick<Section | SectionItem, "caption" | "title" | "text">
+  theme?: "dark" | "light"
+}
+
+const { content, theme = "dark" } = Astro.props
+const isLight = theme === "light"
+---
+
+{content.caption && (
+  <div class="mb-3 inline-block">
+    <span class:list={[
+      "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest shadow-2xs backdrop-blur-md transition-all",
+      isLight
+        ? "border border-indigo-200 bg-indigo-50 text-indigo-700"
+        : "border border-indigo-500/30 bg-indigo-500/15 text-indigo-300"
+    ]}>
+      <span class:list={["h-1.5 w-1.5 rounded-full", isLight ? "bg-indigo-600" : "bg-indigo-400"]} />
+      {content.caption}
+    </span>
+  </div>
+)}
+{content.title && (
+  <h2 class:list={[
+    "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.18]",
+    isLight ? "text-slate-950" : "text-white"
+  ]}>
+    {content.title}
+  </h2>
+)}
+{content.text && (
+  <p class:list={[
+    "mt-4 max-w-3xl text-base sm:text-lg leading-relaxed font-normal",
+    isLight ? "text-slate-600" : "text-slate-300"
+  ]}>
+    {content.text}
+  </p>
+)}

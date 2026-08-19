@@ -1,6 +1,6 @@
 /**
  * Barrel export — handlers.
- * Import from `zadm/app/handlers` instead of individual files.
+ * Import from `beaver/app/handlers` instead of individual files.
  */
 
 export { handlePasswordLogin } from "./auth"

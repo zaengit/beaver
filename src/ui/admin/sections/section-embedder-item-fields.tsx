@@ -1,10 +1,12 @@
 
 import { useEffect, useId, useState } from "react";
-import { Input } from "zadm/ui/admin/components/ui/input";
-import { Label } from "zadm/ui/admin/components/ui/label";
-import { Textarea } from "zadm/ui/admin/components/ui/textarea";
-import { Checkbox } from "zadm/ui/admin/components/ui/checkbox";
-import { MediaPicker } from "zadm/ui/admin/shared/media-picker";
+import { X } from "lucide-react";
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button";
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input";
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label";
+import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea";
+import { Checkbox } from "@zaenpm/beaver/ui/admin/components/ui/checkbox";
+import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker";
 import {
   ITEM_FIELD_LABELS,
   ITEM_FIELD_PLACEHOLDERS,
@@ -119,11 +121,12 @@ export function ItemFieldRenderer({
   }
 
   if (field === "image" || field === "bg_image") {
+    const hasValue = Boolean(strValue);
     return (
       <div className="flex flex-col gap-1">
         <Label className="text-xs">{label}</Label>
-        <div className="flex items-start gap-2">
-          {strValue && (
+        <div className="flex items-center gap-2">
+          {hasValue && (
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted">
               <img
                 src={strValue}
@@ -132,13 +135,22 @@ export function ItemFieldRenderer({
               />
             </div>
           )}
-          <div className="flex-1">
-            <MediaPicker
-              value={value ? String(value) : null}
-              onChange={(media) => onItemChange(media ? media.url : null)}
-              accept="image/*"
-            />
-          </div>
+          <MediaPicker
+            value={hasValue ? strValue : null}
+            onChange={(media) => onItemChange(media ? media.url : null)}
+            accept="image/*"
+          />
+          {hasValue && (
+            <Button
+              type="button"
+              variant="outline"
+              aria-label={`Remove ${label.toLowerCase()}`}
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => onItemChange(null)}
+            >
+              Remove
+            </Button>
+          )}
         </div>
       </div>
     );

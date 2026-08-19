@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 
-import { MediaLibraryClient } from "zadm/ui/admin/media/media-library-client"
+import { MediaLibraryClient } from "@zaenpm/beaver/ui/admin/media/media-library-client"
 
 const {
   adminApiPost,
@@ -27,18 +27,18 @@ vi.mock("sonner", () => ({
   },
 }))
 
-vi.mock("zadm/ui/admin/shared/api-client", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/shared/api-client", () => ({
   adminApiPost,
   adminApiPut,
 }))
 
-vi.mock("zadm/ui/admin/navigation", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/navigation", () => ({
   getCurrentSearchParams,
   navigateTo,
   reloadPage,
 }))
 
-vi.mock("zadm/ui/admin/media/media-grid", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/media/media-grid", () => ({
   MediaGrid: ({
     items,
     onSelect,
@@ -57,7 +57,7 @@ vi.mock("zadm/ui/admin/media/media-grid", () => ({
   ),
 }))
 
-vi.mock("zadm/ui/admin/shared/media-upload-zone", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/shared/media-upload-zone", () => ({
   MediaUploadZone: ({ onUploadComplete }: { onUploadComplete: () => void }) => (
     <button type="button" onClick={onUploadComplete}>
       upload-complete

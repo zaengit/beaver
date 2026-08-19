@@ -1,6 +1,6 @@
-import type { AdminRoute } from "zadm/router/route"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
 
-import { handleGetSettings, handleUpdateSettings } from "zadm/app/handlers"
+import { handleGetSettings, handleUpdateSettings } from "@zaenpm/beaver/app/handlers"
 
 export const GET: AdminRoute = async () => {
   return handleGetSettings()

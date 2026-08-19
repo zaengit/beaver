@@ -60,7 +60,7 @@ export const galleryImageSchema = z
   .optional()
   .pipe(imageUrlSchema)
 
-/** Simple image field (categories, etc.) that only accepts full URLs. */
+/** Simple image field (categories, etc.) that accepts full URLs or relative paths. */
 export const imageUrlSimpleSchema = z
   .string()
   .transform((val) => (val.trim() === "" ? null : val))
@@ -69,7 +69,15 @@ export const imageUrlSimpleSchema = z
   .pipe(
     z
       .string()
-      .url("Image must be a valid URL")
+      .refine(
+        (val) => {
+          if (val.startsWith("http://") || val.startsWith("https://")) {
+            return z.string().url().safeParse(val).success
+          }
+          return val.startsWith("/")
+        },
+        "Image must be a valid URL (http/https) or a relative path starting with /",
+      )
       .nullable()
       .optional(),
   )

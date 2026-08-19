@@ -1,10 +1,10 @@
 import { and, asc, count, desc, eq, inArray, like, or, sql, type SQL } from "drizzle-orm"
 
-import { db } from "zadm/app/db"
-import { categories, media, postCategories, posts, users } from "zadm/app/db/schema"
-import type { PostRecord } from "zadm/app/models/post"
-import type { PaginatedResult } from "zadm/pkg/types"
-import type { Post, PostFilters, PostWithRelations, PublicArchiveFilterOptions, PublicArchiveFilters, PublicPost, PublicSearchResult } from "zadm/pkg/types/posts"
+import { db } from "@zaenpm/beaver/app/db"
+import { categories, media, postCategories, posts, users } from "@zaenpm/beaver/app/db/schema"
+import type { PostRecord } from "@zaenpm/beaver/app/models/post"
+import type { PaginatedResult } from "@zaenpm/beaver/pkg/types"
+import type { Post, PostFilters, PostWithRelations, PublicArchiveFilterOptions, PublicArchiveFilters, PublicPost, PublicSearchResult } from "@zaenpm/beaver/pkg/types/posts"
 
 type UserAuthor = { id: string; name: string; email: string }
 type CategoryRef = { id: string; name: string; slug: string }

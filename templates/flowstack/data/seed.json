@@ -1,0 +1,128 @@
+{
+  "settings": {
+    "title": "Flowstack",
+    "description": "The calm, connected workspace for teams that ship.",
+    "meta_title": "Flowstack — Build momentum",
+    "meta_description": "Flowstack brings plans, decisions, and progress into one focused workspace.",
+    "timezone": "Asia/Jakarta"
+  },
+  "categories": [
+    { "name": "Product", "description": "Product updates, guides, and releases from Flowstack." },
+    { "name": "Teamwork", "description": "Practical ideas for calmer, more focused teamwork." }
+  ],
+  "posts": [
+    {
+      "title": "The cost of context switching",
+      "slug": "cost-of-context-switching",
+      "excerpt": "How fragmented tools quietly consume your team’s attention.",
+      "description": "<p>Every handoff costs attention. The most resilient teams design a shared place for context, decisions, and the work that follows.</p><h2>Make the next step obvious</h2><p>When progress is visible, people can move without waiting for another meeting.</p>",
+      "featuredImage": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=85",
+      "tags": ["focus", "workflow"],
+      "categorySlugs": ["teamwork"],
+      "metaTitle": "The cost of context switching",
+      "metaDescription": "How fragmented tools quietly consume your team’s attention."
+    },
+    {
+      "title": "A better weekly planning ritual",
+      "slug": "better-weekly-planning-ritual",
+      "excerpt": "A lightweight routine that gives every teammate a clear week ahead.",
+      "description": "<p>Weekly planning is not about producing a perfect forecast. It is about making the important trade-offs visible before the work begins.</p><h2>Start with outcomes</h2><p>Name the result you want, then decide what deserves attention now.</p>",
+      "featuredImage": "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1200&q=85",
+      "tags": ["planning", "teams"],
+      "categorySlugs": ["teamwork"],
+      "metaTitle": "A better weekly planning ritual",
+      "metaDescription": "A lightweight routine that gives every teammate a clear week ahead."
+    },
+    {
+      "title": "What shipped in Flowstack 1.4",
+      "slug": "flowstack-1-4",
+      "excerpt": "New views, simpler approvals, and a faster way to find the work that needs you.",
+      "description": "<p>Flowstack 1.4 makes it easier to see momentum across your workspace, without adding more dashboard noise.</p><h2>Designed for the handoff</h2><p>Approvals now stay attached to the decision, so the next person has the full picture.</p>",
+      "featuredImage": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=85",
+      "tags": ["release", "product"],
+      "categorySlugs": ["product"],
+      "metaTitle": "What shipped in Flowstack 1.4",
+      "metaDescription": "New views, simpler approvals, and a faster way to find the work that needs you."
+    },
+    {
+      "title": "How to make decisions that stick",
+      "slug": "decisions-that-stick",
+      "excerpt": "A simple structure for turning discussion into durable direction.",
+      "description": "<p>A documented decision is not bureaucracy. It is a gift to the people who need to build, explain, and revisit the work later.</p>",
+      "featuredImage": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=85",
+      "tags": ["decisions", "leadership"],
+      "categorySlugs": ["teamwork"],
+      "metaTitle": "How to make decisions that stick",
+      "metaDescription": "A simple structure for turning discussion into durable direction."
+    },
+    {
+      "title": "Introducing project health",
+      "slug": "introducing-project-health",
+      "excerpt": "A more human way to understand whether a project is moving well.",
+      "description": "<p>Project health blends progress, risk, and team sentiment into one readable signal—without pretending every project is a spreadsheet.</p>",
+      "featuredImage": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=85",
+      "tags": ["release", "projects"],
+      "categorySlugs": ["product"],
+      "metaTitle": "Introducing project health",
+      "metaDescription": "A more human way to understand whether a project is moving well."
+    },
+    {
+      "title": "The small habits behind high-trust teams",
+      "slug": "high-trust-team-habits",
+      "excerpt": "A few repeatable practices that make collaboration feel lighter.",
+      "description": "<p>Trust grows when expectations are explicit, context is easy to find, and people can make progress without asking for permission at every turn.</p>",
+      "featuredImage": "https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1200&q=85",
+      "tags": ["culture", "teams"],
+      "categorySlugs": ["teamwork"],
+      "metaTitle": "The small habits behind high-trust teams",
+      "metaDescription": "A few repeatable practices that make collaboration feel lighter."
+    }
+  ],
+  "pages": [
+    {
+      "title": "Home",
+      "slug": "home",
+      "description": "",
+      "metaTitle": "Flowstack — Build momentum",
+      "metaDescription": "The calm, connected workspace for teams that ship.",
+      "sections": [
+        {
+          "id": "flowstack-hero", "type": "hero", "bg_color": "#0f172a", "style_id": "product", "alignment": "center",
+          "item": [{ "caption": "The workspace for teams in motion", "title": "Make your best work feel inevitable.", "text": "Flowstack brings plans, decisions, and progress into one focused space—so your team can spend less time coordinating and more time creating.", "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=85", "alt_image": "Team planning a product launch", "links": [{ "label": "See pricing", "url": "/#pricing" }, { "label": "Talk to sales", "url": "/contact" }] }]
+        },
+        {
+          "id": "flowstack-features", "type": "feature-icon-grid", "caption": "One place, less noise", "title": "The system behind your team’s best week.", "text": "A thoughtful set of tools that helps your team move from idea to impact, without losing the thread.", "bg_color": "#ffffff", "style_id": "features", "alignment": "center",
+          "item": [{ "icon": "Layers", "title": "One clear source", "text": "Turn scattered requests into a shared plan, with the context behind every decision." }, { "icon": "ChartNoAxesCombined", "title": "Momentum, visible", "text": "See what is moving, what needs attention, and where your team can unblock itself." }, { "icon": "ArrowLeftRight", "title": "Built for the handoff", "text": "Keep design, product, and engineering aligned without another status meeting." }]
+        },
+        {
+          "id": "flowstack-pricing", "type": "banner", "caption": "Simple, honest pricing", "title": "Start with momentum.", "text": "Choose the plan that fits today. Change it when tomorrow looks different.", "bg_color": "#f5f3ff", "style_id": "pricing", "alignment": "center",
+          "item": [{ "title": "Scale for $18 per member/month", "text": "Unlimited projects, timeline and automations, guests, and permissions. Start free and bring your team when you are ready.", "links": [{ "label": "Talk to sales", "url": "/contact" }] }]
+        },
+        { "id": "flowstack-resources", "type": "post", "caption": "Resources", "title": "Ideas for calmer, more focused teamwork.", "text": "Practical guides, product updates, and stories from teams in motion.", "bg_color": "#ffffff", "style_id": "resources", "alignment": "left", "limit": 3, "sort_by": "created_at", "sort_order": "desc" },
+        {
+          "id": "flowstack-faq", "type": "faq", "caption": "Questions", "title": "Frequently asked questions", "text": "Everything your team needs to know before getting started.", "bg_color": "#0f172a", "style_id": "faq", "alignment": "center",
+          "item": [{ "question": "How quickly can we get started?", "answer": "Create your workspace in minutes, then invite your team when you are ready." }, { "question": "Can we change our plan later?", "answer": "Yes. You can upgrade or change your plan whenever your needs change." }, { "question": "Is Flowstack suitable for a growing team?", "answer": "Yes. The workflow works for a small focused team and scales with clear permissions and projects." }]
+        },
+        {
+          "id": "flowstack-contact", "type": "banner", "caption": "Ready when you are", "title": "Give your team a clearer way forward.", "text": "Tell us where your team is headed. We will show you how Flowstack can help you get there.", "bg_color": "#ede9fe", "style_id": "talk-to-sales", "alignment": "center",
+          "item": [{ "links": [{ "label": "Talk to sales", "url": "/contact" }] }]
+        }
+      ]
+    },
+    {
+      "title": "Contact", "slug": "contact", "description": "", "metaTitle": "Contact Flowstack", "metaDescription": "Talk to the Flowstack team about your workspace.",
+      "sections": [{ "id": "flowstack-contact-form", "type": "contact", "caption": "Talk to sales", "title": "Let’s build a clearer way forward.", "text": "Tell us a little about your team and we’ll be in touch.", "bg_color": "#0f172a", "style_id": "talk-to-sales", "alignment": "center", "item": [{ "form_inquiry": true }] }]
+    }
+  ],
+  "menus": [
+    { "title": "Product", "url": "/#product", "type": "navbar" },
+    { "title": "Customers", "url": "/#customers", "type": "navbar" },
+    { "title": "Pricing", "url": "/#pricing", "type": "navbar" },
+    { "title": "Resources", "url": "/post", "type": "navbar" },
+    { "title": "Talk to sales", "url": "/contact", "type": "navbar" },
+    { "title": "Product", "url": "/#product", "type": "footer" },
+    { "title": "Pricing", "url": "/#pricing", "type": "footer" },
+    { "title": "Resources", "url": "/post", "type": "footer" },
+    { "title": "Contact", "url": "/contact", "type": "footer" }
+  ]
+}

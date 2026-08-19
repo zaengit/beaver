@@ -8,9 +8,9 @@
  * These helpers remove that boilerplate.
  */
 
-import { adminError, adminUnauthorized } from "zadm/app/admin/api-response"
-import { can, canAny } from "zadm/app/admin/permissions"
-import type { Session } from "zadm/app/handlers/types"
+import { adminError, adminUnauthorized } from "@zaenpm/beaver/app/admin/api-response"
+import { can, canAny } from "@zaenpm/beaver/app/admin/permissions"
+import type { Session } from "@zaenpm/beaver/app/handlers/types"
 
 // ---------------------------------------------------------------------------
 // Auth guards

@@ -1,7 +1,7 @@
 import { defineMiddleware } from "astro:middleware"
-import { ADMIN_PATH } from "@zaenpm/zadm/server"
+import { ADMIN_PATH } from "@zaenpm/beaver/server"
 
-const INTERNAL_REWRITE = "__zadmInternalRewrite"
+const INTERNAL_REWRITE = "__beaverInternalRewrite"
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const pathname = context.url.pathname

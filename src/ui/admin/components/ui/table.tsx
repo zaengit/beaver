@@ -1,7 +1,7 @@
 
 import * as React from "react"
 
-import { cn } from "zadm/pkg/utils/ui"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (

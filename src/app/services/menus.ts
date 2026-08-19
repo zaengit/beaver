@@ -1,5 +1,5 @@
-import { generateId, getCurrentTimestamp } from "zadm/pkg/utils/index"
-import type { CreateMenuInput, UpdateMenuInput, ReorderMenusInput } from "zadm/app/validations/menus"
+import { generateId, getCurrentTimestamp } from "@zaenpm/beaver/pkg/utils/index"
+import type { CreateMenuInput, UpdateMenuInput, ReorderMenusInput } from "@zaenpm/beaver/app/validations/menus"
 import {
   createMenuRecord,
   deleteMenuRecord,
@@ -9,10 +9,10 @@ import {
   reorderMenuTree,
   updateMenuRecord,
   type MenuRow,
-} from "zadm/app/repositories/menus"
-import type { ServiceResult } from "zadm/pkg/types"
-import { getCachedPublicData, invalidatePublicDataCache } from "zadm/app/cache/public-data-cache"
-import { serviceSuccess, serviceNotFound } from "zadm/app/services/utils"
+} from "@zaenpm/beaver/app/repositories/menus"
+import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
+import { getCachedPublicData, invalidatePublicDataCache } from "@zaenpm/beaver/app/cache/public-data-cache"
+import { serviceSuccess, serviceNotFound } from "@zaenpm/beaver/app/services/utils"
 
 // ─── Get Menu Tree ─────────────────────────────────────────────────────────
 
@@ -46,10 +46,11 @@ export function createMenu(data: CreateMenuInput): ServiceResult<MenuRow> {
     id,
     title: data.title,
     url: data.url,
-    type: data.type ?? "custom",
+    type: data.type,
     position: data.position ?? 0,
     cssClass: data.cssClass,
     target: data.target,
+    image: data.image,
     parentId: data.parentId,
     status: data.status,
     createdAt: now,
@@ -74,6 +75,7 @@ export function updateMenu(id: string, data: UpdateMenuInput): ServiceResult<Men
     position?: number
     cssClass?: string | null
     target?: string | null
+    image?: string | null
     parentId?: string | null
     status?: "draft" | "published"
     updatedAt: number
@@ -85,6 +87,7 @@ export function updateMenu(id: string, data: UpdateMenuInput): ServiceResult<Men
   if (data.position !== undefined) updateData.position = data.position
   if (data.cssClass !== undefined) updateData.cssClass = data.cssClass
   if (data.target !== undefined) updateData.target = data.target
+  if (data.image !== undefined) updateData.image = data.image
   if (data.parentId !== undefined) updateData.parentId = data.parentId
   if (data.status !== undefined) updateData.status = data.status
 

@@ -10,8 +10,8 @@
  * `mapServiceError(result)`.
  */
 
-import { adminError } from "zadm/app/admin/api-response"
-import type { HandlerResponse } from "zadm/app/handlers/types"
+import { adminError } from "@zaenpm/beaver/app/admin/api-response"
+import type { HandlerResponse } from "@zaenpm/beaver/app/handlers/types"
 
 /** Maps well-known `error.code` strings to HTTP status codes. */
 const CODE_STATUS: Record<string, number> = {

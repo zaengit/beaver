@@ -3,7 +3,7 @@ import { BubbleMenu } from "@tiptap/react/menus"
 import type { Editor } from "@tiptap/react"
 import { Bold, Italic, Underline, Link2 } from "lucide-react"
 
-import { Toggle } from "zadm/ui/admin/components/ui/toggle"
+import { Toggle } from "@zaenpm/beaver/ui/admin/components/ui/toggle"
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 

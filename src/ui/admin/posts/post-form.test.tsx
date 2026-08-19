@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 
-import { PostForm } from "zadm/ui/admin/posts/post-form"
+import { PostForm } from "@zaenpm/beaver/ui/admin/posts/post-form"
 
 const { adminApiGet, adminApiPost, adminApiPut, navigateToPath } = vi.hoisted(() => ({
   adminApiGet: vi.fn(),
@@ -13,7 +13,7 @@ const { adminApiGet, adminApiPost, adminApiPut, navigateToPath } = vi.hoisted(()
   navigateToPath: vi.fn(),
 }))
 
-vi.mock("zadm/ui/admin/shared/api-client", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/shared/api-client", () => ({
   adminApiGet,
   adminApiPost,
   adminApiPut,
@@ -26,7 +26,7 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("zadm/ui/admin/navigation", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/navigation", () => ({
   navigateToPath,
 }))
 
@@ -37,19 +37,19 @@ vi.mock("sonner", () => ({
   },
 }))
 
-vi.mock("zadm/ui/admin/posts/content-type-fields-renderer", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/posts/content-type-fields-renderer", () => ({
   ContentTypeFieldsRenderer: () => <div>template-fields</div>,
 }))
 
-vi.mock("zadm/ui/admin/sections/section-embedder", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/sections/section-embedder", () => ({
   SectionEmbedder: () => <div>section-embedder</div>,
 }))
 
-vi.mock("zadm/ui/admin/shared/media-picker", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/shared/media-picker", () => ({
   MediaPicker: () => <button type="button">media-picker</button>,
 }))
 
-vi.mock("zadm/ui/admin/editor/tiptap-editor", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/editor/tiptap-editor", () => ({
   TiptapEditor: () => <div>tiptap-editor</div>,
 }))
 
@@ -82,7 +82,7 @@ vi.mock("@dnd-kit/utilities", () => ({
   },
 }))
 
-vi.mock("zadm/ui/admin/layout/admin-page-shell", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/layout/admin-page-shell", () => ({
   AdminPageShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AdminPageHeader: ({
     title,

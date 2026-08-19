@@ -3,7 +3,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 
-import { MenuBuilder } from "zadm/ui/admin/menus/menu-builder"
+import { MenuBuilder } from "@zaenpm/beaver/ui/admin/menus/menu-builder"
 
 const { adminApiPost, adminApiPut, adminApiDelete, reloadPage } = vi.hoisted(() => ({
   adminApiPost: vi.fn(),
@@ -12,13 +12,13 @@ const { adminApiPost, adminApiPut, adminApiDelete, reloadPage } = vi.hoisted(() 
   reloadPage: vi.fn(),
 }))
 
-vi.mock("zadm/ui/admin/shared/api-client", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/shared/api-client", () => ({
   adminApiPost,
   adminApiPut,
   adminApiDelete,
 }))
 
-vi.mock("zadm/ui/admin/navigation", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/navigation", () => ({
   reloadPage,
 }))
 
@@ -39,7 +39,7 @@ vi.mock("@dnd-kit/sortable", () => ({
   sortableKeyboardCoordinates: {},
 }))
 
-vi.mock("zadm/ui/admin/menus/sortable-menu-item", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/menus/sortable-menu-item", () => ({
   SortableMenuItem: ({
     item,
     onEdit,

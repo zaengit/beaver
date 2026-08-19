@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { ulidRegex } from "zadm/app/validations/shared"
+import { ulidRegex } from "@zaenpm/beaver/app/validations/shared"
 
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),

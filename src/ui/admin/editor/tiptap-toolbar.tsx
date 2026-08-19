@@ -35,10 +35,10 @@ import {
   MoreHorizontal,
 } from "lucide-react"
 
-import { cn } from "zadm/pkg/utils/ui"
-import { Toggle } from "zadm/ui/admin/components/ui/toggle"
-import { Separator } from "zadm/ui/admin/components/ui/separator"
-import { Button } from "zadm/ui/admin/components/ui/button"
+import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { Toggle } from "@zaenpm/beaver/ui/admin/components/ui/toggle"
+import { Separator } from "@zaenpm/beaver/ui/admin/components/ui/separator"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -46,8 +46,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel,
-} from "zadm/ui/admin/components/ui/dropdown-menu"
-import { MediaPicker, type MediaPickerMedia } from "zadm/ui/admin/shared/media-picker"
+} from "@zaenpm/beaver/ui/admin/components/ui/dropdown-menu"
+import { MediaPicker, type MediaPickerMedia } from "@zaenpm/beaver/ui/admin/shared/media-picker"
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 

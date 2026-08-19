@@ -1,9 +1,9 @@
 import { and, asc, count, desc, eq, like, or } from "drizzle-orm"
 
-import { db } from "zadm/app/db"
-import { users } from "zadm/app/db/schema"
-import { sanitizeText } from "zadm/pkg/security/sanitize"
-import type { UserRecord } from "zadm/app/models/user"
+import { db } from "@zaenpm/beaver/app/db"
+import { users } from "@zaenpm/beaver/app/db/schema"
+import { sanitizeText } from "@zaenpm/beaver/pkg/security/sanitize"
+import type { UserRecord } from "@zaenpm/beaver/app/models/user"
 
 export type UserSafe = Omit<UserRecord, "password">
 

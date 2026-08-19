@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 
-import { CategoryForm } from "zadm/ui/admin/categories/category-form"
+import { CategoryForm } from "@zaenpm/beaver/ui/admin/categories/category-form"
 
 const { adminApiPost, adminApiPut, navigateToPath } = vi.hoisted(() => ({
   adminApiPost: vi.fn(),
@@ -12,7 +12,7 @@ const { adminApiPost, adminApiPut, navigateToPath } = vi.hoisted(() => ({
   navigateToPath: vi.fn(),
 }))
 
-vi.mock("zadm/ui/admin/shared/api-client", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/shared/api-client", () => ({
   adminApiPost,
   adminApiPut,
 }))
@@ -24,7 +24,7 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("zadm/ui/admin/navigation", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/navigation", () => ({
   navigateToPath,
 }))
 
@@ -35,11 +35,11 @@ vi.mock("sonner", () => ({
   },
 }))
 
-vi.mock("zadm/ui/admin/shared/media-picker", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/shared/media-picker", () => ({
   MediaPicker: () => <button type="button">media-picker</button>,
 }))
 
-vi.mock("zadm/ui/admin/layout/admin-page-shell", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/layout/admin-page-shell", () => ({
   AdminPageShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AdminPageHeader: ({
     title,

@@ -1,111 +1,111 @@
 
 import { lazy, Suspense } from "react"
 import { Navigate, Outlet, Route, Routes, useLocation, useParams } from "react-router"
-import { useAdminSession } from "zadm/ui/admin/auth/admin-session-provider"
-import { AdminSidebar } from "zadm/ui/admin/layout/app-sidebar"
-import { AdminLoadingState } from "zadm/ui/admin/core/admin-loading-state"
-import { SidebarInset, SidebarProvider } from "zadm/ui/admin/components/ui/sidebar"
-import { ADMIN_PATH } from "zadm/app/admin/admin-path"
+import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
+import { AdminSidebar } from "@zaenpm/beaver/ui/admin/layout/app-sidebar"
+import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
+import { SidebarInset, SidebarProvider } from "@zaenpm/beaver/ui/admin/components/ui/sidebar"
+import { ADMIN_PATH } from "@zaenpm/beaver/app/admin/admin-path"
 
-import { AdminLoginPage } from "zadm/ui/admin/auth/admin-login-page"
+import { AdminLoginPage } from "@zaenpm/beaver/ui/admin/auth/admin-login-page"
 
 const AdminDashboardPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/dashboard/admin-dashboard-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/dashboard/admin-dashboard-page")
   return { default: mod.AdminDashboardPage }
 })
 
 const AdminPostsContentListPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/posts/admin-content-list-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/posts/admin-content-list-page")
   return { default: mod.AdminContentListPage }
 })
 
 const AdminUsersPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/users/admin-users-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/users/admin-users-page")
   return { default: mod.AdminUsersPage }
 })
 
 const AdminUserCreatePage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/users/admin-user-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/users/admin-user-form-page")
   return { default: mod.AdminUserCreatePage }
 })
 
 const AdminUserEditPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/users/admin-user-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/users/admin-user-form-page")
   return { default: mod.AdminUserEditPage }
 })
 
 const AdminMediaPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/media/admin-media-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/media/admin-media-page")
   return { default: mod.AdminMediaPage }
 })
 
 const AdminCategoriesPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/categories/admin-categories-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/categories/admin-categories-page")
   return { default: mod.AdminCategoriesPage }
 })
 
 const AdminMenusPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/menus/admin-menus-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/menus/admin-menus-page")
   return { default: mod.AdminMenusPage }
 })
 
 const AdminRolesPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/roles/admin-roles-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/roles/admin-roles-page")
   return { default: mod.AdminRolesPage }
 })
 
 const AdminProfilePage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/profile/admin-profile-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/profile/admin-profile-page")
   return { default: mod.AdminProfilePage }
 })
 
 const AdminCategoryCreatePage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/categories/admin-category-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/categories/admin-category-form-page")
   return { default: mod.AdminCategoryCreatePage }
 })
 
 const AdminCategoryEditPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/categories/admin-category-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/categories/admin-category-form-page")
   return { default: mod.AdminCategoryEditPage }
 })
 
 const AdminPostCreatePage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/posts/admin-post-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/posts/admin-post-form-page")
   return { default: mod.AdminPostCreatePage }
 })
 
 const AdminPostEditPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/posts/admin-post-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/posts/admin-post-form-page")
   return { default: mod.AdminPostEditPage }
 })
 
 const AdminPagesContentListPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/pages/admin-content-list-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/pages/admin-content-list-page")
   return { default: mod.AdminContentListPage }
 })
 
 const AdminPageCreatePage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/pages/admin-page-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/pages/admin-page-form-page")
   return { default: mod.AdminPageCreatePage }
 })
 
 const AdminPageEditPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/pages/admin-page-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/pages/admin-page-form-page")
   return { default: mod.AdminPageEditPage }
 })
 
 const AdminRoleCreatePage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/roles/admin-role-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/roles/admin-role-form-page")
   return { default: mod.AdminRoleCreatePage }
 })
 
 const AdminRoleEditPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/roles/admin-role-form-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/roles/admin-role-form-page")
   return { default: mod.AdminRoleEditPage }
 })
 
 const AdminSettingsPage = lazy(async () => {
-  const mod = await import("zadm/ui/admin/settings/admin-settings-page")
+  const mod = await import("@zaenpm/beaver/ui/admin/settings/admin-settings-page")
   return { default: mod.AdminSettingsPage }
 })
 

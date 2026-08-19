@@ -4,14 +4,14 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 
-import { AdminDashboardPage } from "zadm/ui/admin/dashboard/admin-dashboard-page"
+import { AdminDashboardPage } from "@zaenpm/beaver/ui/admin/dashboard/admin-dashboard-page"
 
-vi.mock("zadm/ui/admin/components/ui/sidebar", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/components/ui/sidebar", () => ({
   SidebarProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarTrigger: () => <button type="button">toggle</button>,
 }))
 
-vi.mock("zadm/ui/admin/auth/admin-session-provider", () => ({
+vi.mock("@zaenpm/beaver/ui/admin/auth/admin-session-provider", () => ({
   useAdminSession: () => ({
     session: {
       permissions: [

@@ -1,8 +1,8 @@
 
 import { lazy, Suspense, useEffect, useState, useTransition } from "react"
 
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "zadm/ui/admin/components/ui/card"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@zaenpm/beaver/ui/admin/components/ui/card"
 import {
   Dialog,
   DialogClose,
@@ -11,19 +11,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "zadm/ui/admin/components/ui/dialog"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { AdminPageHeader } from "zadm/ui/admin/layout/admin-page-shell"
-import { SectionEmbedder, type EmbeddedSection } from "zadm/ui/admin/sections/section-embedder"
-import { adminApiPost, adminApiPut } from "zadm/ui/admin/shared/api-client"
-import { adminToast } from "zadm/ui/admin/shared/admin-toast"
-import { navigateToPath } from "zadm/ui/admin/navigation"
-import { slugify } from "zadm/pkg/utils/slug"
+} from "@zaenpm/beaver/ui/admin/components/ui/dialog"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { AdminPageHeader } from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
+import { SectionEmbedder, type EmbeddedSection } from "@zaenpm/beaver/ui/admin/sections/section-embedder"
+import { adminApiPost, adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
+import { navigateToPath } from "@zaenpm/beaver/ui/admin/navigation"
+import { slugify } from "@zaenpm/beaver/pkg/utils/slug"
 import { Settings2 } from "lucide-react"
 
 const TiptapEditor = lazy(async () => {
-  const mod = await import("zadm/ui/admin/editor/tiptap-editor")
+  const mod = await import("@zaenpm/beaver/ui/admin/editor/tiptap-editor")
   return { default: mod.TiptapEditor }
 })
 

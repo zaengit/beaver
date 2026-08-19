@@ -1,0 +1,31 @@
+---
+interface Field {
+  label: string
+  type: string
+  value: unknown
+}
+
+interface Props {
+  fields: Field[]
+}
+
+const { fields } = Astro.props
+const formatValue = (value: unknown) => value === true ? "Yes" : value === false ? "No" : String(value)
+---
+
+{fields.length > 0 && (
+  <section class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16 sm:pb-20">
+    <dl class="grid gap-4 rounded-[28px] border border-slate-200/90 bg-slate-100/70 p-4 sm:p-6 shadow-sm backdrop-blur-md sm:grid-cols-2">
+      {fields.map((field) => (
+        <div class="rounded-2xl bg-white p-5 border border-slate-200/80 shadow-2xs transition-all duration-200 hover:border-indigo-200">
+          <dt class="text-xs font-bold uppercase tracking-wider text-indigo-700">{field.label}</dt>
+          <dd class="mt-1.5 text-sm font-semibold leading-relaxed text-slate-950">
+            {field.type === "image" && typeof field.value === "string"
+              ? <img src={field.value} alt={field.label} class="max-h-64 w-full rounded-xl object-cover shadow-xs mt-1" loading="lazy" />
+              : formatValue(field.value)}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  </section>
+)}

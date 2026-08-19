@@ -1,5 +1,5 @@
-import type { AdminRoute } from "zadm/router/route"
-import { handleBulkUpdateCategoryStatus } from "zadm/app/handlers"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import { handleBulkUpdateCategoryStatus } from "@zaenpm/beaver/app/handlers"
 
 export const POST: AdminRoute = async ({ request, locals }) => {
   const body = await request.json()

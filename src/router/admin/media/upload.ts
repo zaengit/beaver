@@ -1,6 +1,6 @@
-import type { AdminRoute } from "zadm/router/route"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
 
-import { handleUploadMedia } from "zadm/app/handlers"
+import { handleUploadMedia } from "@zaenpm/beaver/app/handlers"
 
 export const POST: AdminRoute = async ({ request, locals }) => {
   try {

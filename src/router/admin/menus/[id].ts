@@ -1,7 +1,7 @@
-import type { AdminRoute } from "zadm/router/route"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
 
-import { adminError } from "zadm/app/admin/api-response"
-import { handleDeleteMenu, handleGetMenu, handleUpdateMenu } from "zadm/app/handlers"
+import { adminError } from "@zaenpm/beaver/app/admin/api-response"
+import { handleDeleteMenu, handleGetMenu, handleUpdateMenu } from "@zaenpm/beaver/app/handlers"
 
 export const GET: AdminRoute = async ({ params, locals }) => {
   if (!params.id) return adminError("Menu id is required.", 400)

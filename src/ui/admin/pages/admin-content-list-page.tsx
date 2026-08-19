@@ -2,31 +2,31 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router"
 
-import { adminApiGet, adminApiPost } from "zadm/ui/admin/shared/api-client"
-import { AdminLoadingState } from "zadm/ui/admin/core/admin-loading-state"
+import { adminApiGet, adminApiPost } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
 import {
   AdminPageShell,
   AdminPageHeader
-} from "zadm/ui/admin/layout/admin-page-shell"
-import { Badge } from "zadm/ui/admin/components/ui/badge"
-import { Button } from "zadm/ui/admin/components/ui/button"
-import { Input } from "zadm/ui/admin/components/ui/input"
-import { Label } from "zadm/ui/admin/components/ui/label"
-import { Checkbox } from "zadm/ui/admin/components/ui/checkbox"
+} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
+import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
+import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
+import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
+import { Checkbox } from "@zaenpm/beaver/ui/admin/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "zadm/ui/admin/components/ui/dialog"
+} from "@zaenpm/beaver/ui/admin/components/ui/dialog"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "zadm/ui/admin/components/ui/select"
+} from "@zaenpm/beaver/ui/admin/components/ui/select"
 import {
   Table,
   TableBody,
@@ -34,10 +34,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "zadm/ui/admin/components/ui/table"
+} from "@zaenpm/beaver/ui/admin/components/ui/table"
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
-import { buildNavigationUrl } from "zadm/ui/admin/navigation"
-import { adminToast } from "zadm/ui/admin/shared/admin-toast"
+import { buildNavigationUrl } from "@zaenpm/beaver/ui/admin/navigation"
+import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
 
 export function AdminContentListPage() {
   const [data, setData] = useState<any>(null)

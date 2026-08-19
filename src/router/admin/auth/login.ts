@@ -1,15 +1,15 @@
-import type { AdminRoute } from "zadm/router/route"
+import type { AdminRoute } from "@zaenpm/beaver/router/route"
 
-import { handlePasswordLogin } from "zadm/app/handlers"
-import { getUserPermissions } from "zadm/app/admin/permissions"
-import { signAccessToken, signRefreshToken } from "zadm/app/admin/jwt"
+import { handlePasswordLogin } from "@zaenpm/beaver/app/handlers"
+import { getUserPermissions } from "@zaenpm/beaver/app/admin/permissions"
+import { signAccessToken, signRefreshToken } from "@zaenpm/beaver/app/admin/jwt"
 import {
   buildAdminAccessCookieOptions,
   buildAdminRefreshCookieOptions,
   ADMIN_ACCESS_COOKIE,
   ADMIN_REFRESH_COOKIE,
-} from "zadm/app/admin/auth-cookies"
-import { saveRefreshSession } from "zadm/app/admin/session-store"
+} from "@zaenpm/beaver/app/admin/auth-cookies"
+import { saveRefreshSession } from "@zaenpm/beaver/app/admin/session-store"
 
 export const POST: AdminRoute = async ({ request, cookies }) => {
   const body = await request.json()

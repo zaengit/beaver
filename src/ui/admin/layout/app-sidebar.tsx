@@ -1,5 +1,5 @@
 
-import { useAdminSession } from "zadm/ui/admin/auth/admin-session-provider"
+import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
 import {
   CircleDot,
   LayoutDashboard,
@@ -30,14 +30,14 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
-} from "zadm/ui/admin/components/ui/sidebar"
+} from "@zaenpm/beaver/ui/admin/components/ui/sidebar"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "zadm/ui/admin/components/ui/collapsible"
+} from "@zaenpm/beaver/ui/admin/components/ui/collapsible"
 import { useNavigate } from "react-router"
-import { getContentTypeRegistry } from "zadm/app/registry/content-types"
+import { getContentTypeRegistry } from "@zaenpm/beaver/app/registry/content-types"
 
 interface AdminSidebarProps {
   user: {
@@ -116,7 +116,7 @@ export function AdminSidebar({ user, permissions, roleName, pathname }: AdminSid
                 <LayoutDashboard className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">CMS Admin</span>
+                <span className="truncate font-semibold">Beaver</span>
                 <span className="truncate text-xs text-sidebar-foreground/65">Editorial control center</span>
               </div>
             </SidebarMenuButton>

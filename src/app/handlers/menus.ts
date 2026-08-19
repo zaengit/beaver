@@ -1,11 +1,11 @@
-import { adminCreated, adminError, adminSuccess } from "zadm/app/admin/api-response"
-import { mapServiceError } from "zadm/app/handlers/error-mapper"
-import { requireAuth, requirePermission, requireAnyPermission } from "zadm/app/handlers/guard"
-import { parseWithSchema } from "zadm/app/handlers/utils"
-import type { Session } from "zadm/app/handlers/types"
-import { can } from "zadm/app/admin/permissions"
-import { createMenu, deleteMenu, getMenu, listMenus, updateMenu, reorderMenus } from "zadm/app/services/menus"
-import { createMenuSchema, reorderMenusSchema, updateMenuSchema } from "zadm/app/validations/menus"
+import { adminCreated, adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
+import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
+import { requireAuth, requirePermission, requireAnyPermission } from "@zaenpm/beaver/app/handlers/guard"
+import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
+import type { Session } from "@zaenpm/beaver/app/handlers/types"
+import { can } from "@zaenpm/beaver/app/admin/permissions"
+import { createMenu, deleteMenu, getMenu, listMenus, updateMenu, reorderMenus } from "@zaenpm/beaver/app/services/menus"
+import { createMenuSchema, reorderMenusSchema, updateMenuSchema } from "@zaenpm/beaver/app/validations/menus"
 
 // ---------------------------------------------------------------------------
 // Helpers

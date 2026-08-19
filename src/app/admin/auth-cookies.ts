@@ -1,4 +1,4 @@
-import type { AstroLikeCookies } from "zadm/app/http/request-context"
+import type { AstroLikeCookies } from "@zaenpm/beaver/app/http/request-context"
 
 export const ADMIN_ACCESS_COOKIE = "admin_access_token"
 export const ADMIN_REFRESH_COOKIE = "admin_refresh_token"

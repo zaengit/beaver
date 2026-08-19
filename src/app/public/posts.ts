@@ -5,4 +5,4 @@ export {
   listPublishedPostsByTag,
   listPublishedPostsByType,
   searchPublishedPosts,
-} from "zadm/app/services/posts"
+} from "@zaenpm/beaver/app/services/posts"
