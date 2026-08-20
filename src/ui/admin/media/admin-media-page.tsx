@@ -3,18 +3,18 @@ import { useEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router"
 import { FileIcon, Search, ImageIcon, Copy, Trash2 } from "lucide-react"
 
-import { adminApiGet, adminApiDelete, adminApiPost } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { MediaUploadZone } from "@zaenpm/beaver/ui/admin/shared/media-upload-zone"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
-import { Skeleton } from "@zaenpm/beaver/ui/admin/components/ui/skeleton"
-import { Checkbox } from "@zaenpm/beaver/ui/admin/components/ui/checkbox"
-import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
+import { adminApiGet, adminApiDelete, adminApiPost } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { MediaUploadZone } from "@zbeaver/beaver/ui/admin/shared/media-upload-zone"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
+import { Skeleton } from "@zbeaver/beaver/ui/admin/components/ui/skeleton"
+import { Checkbox } from "@zbeaver/beaver/ui/admin/components/ui/checkbox"
+import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
 import {
   AdminPageShell,
   AdminPageHeader,
-} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
-import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+} from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
+import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
 interface MediaItem {
   id: string

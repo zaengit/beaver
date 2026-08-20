@@ -2,22 +2,22 @@
 import { useEffect, useState } from "react"
 import { Save, Plus, Trash2 } from "lucide-react"
 
-import { adminApiGet, adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
-import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
+import { adminApiGet, adminApiPut } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import { AdminLoadingState } from "@zbeaver/beaver/ui/admin/core/admin-loading-state"
 import {
   AdminPageHeader,
   AdminPageShell,
   AdminSectionCard,
-} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
-import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
-import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
-import { Checkbox } from "@zaenpm/beaver/ui/admin/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@zaenpm/beaver/ui/admin/components/ui/select"
-import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker"
-import type { SiteSettings, SocialLink, OpenHours } from "@zaenpm/beaver/app/models/setting"
+} from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
+import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea"
+import { Checkbox } from "@zbeaver/beaver/ui/admin/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@zbeaver/beaver/ui/admin/components/ui/select"
+import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker"
+import type { SiteSettings, SocialLink, OpenHours } from "@zbeaver/beaver/app/models/setting"
 
 const TIMEZONES = Intl.supportedValuesOf?.("timeZone") ?? [
   "UTC",

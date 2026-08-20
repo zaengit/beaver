@@ -3,19 +3,19 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router"
 import { ArrowRight, FileText, Image, type LucideIcon } from "lucide-react"
 
-import { getContentTypeRegistry } from "@zaenpm/beaver/app/registry/content-types"
-import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
-import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
+import { getContentTypeRegistry } from "@zbeaver/beaver/app/registry/content-types"
+import { useAdminSession } from "@zbeaver/beaver/ui/admin/auth/admin-session-provider"
+import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zbeaver/beaver/ui/admin/core/admin-loading-state"
 import {
   AdminPageHeader,
   AdminPageShell,
   AdminSectionCard,
   AdminStatCard,
   AdminStatsGrid,
-} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
-import { buttonVariants } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+} from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
+import { buttonVariants } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
 type DashboardStats = {
   totalPosts: number

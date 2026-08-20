@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm"
 
-import { db } from "@zaenpm/beaver/app/db"
-import { rolePermissions, users } from "@zaenpm/beaver/app/db/schema"
-import { forbidden, type ErrorResponse } from "@zaenpm/beaver/pkg/http/api-response"
+import { db } from "@zbeaver/beaver/app/db"
+import { rolePermissions, users } from "@zbeaver/beaver/app/db/schema"
+import { forbidden, type ErrorResponse } from "@zbeaver/beaver/pkg/http/api-response"
 
 /** Read the current permission set for a user. This deliberately does not cache. */
 export async function getUserPermissions(userId: string): Promise<string[]> {

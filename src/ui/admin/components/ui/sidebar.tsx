@@ -4,24 +4,24 @@ import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { useIsMobile } from "@zaenpm/beaver/ui/admin/hooks/use-mobile"
-import { cn } from "@zaenpm/beaver/pkg/utils/ui"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
-import { Separator } from "@zaenpm/beaver/ui/admin/components/ui/separator"
+import { useIsMobile } from "@zbeaver/beaver/ui/admin/hooks/use-mobile"
+import { cn } from "@zbeaver/beaver/pkg/utils/ui"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
+import { Separator } from "@zbeaver/beaver/ui/admin/components/ui/separator"
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@zaenpm/beaver/ui/admin/components/ui/sheet"
-import { Skeleton } from "@zaenpm/beaver/ui/admin/components/ui/skeleton"
+} from "@zbeaver/beaver/ui/admin/components/ui/sheet"
+import { Skeleton } from "@zbeaver/beaver/ui/admin/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@zaenpm/beaver/ui/admin/components/ui/tooltip"
+} from "@zbeaver/beaver/ui/admin/components/ui/tooltip"
 import { PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"

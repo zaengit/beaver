@@ -1,7 +1,7 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { getAdminSession, refreshAdminSession } from "@zaenpm/beaver/app/admin/api-guard"
-import { getRoleNameRecord } from "@zaenpm/beaver/app/repositories/roles"
+import { getAdminSession, refreshAdminSession } from "@zbeaver/beaver/app/admin/api-guard"
+import { getRoleNameRecord } from "@zbeaver/beaver/app/repositories/roles"
 
 export const GET: AdminRoute = async ({ cookies }) => {
   // Coba access token dulu — kalau masih valid, langsung return.

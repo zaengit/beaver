@@ -1,9 +1,9 @@
 
 import { useState, useRef, useCallback } from "react"
 import { Upload, FileIcon, X, Loader2 } from "lucide-react"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
-import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
 interface UploadedMedia {
   id: string

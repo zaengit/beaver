@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { ulidRegex } from "@zaenpm/beaver/app/validations/shared"
+import { ulidRegex } from "@zbeaver/beaver/app/validations/shared"
 
 export const createUserSchema = z.object({
   name: z

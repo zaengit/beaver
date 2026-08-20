@@ -14,7 +14,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { Plus } from "lucide-react"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -22,8 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@zaenpm/beaver/ui/admin/components/ui/dialog"
-import { getSectionRegistry, type SectionTemplate } from "@zaenpm/beaver/app/registry/sections"
+} from "@zbeaver/beaver/ui/admin/components/ui/dialog"
+import { getSectionRegistry, type SectionTemplate } from "@zbeaver/beaver/app/registry/sections"
 import {
   createEmptyItem,
   type EmbeddedSection,

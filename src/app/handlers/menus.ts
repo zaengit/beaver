@@ -1,11 +1,11 @@
-import { adminCreated, adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
-import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
-import { requireAuth, requirePermission, requireAnyPermission } from "@zaenpm/beaver/app/handlers/guard"
-import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
-import type { Session } from "@zaenpm/beaver/app/handlers/types"
-import { can } from "@zaenpm/beaver/app/admin/permissions"
-import { createMenu, deleteMenu, getMenu, listMenus, updateMenu, reorderMenus } from "@zaenpm/beaver/app/services/menus"
-import { createMenuSchema, reorderMenusSchema, updateMenuSchema } from "@zaenpm/beaver/app/validations/menus"
+import { adminCreated, adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
+import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
+import { requireAuth, requirePermission, requireAnyPermission } from "@zbeaver/beaver/app/handlers/guard"
+import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import type { Session } from "@zbeaver/beaver/app/handlers/types"
+import { can } from "@zbeaver/beaver/app/admin/permissions"
+import { createMenu, deleteMenu, getMenu, listMenus, updateMenu, reorderMenus } from "@zbeaver/beaver/app/services/menus"
+import { createMenuSchema, reorderMenusSchema, updateMenuSchema } from "@zbeaver/beaver/app/validations/menus"
 
 // ---------------------------------------------------------------------------
 // Helpers

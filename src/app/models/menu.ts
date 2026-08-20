@@ -1,4 +1,4 @@
-import type { menus } from "@zaenpm/beaver/app/db/schema"
+import type { menus } from "@zbeaver/beaver/app/db/schema"
 
 export const MENU_TABLE = "menus"
 

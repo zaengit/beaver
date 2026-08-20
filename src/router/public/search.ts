@@ -1,5 +1,5 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
-import { searchPublishedPosts } from "@zaenpm/beaver/app/public/posts"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
+import { searchPublishedPosts } from "@zbeaver/beaver/app/public/posts"
 
 export const GET: AdminRoute = ({ request }) => {
   const query = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? ""

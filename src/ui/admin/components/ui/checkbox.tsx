@@ -2,7 +2,7 @@
 import { Check } from "lucide-react"
 import * as React from "react"
 
-import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
 export interface CheckboxProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "checked" | "onChange"> {

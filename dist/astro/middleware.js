@@ -1,5 +1,5 @@
 import { defineMiddleware } from "astro:middleware"
-import { ADMIN_PATH } from "@zaenpm/beaver/server"
+import { ADMIN_PATH } from "@zbeaver/beaver/server"
 
 const INTERNAL_REWRITE = "__beaverInternalRewrite"
 

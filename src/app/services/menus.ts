@@ -1,5 +1,5 @@
-import { generateId, getCurrentTimestamp } from "@zaenpm/beaver/pkg/utils/index"
-import type { CreateMenuInput, UpdateMenuInput, ReorderMenusInput } from "@zaenpm/beaver/app/validations/menus"
+import { generateId, getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
+import type { CreateMenuInput, UpdateMenuInput, ReorderMenusInput } from "@zbeaver/beaver/app/validations/menus"
 import {
   createMenuRecord,
   deleteMenuRecord,
@@ -9,10 +9,10 @@ import {
   reorderMenuTree,
   updateMenuRecord,
   type MenuRow,
-} from "@zaenpm/beaver/app/repositories/menus"
-import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
-import { getCachedPublicData, invalidatePublicDataCache } from "@zaenpm/beaver/app/cache/public-data-cache"
-import { serviceSuccess, serviceNotFound } from "@zaenpm/beaver/app/services/utils"
+} from "@zbeaver/beaver/app/repositories/menus"
+import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
+import { getCachedPublicData, invalidatePublicDataCache } from "@zbeaver/beaver/app/cache/public-data-cache"
+import { serviceSuccess, serviceNotFound } from "@zbeaver/beaver/app/services/utils"
 
 // ─── Get Menu Tree ─────────────────────────────────────────────────────────
 

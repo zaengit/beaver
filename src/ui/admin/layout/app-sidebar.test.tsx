@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 
-import { AdminSidebar } from "@zaenpm/beaver/ui/admin/layout/app-sidebar"
+import { AdminSidebar } from "@zbeaver/beaver/ui/admin/layout/app-sidebar"
 
 const { navigateMock, setSessionMock } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
@@ -19,13 +19,13 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("@zaenpm/beaver/ui/admin/auth/admin-session-provider", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/auth/admin-session-provider", () => ({
   useAdminSession: () => ({
     setSession: setSessionMock,
   }),
 }))
 
-vi.mock("@zaenpm/beaver/ui/admin/components/ui/sidebar", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/components/ui/sidebar", () => ({
   Sidebar: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -91,5 +91,20 @@ describe("AdminSidebar", () => {
 
     expect(screen.getAllByRole("button", { name: "Pages" })).toHaveLength(1)
     expect(screen.queryByRole("button", { name: "Categories" })).toBeNull()
+  })
+
+  it("shows the installed Beaver version in the admin sidebar footer", () => {
+    render(
+      <MemoryRouter>
+        <AdminSidebar
+          user={{ id: "user-1", name: "Admin", email: "admin@example.com", roleId: "role-1" }}
+          permissions={["posts.view"]}
+          roleName="Administrator"
+          pathname="/admin"
+        />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText("Beaver v0.1.6")).toBeInTheDocument()
   })
 })

@@ -1,7 +1,7 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { adminError } from "@zaenpm/beaver/app/admin/api-response"
-import { handleDeleteRole, handleGetRole, handleUpdateRole } from "@zaenpm/beaver/app/handlers"
+import { adminError } from "@zbeaver/beaver/app/admin/api-response"
+import { handleDeleteRole, handleGetRole, handleUpdateRole } from "@zbeaver/beaver/app/handlers"
 
 export const GET: AdminRoute = async ({ params }) => {
   if (!params.id) return adminError("Role id is required.", 400)

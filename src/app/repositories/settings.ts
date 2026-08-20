@@ -1,8 +1,8 @@
-import { db } from "@zaenpm/beaver/app/db"
-import { settings } from "@zaenpm/beaver/app/db/schema"
-import { getCurrentTimestamp } from "@zaenpm/beaver/pkg/utils/index"
+import { db } from "@zbeaver/beaver/app/db"
+import { settings } from "@zbeaver/beaver/app/db/schema"
+import { getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
 import { eq } from "drizzle-orm"
-import type { SettingRow } from "@zaenpm/beaver/app/models/setting"
+import type { SettingRow } from "@zbeaver/beaver/app/models/setting"
 
 // ─── Get All Settings ────────────────────────────────────────────────────────
 

@@ -1,8 +1,8 @@
 import { and, asc, desc, eq, like, type SQL } from "drizzle-orm"
 
-import { db } from "@zaenpm/beaver/app/db"
-import { categories } from "@zaenpm/beaver/app/db/schema"
-import type { CategoryRecord } from "@zaenpm/beaver/app/models/category"
+import { db } from "@zbeaver/beaver/app/db"
+import { categories } from "@zbeaver/beaver/app/db/schema"
+import type { CategoryRecord } from "@zbeaver/beaver/app/models/category"
 
 export type CategoryRow = Pick<
   CategoryRecord,

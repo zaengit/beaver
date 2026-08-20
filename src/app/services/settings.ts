@@ -1,13 +1,13 @@
-import { getAllSettingsRecords, upsertSettingRecord } from "@zaenpm/beaver/app/repositories/settings"
-import { SETTING_KEYS } from "@zaenpm/beaver/app/models/setting"
+import { getAllSettingsRecords, upsertSettingRecord } from "@zbeaver/beaver/app/repositories/settings"
+import { SETTING_KEYS } from "@zbeaver/beaver/app/models/setting"
 import type {
   SiteSettings,
   UpdateSettingsInput,
   SettingRow,
-} from "@zaenpm/beaver/app/models/setting"
-import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
-import { serviceSuccess } from "@zaenpm/beaver/app/services/utils"
-import { getCachedPublicData, invalidatePublicDataCache } from "@zaenpm/beaver/app/cache/public-data-cache"
+} from "@zbeaver/beaver/app/models/setting"
+import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
+import { serviceSuccess } from "@zbeaver/beaver/app/services/utils"
+import { getCachedPublicData, invalidatePublicDataCache } from "@zbeaver/beaver/app/cache/public-data-cache"
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 

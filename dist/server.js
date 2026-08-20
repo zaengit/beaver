@@ -69,7 +69,7 @@ function beaver(options = {}) {
   setContentTypeRegistry(readRegistry(registries["@content-type-registry"]));
   const compatShim = fileURLToPath(new URL("./compat/use-sync-external-store.js", import.meta.url));
   return {
-    name: "@zaenpm/beaver",
+    name: "@zbeaver/beaver",
     hooks: {
       "astro:config:setup": ({ addMiddleware, injectRoute, updateConfig }) => {
         updateConfig({
@@ -87,7 +87,7 @@ function beaver(options = {}) {
               ]
             },
             define: { __ADMIN_PATH__: JSON.stringify(adminPath) },
-            ssr: { noExternal: ["@zaenpm/beaver"] },
+            ssr: { noExternal: ["@zbeaver/beaver"] },
             optimizeDeps: {
               include: [
                 "highlight.js/lib/core"

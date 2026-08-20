@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { MenuTree } from "@zaenpm/beaver/server"
+import type { MenuTree } from "@zbeaver/beaver/server"
 
 interface NavbarProps {
   items: MenuTree[]

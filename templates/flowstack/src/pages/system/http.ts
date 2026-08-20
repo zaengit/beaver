@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro"
 
-import { apiApp } from "@zaen3/beaver/server"
+import { apiApp } from "@zbeaver/beaver/server"
 
 export const prerender = false
 

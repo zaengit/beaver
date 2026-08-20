@@ -1,8 +1,8 @@
 import { and, desc, eq, like } from "drizzle-orm"
 
-import { db } from "@zaenpm/beaver/app/db"
-import { media } from "@zaenpm/beaver/app/db/schema"
-import type { MediaRecord } from "@zaenpm/beaver/app/models/media"
+import { db } from "@zbeaver/beaver/app/db"
+import { media } from "@zbeaver/beaver/app/db/schema"
+import type { MediaRecord } from "@zbeaver/beaver/app/models/media"
 
 export type MediaRow = MediaRecord
 

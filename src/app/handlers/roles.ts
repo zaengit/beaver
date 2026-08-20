@@ -1,9 +1,9 @@
-import { adminCreated, adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
-import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
-import { requireAuth, requirePermission, requireAnyPermission } from "@zaenpm/beaver/app/handlers/guard"
-import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
-import type { Session } from "@zaenpm/beaver/app/handlers/types"
-import { listAllPermissionRecords } from "@zaenpm/beaver/app/repositories/roles"
+import { adminCreated, adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
+import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
+import { requireAuth, requirePermission, requireAnyPermission } from "@zbeaver/beaver/app/handlers/guard"
+import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import type { Session } from "@zbeaver/beaver/app/handlers/types"
+import { listAllPermissionRecords } from "@zbeaver/beaver/app/repositories/roles"
 import {
   bulkDeleteRoles,
   bulkDuplicateRoles,
@@ -13,8 +13,8 @@ import {
   getRole,
   listRolesService,
   updateRole,
-} from "@zaenpm/beaver/app/services/roles"
-import { createRoleSchema, updateRoleSchema } from "@zaenpm/beaver/app/validations/roles"
+} from "@zbeaver/beaver/app/services/roles"
+import { createRoleSchema, updateRoleSchema } from "@zbeaver/beaver/app/validations/roles"
 
 // ---------------------------------------------------------------------------
 // Helpers

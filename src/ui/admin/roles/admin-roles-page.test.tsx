@@ -3,14 +3,14 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 
-import { AdminRolesPage } from "@zaenpm/beaver/ui/admin/roles/admin-roles-page"
+import { AdminRolesPage } from "@zbeaver/beaver/ui/admin/roles/admin-roles-page"
 
 const { adminApiGet, adminApiPost } = vi.hoisted(() => ({
   adminApiGet: vi.fn(),
   adminApiPost: vi.fn(),
 }))
 
-vi.mock("@zaenpm/beaver/ui/admin/shared/api-client", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/shared/api-client", () => ({
   adminApiGet,
   adminApiPost,
 }))
@@ -32,7 +32,7 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("@zaenpm/beaver/ui/admin/components/ui/sidebar", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/components/ui/sidebar", () => ({
   SidebarProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarTrigger: () => <button type="button">toggle</button>,
   SidebarInset: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

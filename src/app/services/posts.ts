@@ -13,11 +13,11 @@ import {
   updatePostRecord,
   deletePostRecord,
   syncPostCategoriesRecord,
-} from "@zaenpm/beaver/app/repositories/posts"
-import { getServerContentTypeRegistry } from "@zaenpm/beaver/app/registry/server-content-types"
-import { sanitizeText, sanitizeHtml } from "@zaenpm/beaver/pkg/security/sanitize"
-import { generateId } from "@zaenpm/beaver/pkg/utils/id"
-import type { CreatePostInput, UpdatePostInput } from "@zaenpm/beaver/app/validations/posts"
+} from "@zbeaver/beaver/app/repositories/posts"
+import { getServerContentTypeRegistry } from "@zbeaver/beaver/app/registry/server-content-types"
+import { sanitizeText, sanitizeHtml } from "@zbeaver/beaver/pkg/security/sanitize"
+import { generateId } from "@zbeaver/beaver/pkg/utils/id"
+import type { CreatePostInput, UpdatePostInput } from "@zbeaver/beaver/app/validations/posts"
 import type {
   Post,
   PostWithRelations,
@@ -27,13 +27,13 @@ import type {
   ServiceResult,
   PaginatedResult,
   PostFilters,
-} from "@zaenpm/beaver/pkg/types"
+} from "@zbeaver/beaver/pkg/types"
 import {
   serviceSuccess,
   serviceNotFound,
   serviceConflict,
-} from "@zaenpm/beaver/app/services/utils"
-import { getCachedPublicData, invalidatePublicDataCache } from "@zaenpm/beaver/app/cache/public-data-cache"
+} from "@zbeaver/beaver/app/services/utils"
+import { getCachedPublicData, invalidatePublicDataCache } from "@zbeaver/beaver/app/cache/public-data-cache"
 
 // ---------------------------------------------------------------------------
 // Pure helpers

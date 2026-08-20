@@ -1,7 +1,7 @@
 
 import * as React from "react"
 
-import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
 function Label({ className, ...props }: React.ComponentProps<"label">) {
   return (

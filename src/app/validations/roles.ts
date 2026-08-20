@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { ulidRegex, slugRegex, emptyToNull } from "@zaenpm/beaver/app/validations/shared"
+import { ulidRegex, slugRegex, emptyToNull } from "@zbeaver/beaver/app/validations/shared"
 
 export const createRoleSchema = z.object({
   // Required: non-empty, max 100 characters

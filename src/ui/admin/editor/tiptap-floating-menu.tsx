@@ -12,7 +12,7 @@ import {
   Code2,
 } from "lucide-react"
 
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 

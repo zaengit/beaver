@@ -1,9 +1,9 @@
-import { hashPassword } from "@zaenpm/beaver/app/auth"
-import { getCurrentTimestamp } from "@zaenpm/beaver/pkg/utils/index"
-import { findUserByIdRecord, updateUserRecord, type UserSafe } from "@zaenpm/beaver/app/repositories/users"
-import { findUserByEmailRecord } from "@zaenpm/beaver/app/repositories/users"
-import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
-import { serviceSuccess, serviceNotFound, serviceConflict } from "@zaenpm/beaver/app/services/utils"
+import { hashPassword } from "@zbeaver/beaver/app/auth"
+import { getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
+import { findUserByIdRecord, updateUserRecord, type UserSafe } from "@zbeaver/beaver/app/repositories/users"
+import { findUserByEmailRecord } from "@zbeaver/beaver/app/repositories/users"
+import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
+import { serviceSuccess, serviceNotFound, serviceConflict } from "@zbeaver/beaver/app/services/utils"
 
 export interface UpdateProfileInput {
   name?: string

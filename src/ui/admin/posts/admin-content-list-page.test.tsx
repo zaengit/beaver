@@ -3,13 +3,13 @@
 
 import { render, screen, waitFor } from "@testing-library/react"
 
-import { AdminContentListPage } from "@zaenpm/beaver/ui/admin/posts/admin-content-list-page"
+import { AdminContentListPage } from "@zbeaver/beaver/ui/admin/posts/admin-content-list-page"
 
 const { adminApiGet } = vi.hoisted(() => ({
   adminApiGet: vi.fn(),
 }))
 
-vi.mock("@zaenpm/beaver/ui/admin/shared/api-client", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/shared/api-client", () => ({
   adminApiGet,
 }))
 
@@ -31,7 +31,7 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("@zaenpm/beaver/ui/admin/layout/admin-page-shell", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/layout/admin-page-shell", () => ({
   AdminPageShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AdminPageHeader: ({
     title,
@@ -50,8 +50,8 @@ vi.mock("@zaenpm/beaver/ui/admin/layout/admin-page-shell", () => ({
   ),
 }))
 
-vi.mock("@zaenpm/beaver/ui/admin/components/ui/table", async () => {
-  const actual = await vi.importActual<typeof import("@zaenpm/beaver/ui/admin/components/ui/table")>("@zaenpm/beaver/ui/admin/components/ui/table")
+vi.mock("@zbeaver/beaver/ui/admin/components/ui/table", async () => {
+  const actual = await vi.importActual<typeof import("@zbeaver/beaver/ui/admin/components/ui/table")>("@zbeaver/beaver/ui/admin/components/ui/table")
   return actual
 })
 

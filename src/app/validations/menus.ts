@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { ulidRegex, emptyToNull, publishStatusEnum } from "@zaenpm/beaver/app/validations/shared"
+import { ulidRegex, emptyToNull, publishStatusEnum } from "@zbeaver/beaver/app/validations/shared"
 
 // Menu type enum (Req 7.1)
 const menuTypeEnum = z.enum(["navbar", "footer", "sidebar"])

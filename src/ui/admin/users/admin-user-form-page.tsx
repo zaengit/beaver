@@ -1,8 +1,8 @@
 
 import { useEffect, useState } from "react"
-import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
-import { UserForm } from "@zaenpm/beaver/ui/admin/users/user-form"
+import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zbeaver/beaver/ui/admin/core/admin-loading-state"
+import { UserForm } from "@zbeaver/beaver/ui/admin/users/user-form"
 
 export function AdminUserCreatePage() {
   const [roles, setRoles] = useState<any[]>([])

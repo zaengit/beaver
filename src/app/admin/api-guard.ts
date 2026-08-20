@@ -1,6 +1,6 @@
-import type { AstroLikeCookies } from "@zaenpm/beaver/app/http/request-context"
-import { findSafeUserByIdRecord } from "@zaenpm/beaver/app/repositories/users"
-import { getUserPermissions } from "@zaenpm/beaver/app/admin/permissions"
+import type { AstroLikeCookies } from "@zbeaver/beaver/app/http/request-context"
+import { findSafeUserByIdRecord } from "@zbeaver/beaver/app/repositories/users"
+import { getUserPermissions } from "@zbeaver/beaver/app/admin/permissions"
 import {
   buildAdminAccessCookieOptions,
   buildAdminRefreshCookieOptions,
@@ -8,14 +8,14 @@ import {
   ADMIN_REFRESH_COOKIE,
   readAdminAccessToken,
   readAdminRefreshToken,
-} from "@zaenpm/beaver/app/admin/auth-cookies"
+} from "@zbeaver/beaver/app/admin/auth-cookies"
 import {
   signAccessToken,
   signRefreshToken,
   verifyAccessToken,
   verifyRefreshToken,
-} from "@zaenpm/beaver/app/admin/jwt"
-import { consumeRefreshSession, saveRefreshSession } from "@zaenpm/beaver/app/admin/session-store"
+} from "@zbeaver/beaver/app/admin/jwt"
+import { consumeRefreshSession, saveRefreshSession } from "@zbeaver/beaver/app/admin/session-store"
 
 export async function getAdminSession(cookies: AstroLikeCookies) {
   const access = readAdminAccessToken(cookies)

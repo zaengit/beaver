@@ -1,9 +1,9 @@
 
 import { useEffect, useMemo, useState } from "react"
 
-import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
-import { RoleForm } from "@zaenpm/beaver/ui/admin/roles/role-form"
+import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zbeaver/beaver/ui/admin/core/admin-loading-state"
+import { RoleForm } from "@zbeaver/beaver/ui/admin/roles/role-form"
 
 interface Permission {
   id: string

@@ -1,10 +1,10 @@
 import { z } from "zod"
-import { adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
-import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
-import { requireAuth } from "@zaenpm/beaver/app/handlers/guard"
-import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
-import type { Session } from "@zaenpm/beaver/app/handlers/types"
-import { updateProfile } from "@zaenpm/beaver/app/services/profile"
+import { adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
+import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
+import { requireAuth } from "@zbeaver/beaver/app/handlers/guard"
+import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import type { Session } from "@zbeaver/beaver/app/handlers/types"
+import { updateProfile } from "@zbeaver/beaver/app/services/profile"
 
 // ---------------------------------------------------------------------------
 // Validation schema

@@ -1,6 +1,6 @@
 
 import { LoaderCircle } from "lucide-react"
-import { Skeleton } from "@zaenpm/beaver/ui/admin/components/ui/skeleton"
+import { Skeleton } from "@zbeaver/beaver/ui/admin/components/ui/skeleton"
 
 export function AdminLoadingState({ className = "p-6" }: { className?: string }) {
   return (

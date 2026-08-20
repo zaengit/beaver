@@ -133,4 +133,4 @@ run `seed` first if the super-admin account does not exist.
 
 ## License
 
-[MIT](./LICENSE) © 2026 zaen3
+[MIT](./LICENSE) © 2026 beaver

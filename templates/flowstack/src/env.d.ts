@@ -2,6 +2,6 @@
 
 declare namespace App {
   interface Locals {
-    session?: Awaited<ReturnType<typeof import("@zaen3/beaver/server").validateSession>>
+    session?: Awaited<ReturnType<typeof import("@zbeaver/beaver/server").validateSession>>
   }
 }

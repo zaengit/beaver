@@ -1,18 +1,18 @@
 
 import { useState, useTransition } from "react"
 
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { adminApiPost, adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
-import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
-import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
-import { PermissionMatrix } from "@zaenpm/beaver/ui/admin/roles/permission-matrix"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { adminApiPost, adminApiPut } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
+import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea"
+import { PermissionMatrix } from "@zbeaver/beaver/ui/admin/roles/permission-matrix"
 import {
   AdminPageHeader
-} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
-import { navigateToPath } from "@zaenpm/beaver/ui/admin/navigation"
-import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
-import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zaenpm/beaver/ui/admin/layout/admin-form-layout"
+} from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
+import { navigateToPath } from "@zbeaver/beaver/ui/admin/navigation"
+import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zbeaver/beaver/ui/admin/layout/admin-form-layout"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

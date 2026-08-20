@@ -1,4 +1,4 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
 import {
   buildAdminAccessCookieOptions,
@@ -6,9 +6,9 @@ import {
   ADMIN_ACCESS_COOKIE,
   ADMIN_REFRESH_COOKIE,
   readAdminRefreshToken,
-} from "@zaenpm/beaver/app/admin/auth-cookies"
-import { verifyRefreshToken } from "@zaenpm/beaver/app/admin/jwt"
-import { deleteRefreshSession } from "@zaenpm/beaver/app/admin/session-store"
+} from "@zbeaver/beaver/app/admin/auth-cookies"
+import { verifyRefreshToken } from "@zbeaver/beaver/app/admin/jwt"
+import { deleteRefreshSession } from "@zbeaver/beaver/app/admin/session-store"
 
 export const POST: AdminRoute = async ({ cookies }) => {
   const refresh = readAdminRefreshToken(cookies)

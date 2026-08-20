@@ -1,9 +1,9 @@
 
 import { useEffect, useState } from "react"
 import { useParams } from "react-router"
-import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
-import { CategoryForm } from "@zaenpm/beaver/ui/admin/categories/category-form"
+import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zbeaver/beaver/ui/admin/core/admin-loading-state"
+import { CategoryForm } from "@zbeaver/beaver/ui/admin/categories/category-form"
 
 export function AdminCategoryCreatePage() {
   const { type = "post" } = useParams()

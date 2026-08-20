@@ -1,7 +1,7 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { adminError } from "@zaenpm/beaver/app/admin/api-response"
-import { handleDeleteCategory, handleGetCategory, handleUpdateCategory } from "@zaenpm/beaver/app/handlers"
+import { adminError } from "@zbeaver/beaver/app/admin/api-response"
+import { handleDeleteCategory, handleGetCategory, handleUpdateCategory } from "@zbeaver/beaver/app/handlers"
 
 export const GET: AdminRoute = async ({ params, locals }) => {
   if (!params.id) return adminError("Category id is required.", 400)

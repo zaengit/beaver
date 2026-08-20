@@ -1,4 +1,4 @@
-import type { settings } from "@zaenpm/beaver/app/db/schema"
+import type { settings } from "@zbeaver/beaver/app/db/schema"
 
 export const TABLE = "settings" as const
 

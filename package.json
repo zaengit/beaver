@@ -1,8 +1,16 @@
 {
   "name": "@zbeaver/beaver",
-  "version": "0.1.4",
+  "version": "0.1.7",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zaengit/beaver.git"
+  },
+  "homepage": "https://github.com/zaengit/beaver#readme",
+  "bugs": {
+    "url": "https://github.com/zaengit/beaver/issues"
+  },
   "main": "./dist/server.js",
   "types": "./dist/server.d.ts",
   "scripts": {

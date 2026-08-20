@@ -1,7 +1,7 @@
 import { eq, and, gt } from "drizzle-orm"
-import { db } from "@zaenpm/beaver/app/db"
-import { adminRefreshSessions } from "@zaenpm/beaver/app/db/schema"
-import { getCurrentTimestamp } from "@zaenpm/beaver/pkg/utils/index"
+import { db } from "@zbeaver/beaver/app/db"
+import { adminRefreshSessions } from "@zbeaver/beaver/app/db/schema"
+import { getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
 
 export function saveRefreshSession(sessionId: string, userId: string, expiresAt: number) {
   db.insert(adminRefreshSessions)

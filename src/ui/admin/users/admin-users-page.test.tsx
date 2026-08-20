@@ -3,18 +3,18 @@
 
 import { render, screen, waitFor } from "@testing-library/react"
 
-import { AdminUsersPage } from "@zaenpm/beaver/ui/admin/users/admin-users-page"
+import { AdminUsersPage } from "@zbeaver/beaver/ui/admin/users/admin-users-page"
 
 const { adminApiGet } = vi.hoisted(() => ({
   adminApiGet: vi.fn(),
 }))
 
-vi.mock("@zaenpm/beaver/ui/admin/shared/api-client", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/shared/api-client", () => ({
   adminApiGet,
   adminApiPost: vi.fn(),
 }))
 
-vi.mock("@zaenpm/beaver/ui/admin/layout/admin-page-shell", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/layout/admin-page-shell", () => ({
   AdminPageShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AdminPageHeader: ({ title, search, actions }: { title: string; search?: React.ReactNode; actions?: React.ReactNode }) => (
     <div><h1>{title}</h1>{search}{actions}</div>

@@ -1,9 +1,9 @@
 import bcrypt from "bcrypt"
 import { and, eq } from "drizzle-orm"
 
-import { db } from "@zaenpm/beaver/app/db"
-import { adminRefreshSessions, roles, users } from "@zaenpm/beaver/app/db/schema"
-import { getCurrentTimestamp } from "@zaenpm/beaver/pkg/utils/index"
+import { db } from "@zbeaver/beaver/app/db"
+import { adminRefreshSessions, roles, users } from "@zbeaver/beaver/app/db/schema"
+import { getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
 
 export function resetSuperAdminPassword() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase()

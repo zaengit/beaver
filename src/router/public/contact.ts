@@ -1,9 +1,9 @@
 import nodemailer from "nodemailer"
 import { z } from "zod"
 
-import { getSiteSettings } from "@zaenpm/beaver/app/public/site"
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
-import { clientAddress, isWithinRateLimit } from "@zaenpm/beaver/router/security"
+import { getSiteSettings } from "@zbeaver/beaver/app/public/site"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
+import { clientAddress, isWithinRateLimit } from "@zbeaver/beaver/router/security"
 
 const contactSchema = z.object({
   name: z.string().trim().min(1).max(120),

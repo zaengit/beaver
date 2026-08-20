@@ -16,35 +16,35 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Pencil, Trash2 } from "lucide-react"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
-import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
-import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
-import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@zaenpm/beaver/ui/admin/components/ui/dialog"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
+import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea"
+import { Badge } from "@zbeaver/beaver/ui/admin/components/ui/badge"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@zbeaver/beaver/ui/admin/components/ui/dialog"
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@zaenpm/beaver/ui/admin/components/ui/card"
-import { adminApiPost, adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { navigateToPath } from "@zaenpm/beaver/ui/admin/navigation"
-import { slugify } from "@zaenpm/beaver/pkg/utils/slug"
-import { ContentTypeFieldsRenderer } from "@zaenpm/beaver/ui/admin/posts/content-type-fields-renderer"
-import { SectionEmbedder, type EmbeddedSection } from "@zaenpm/beaver/ui/admin/sections/section-embedder"
-import { getContentTypeRegistry } from "@zaenpm/beaver/app/registry/content-types"
-import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker"
-import { MultiSelect } from "@zaenpm/beaver/ui/admin/components/ui/multi-select"
-import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
-import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
-import type { AdminToastEntity } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
+} from "@zbeaver/beaver/ui/admin/components/ui/card"
+import { adminApiPost, adminApiPut } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { navigateToPath } from "@zbeaver/beaver/ui/admin/navigation"
+import { slugify } from "@zbeaver/beaver/pkg/utils/slug"
+import { ContentTypeFieldsRenderer } from "@zbeaver/beaver/ui/admin/posts/content-type-fields-renderer"
+import { SectionEmbedder, type EmbeddedSection } from "@zbeaver/beaver/ui/admin/sections/section-embedder"
+import { getContentTypeRegistry } from "@zbeaver/beaver/app/registry/content-types"
+import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker"
+import { MultiSelect } from "@zbeaver/beaver/ui/admin/components/ui/multi-select"
+import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import { useAdminSession } from "@zbeaver/beaver/ui/admin/auth/admin-session-provider"
+import type { AdminToastEntity } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
 import {
   AdminPageHeader
-} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
+} from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
 
 const TiptapEditor = lazy(async () => {
-  const mod = await import("@zaenpm/beaver/ui/admin/editor/tiptap-editor")
+  const mod = await import("@zbeaver/beaver/ui/admin/editor/tiptap-editor")
   return { default: mod.TiptapEditor }
 })
 

@@ -1,8 +1,8 @@
 
 import { lazy, Suspense, useEffect, useState, useTransition } from "react"
 
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@zaenpm/beaver/ui/admin/components/ui/card"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@zbeaver/beaver/ui/admin/components/ui/card"
 import {
   Dialog,
   DialogClose,
@@ -11,19 +11,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@zaenpm/beaver/ui/admin/components/ui/dialog"
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
-import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
-import { AdminPageHeader } from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
-import { SectionEmbedder, type EmbeddedSection } from "@zaenpm/beaver/ui/admin/sections/section-embedder"
-import { adminApiPost, adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
-import { navigateToPath } from "@zaenpm/beaver/ui/admin/navigation"
-import { slugify } from "@zaenpm/beaver/pkg/utils/slug"
+} from "@zbeaver/beaver/ui/admin/components/ui/dialog"
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
+import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
+import { AdminPageHeader } from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
+import { SectionEmbedder, type EmbeddedSection } from "@zbeaver/beaver/ui/admin/sections/section-embedder"
+import { adminApiPost, adminApiPut } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import { navigateToPath } from "@zbeaver/beaver/ui/admin/navigation"
+import { slugify } from "@zbeaver/beaver/pkg/utils/slug"
 import { Settings2 } from "lucide-react"
 
 const TiptapEditor = lazy(async () => {
-  const mod = await import("@zaenpm/beaver/ui/admin/editor/tiptap-editor")
+  const mod = await import("@zbeaver/beaver/ui/admin/editor/tiptap-editor")
   return { default: mod.TiptapEditor }
 })
 

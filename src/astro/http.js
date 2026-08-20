@@ -1,4 +1,4 @@
-import { apiApp } from "@zaenpm/beaver/server"
+import { apiApp } from "@zbeaver/beaver/server"
 
 export const prerender = false
 

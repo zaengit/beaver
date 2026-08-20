@@ -1,8 +1,8 @@
 
 import type { ReactNode } from "react"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@zaenpm/beaver/ui/admin/components/ui/card"
-import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@zbeaver/beaver/ui/admin/components/ui/card"
+import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
 export function AdminFormLayout({
   children,

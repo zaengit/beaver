@@ -5,13 +5,13 @@ import react from "@astrojs/react"
 import node from "@astrojs/node"
 import tailwindcss from "@tailwindcss/vite"
 import { loadEnv } from "vite"
-import beaver from "@zaen3/beaver"
+import beaver from "@zbeaver/beaver"
 
 function normalizePath(value, fallback, envName) {
   const segment = value?.trim().replace(/^\/+|\/+$/g, "") || fallback
 
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(segment)) {
-    throw new Error(`${envName} must be a single URL segment, such as panel-rahasia.`)
+    throw new Error(`${envName} must be a single URL segment, such as panel.`)
   }
 
   return `/${segment}`

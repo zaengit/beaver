@@ -1,4 +1,4 @@
-import type { MenuTree } from "@zaenpm/beaver/server"
+import type { MenuTree } from "@zbeaver/beaver/server"
 
 interface FooterProps {
   items: MenuTree[]

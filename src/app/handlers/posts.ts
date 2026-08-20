@@ -1,9 +1,9 @@
-import { adminCreated, adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
-import { requireAuth } from "@zaenpm/beaver/app/handlers/guard"
-import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
-import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
-import type { Session } from "@zaenpm/beaver/app/handlers/types"
-import { can } from "@zaenpm/beaver/app/admin/permissions"
+import { adminCreated, adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
+import { requireAuth } from "@zbeaver/beaver/app/handlers/guard"
+import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
+import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import type { Session } from "@zbeaver/beaver/app/handlers/types"
+import { can } from "@zbeaver/beaver/app/admin/permissions"
 import {
   bulkDeletePosts,
   bulkDuplicatePosts,
@@ -15,14 +15,14 @@ import {
   getPost,
   listPosts,
   updatePost,
-} from "@zaenpm/beaver/app/services/posts"
-import { createPostSchema, updatePostSchema } from "@zaenpm/beaver/app/validations/posts"
-import type { PostFilters } from "@zaenpm/beaver/pkg/types/posts"
+} from "@zbeaver/beaver/app/services/posts"
+import { createPostSchema, updatePostSchema } from "@zbeaver/beaver/app/validations/posts"
+import type { PostFilters } from "@zbeaver/beaver/pkg/types/posts"
 import {
   contentPermission,
   isKnownContentType,
   type ContentAction,
-} from "@zaenpm/beaver/app/admin/content-permissions"
+} from "@zbeaver/beaver/app/admin/content-permissions"
 
 // ---------------------------------------------------------------------------
 // Helpers

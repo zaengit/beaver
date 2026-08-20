@@ -1,6 +1,6 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { handleDuplicateRole } from "@zaenpm/beaver/app/handlers"
+import { handleDuplicateRole } from "@zbeaver/beaver/app/handlers"
 
 export const POST: AdminRoute = async ({ params, locals }) => {
   if (!params.id) {

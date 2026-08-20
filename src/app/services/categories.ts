@@ -1,5 +1,5 @@
-import { generateId, getCurrentTimestamp, slugify } from "@zaenpm/beaver/pkg/utils/index"
-import type { CreateCategoryInput, UpdateCategoryInput } from "@zaenpm/beaver/app/validations/categories"
+import { generateId, getCurrentTimestamp, slugify } from "@zbeaver/beaver/pkg/utils/index"
+import type { CreateCategoryInput, UpdateCategoryInput } from "@zbeaver/beaver/app/validations/categories"
 import {
   findCategoryByIdRecord,
   listCategoryRecords,
@@ -8,9 +8,9 @@ import {
   updateCategoryRecord,
   deleteCategoryRecord,
   type CategoryRow,
-} from "@zaenpm/beaver/app/repositories/categories"
-import type { ServiceResult } from "@zaenpm/beaver/pkg/types"
-import { serviceSuccess, serviceNotFound } from "@zaenpm/beaver/app/services/utils"
+} from "@zbeaver/beaver/app/repositories/categories"
+import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
+import { serviceSuccess, serviceNotFound } from "@zbeaver/beaver/app/services/utils"
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { adminError } from "@zaenpm/beaver/app/admin/api-response"
-import { handleUpdateProfile } from "@zaenpm/beaver/app/handlers"
+import { adminError } from "@zbeaver/beaver/app/admin/api-response"
+import { handleUpdateProfile } from "@zbeaver/beaver/app/handlers"
 
 export const PUT: AdminRoute = async ({ request, locals }) => {
   const body = await request.json()

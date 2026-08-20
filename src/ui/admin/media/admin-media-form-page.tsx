@@ -1,8 +1,8 @@
 
 import { useEffect, useState } from "react"
-import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
-import { MediaForm } from "@zaenpm/beaver/ui/admin/media/media-form"
+import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zbeaver/beaver/ui/admin/core/admin-loading-state"
+import { MediaForm } from "@zbeaver/beaver/ui/admin/media/media-form"
 
 export function AdminMediaEditPage({ id }: { id: string }) {
   const [media, setMedia] = useState<any>(null)

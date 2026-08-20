@@ -1,4 +1,4 @@
-import { getServerContentTypeRegistry } from "@zaenpm/beaver/app/registry/server-content-types"
+import { getServerContentTypeRegistry } from "@zbeaver/beaver/app/registry/server-content-types"
 
 const builtInContentTypes = ["post", "page"]
 

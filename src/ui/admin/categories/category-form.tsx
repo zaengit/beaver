@@ -1,19 +1,19 @@
 
 import { useEffect, useState, useTransition } from "react"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
-import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
-import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea"
-import { adminApiPost, adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker"
-import { navigateToPath } from "@zaenpm/beaver/ui/admin/navigation"
-import { slugify } from "@zaenpm/beaver/pkg/utils/slug"
-import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
-import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
+import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
+import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea"
+import { adminApiPost, adminApiPut } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker"
+import { navigateToPath } from "@zbeaver/beaver/ui/admin/navigation"
+import { slugify } from "@zbeaver/beaver/pkg/utils/slug"
+import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import { useAdminSession } from "@zbeaver/beaver/ui/admin/auth/admin-session-provider"
 import {
   AdminPageHeader,
-} from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
-import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zaenpm/beaver/ui/admin/layout/admin-form-layout"
+} from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
+import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zbeaver/beaver/ui/admin/layout/admin-form-layout"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

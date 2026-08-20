@@ -1,2 +1,2 @@
-export { getMenuTree } from "@zaenpm/beaver/app/services/menus"
-export { getSiteSettings } from "@zaenpm/beaver/app/services/settings"
+export { getMenuTree } from "@zbeaver/beaver/app/services/menus"
+export { getSiteSettings } from "@zbeaver/beaver/app/services/settings"

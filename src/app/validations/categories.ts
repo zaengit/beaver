@@ -3,7 +3,7 @@ import {
   emptyToNull,
   imageUrlSimpleSchema,
   publishStatusEnum,
-} from "@zaenpm/beaver/app/validations/shared"
+} from "@zbeaver/beaver/app/validations/shared"
 
 // ---------------------------------------------------------------------------
 // Schemas

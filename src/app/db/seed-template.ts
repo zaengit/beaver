@@ -5,13 +5,13 @@ import { fileURLToPath } from "node:url"
 
 import { db } from "./index"
 import { users } from "./schema"
-import { findPostBySlugRecord } from "@zaenpm/beaver/app/repositories/posts"
-import { findCategoryBySlugRecord } from "@zaenpm/beaver/app/repositories/categories"
-import { listMenus } from "@zaenpm/beaver/app/repositories/menus"
-import { createCategoryAsync } from "@zaenpm/beaver/app/services/categories"
-import { createMenu } from "@zaenpm/beaver/app/services/menus"
-import { createPost } from "@zaenpm/beaver/app/services/posts"
-import { getSiteSettings, updateSiteSettings } from "@zaenpm/beaver/app/services/settings"
+import { findPostBySlugRecord } from "@zbeaver/beaver/app/repositories/posts"
+import { findCategoryBySlugRecord } from "@zbeaver/beaver/app/repositories/categories"
+import { listMenus } from "@zbeaver/beaver/app/repositories/menus"
+import { createCategoryAsync } from "@zbeaver/beaver/app/services/categories"
+import { createMenu } from "@zbeaver/beaver/app/services/menus"
+import { createPost } from "@zbeaver/beaver/app/services/posts"
+import { getSiteSettings, updateSiteSettings } from "@zbeaver/beaver/app/services/settings"
 
 interface TemplateSeed {
   settings?: { title: string; description: string; meta_title: string; meta_description: string; timezone?: string }

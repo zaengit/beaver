@@ -1,6 +1,6 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { handleCreateRole, handleListRoles } from "@zaenpm/beaver/app/handlers"
+import { handleCreateRole, handleListRoles } from "@zbeaver/beaver/app/handlers"
 
 const VALID_SORT_BY = new Set(["name", "createdAt"])
 const VALID_SORT_ORDER = new Set(["asc", "desc"])

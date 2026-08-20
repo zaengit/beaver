@@ -1,12 +1,12 @@
 
 import { useEffect, useId, useState } from "react";
 import { X } from "lucide-react";
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button";
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input";
-import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label";
-import { Textarea } from "@zaenpm/beaver/ui/admin/components/ui/textarea";
-import { Checkbox } from "@zaenpm/beaver/ui/admin/components/ui/checkbox";
-import { MediaPicker } from "@zaenpm/beaver/ui/admin/shared/media-picker";
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button";
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input";
+import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label";
+import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea";
+import { Checkbox } from "@zbeaver/beaver/ui/admin/components/ui/checkbox";
+import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker";
 import {
   ITEM_FIELD_LABELS,
   ITEM_FIELD_PLACEHOLDERS,

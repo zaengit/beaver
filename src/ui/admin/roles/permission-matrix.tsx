@@ -1,7 +1,7 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@zaenpm/beaver/ui/admin/components/ui/card"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { Checkbox } from "@zaenpm/beaver/ui/admin/components/ui/checkbox"
+import { Card, CardContent, CardHeader, CardTitle } from "@zbeaver/beaver/ui/admin/components/ui/card"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { Checkbox } from "@zbeaver/beaver/ui/admin/components/ui/checkbox"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

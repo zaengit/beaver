@@ -1,11 +1,11 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { adminError } from "@zaenpm/beaver/app/admin/api-response"
+import { adminError } from "@zbeaver/beaver/app/admin/api-response"
 import {
   handleDeleteUser,
   handleGetUser,
   handleUpdateUser,
-} from "@zaenpm/beaver/app/handlers"
+} from "@zbeaver/beaver/app/handlers"
 
 export const GET: AdminRoute = async ({ params }) => {
   if (!params.id) return adminError("User id is required.", 400)

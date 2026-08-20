@@ -1,9 +1,9 @@
 
 import { useEffect, useState } from "react"
 
-import { AdminLoadingState } from "@zaenpm/beaver/ui/admin/core/admin-loading-state"
-import { PageForm, type PageData } from "@zaenpm/beaver/ui/admin/pages/page-form"
-import { adminApiGet } from "@zaenpm/beaver/ui/admin/shared/api-client"
+import { AdminLoadingState } from "@zbeaver/beaver/ui/admin/core/admin-loading-state"
+import { PageForm, type PageData } from "@zbeaver/beaver/ui/admin/pages/page-form"
+import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
 
 export function AdminPageCreatePage() {
   return <PageForm mode="create" />

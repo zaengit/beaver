@@ -1,5 +1,5 @@
 
-import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
+import { useAdminSession } from "@zbeaver/beaver/ui/admin/auth/admin-session-provider"
 import {
   CircleDot,
   LayoutDashboard,
@@ -30,14 +30,15 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
-} from "@zaenpm/beaver/ui/admin/components/ui/sidebar"
+} from "@zbeaver/beaver/ui/admin/components/ui/sidebar"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@zaenpm/beaver/ui/admin/components/ui/collapsible"
+} from "@zbeaver/beaver/ui/admin/components/ui/collapsible"
 import { useNavigate } from "react-router"
-import { getContentTypeRegistry } from "@zaenpm/beaver/app/registry/content-types"
+import { getContentTypeRegistry } from "@zbeaver/beaver/app/registry/content-types"
+import packageJson from "../../../../package.json" with { type: "json" }
 
 interface AdminSidebarProps {
   user: {
@@ -245,6 +246,7 @@ export function AdminSidebar({ user, permissions, roleName, pathname }: AdminSid
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <p className="px-3 pt-3 text-xs text-sidebar-foreground/50">Beaver v{packageJson.version}</p>
       </SidebarFooter>
     </Sidebar>
   )

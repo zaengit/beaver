@@ -17,7 +17,7 @@ const sharedConfig = {
   define: { __ADMIN_PATH__: "undefined" },
   resolve: {
     alias: {
-      "@zaenpm/beaver": sourceRoot,
+      "@zbeaver/beaver": sourceRoot,
       "@content-type-registry": resolve(sourceRoot, "registry/content-types.json"),
       "@menu-group-registry": resolve(sourceRoot, "registry/menu-groups.json"),
       "@section-registry": resolve(sourceRoot, "registry/sections.json"),

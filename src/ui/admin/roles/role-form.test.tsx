@@ -4,7 +4,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 
-import { RoleForm } from "@zaenpm/beaver/ui/admin/roles/role-form"
+import { RoleForm } from "@zbeaver/beaver/ui/admin/roles/role-form"
 
 const { adminApiPost, adminApiPut, navigateToPath } = vi.hoisted(() => ({
   adminApiPost: vi.fn(),
@@ -12,7 +12,7 @@ const { adminApiPost, adminApiPut, navigateToPath } = vi.hoisted(() => ({
   navigateToPath: vi.fn(),
 }))
 
-vi.mock("@zaenpm/beaver/ui/admin/shared/api-client", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/shared/api-client", () => ({
   adminApiPost,
   adminApiPut,
 }))
@@ -24,15 +24,15 @@ vi.mock("react-router", async () => {
   }
 })
 
-vi.mock("@zaenpm/beaver/ui/admin/navigation", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/navigation", () => ({
   navigateToPath,
 }))
 
-vi.mock("@zaenpm/beaver/ui/admin/roles/permission-matrix", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/roles/permission-matrix", () => ({
   PermissionMatrix: () => <div>permission-matrix</div>,
 }))
 
-vi.mock("@zaenpm/beaver/ui/admin/components/ui/sidebar", () => ({
+vi.mock("@zbeaver/beaver/ui/admin/components/ui/sidebar", () => ({
   SidebarProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarTrigger: () => <button type="button">toggle</button>,
   SidebarInset: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

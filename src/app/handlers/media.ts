@@ -1,20 +1,20 @@
 import { unlink } from "fs/promises"
 import path from "path"
 
-import { adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
-import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
-import { requirePermission } from "@zaenpm/beaver/app/handlers/guard"
-import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
-import type { Session } from "@zaenpm/beaver/app/handlers/types"
-import { getUploadDir } from "@zaenpm/beaver/pkg/media/media"
+import { adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
+import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
+import { requirePermission } from "@zbeaver/beaver/app/handlers/guard"
+import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import type { Session } from "@zbeaver/beaver/app/handlers/types"
+import { getUploadDir } from "@zbeaver/beaver/pkg/media/media"
 import {
   deleteMedia as deleteMediaService,
   getMedia,
   listMediaService,
   uploadMediaForUser,
   updateMedia,
-} from "@zaenpm/beaver/app/services/media"
-import { updateMediaSchema, uploadMediaSchema } from "@zaenpm/beaver/app/validations/media"
+} from "@zbeaver/beaver/app/services/media"
+import { updateMediaSchema, uploadMediaSchema } from "@zbeaver/beaver/app/validations/media"
 
 // ---------------------------------------------------------------------------
 // Helpers

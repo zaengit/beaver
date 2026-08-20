@@ -1,9 +1,9 @@
-import { adminCreated, adminError, adminSuccess } from "@zaenpm/beaver/app/admin/api-response"
-import { requireAuth } from "@zaenpm/beaver/app/handlers/guard"
-import { mapServiceError } from "@zaenpm/beaver/app/handlers/error-mapper"
-import { parseWithSchema } from "@zaenpm/beaver/app/handlers/utils"
-import type { Session } from "@zaenpm/beaver/app/handlers/types"
-import { can } from "@zaenpm/beaver/app/admin/permissions"
+import { adminCreated, adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
+import { requireAuth } from "@zbeaver/beaver/app/handlers/guard"
+import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
+import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import type { Session } from "@zbeaver/beaver/app/handlers/types"
+import { can } from "@zbeaver/beaver/app/admin/permissions"
 import {
   bulkDeleteCategories,
   bulkDuplicateCategories,
@@ -13,14 +13,14 @@ import {
   duplicateCategory,
   listCategories,
   updateCategory,
-} from "@zaenpm/beaver/app/services/categories"
-import { findCategoryByIdRecord } from "@zaenpm/beaver/app/repositories/categories"
-import { createCategorySchema, updateCategorySchema } from "@zaenpm/beaver/app/validations/categories"
+} from "@zbeaver/beaver/app/services/categories"
+import { findCategoryByIdRecord } from "@zbeaver/beaver/app/repositories/categories"
+import { createCategorySchema, updateCategorySchema } from "@zbeaver/beaver/app/validations/categories"
 import {
   categoryPermission,
   isKnownContentType,
   type CategoryAction,
-} from "@zaenpm/beaver/app/admin/content-permissions"
+} from "@zbeaver/beaver/app/admin/content-permissions"
 
 // ---------------------------------------------------------------------------
 // Helpers

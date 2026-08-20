@@ -1,7 +1,7 @@
 
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator"
 
-import { cn } from "@zaenpm/beaver/pkg/utils/ui"
+import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
 function Separator({
   className,

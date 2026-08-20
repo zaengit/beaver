@@ -1,6 +1,6 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { handleDeleteMedia, handleGetMedia, handleUpdateMedia } from "@zaenpm/beaver/app/handlers"
+import { handleDeleteMedia, handleGetMedia, handleUpdateMedia } from "@zbeaver/beaver/app/handlers"
 
 export const GET: AdminRoute = async ({ params }) => {
   return handleGetMedia(params.id!)

@@ -2,8 +2,8 @@
 import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
 
-import { cn } from "@zaenpm/beaver/pkg/utils/ui"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
+import { cn } from "@zbeaver/beaver/pkg/utils/ui"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />

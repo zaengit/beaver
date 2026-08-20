@@ -3,14 +3,14 @@ import { useState, useTransition } from "react"
 import { useNavigate } from "react-router"
 import { Loader2 } from "lucide-react"
 
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
-import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
-import { adminApiPut } from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
-import { useAdminSession } from "@zaenpm/beaver/ui/admin/auth/admin-session-provider"
-import { AdminPageHeader } from "@zaenpm/beaver/ui/admin/layout/admin-page-shell"
-import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zaenpm/beaver/ui/admin/layout/admin-form-layout"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
+import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
+import { adminApiPut } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import { useAdminSession } from "@zbeaver/beaver/ui/admin/auth/admin-session-provider"
+import { AdminPageHeader } from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
+import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zbeaver/beaver/ui/admin/layout/admin-form-layout"
 
 export function AdminProfilePage() {
   const navigate = useNavigate()

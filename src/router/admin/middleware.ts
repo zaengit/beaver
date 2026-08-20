@@ -1,8 +1,8 @@
 import type { MiddlewareHandler } from "hono"
 
-import { getAdminSession } from "@zaenpm/beaver/app/admin/api-guard"
-import { can } from "@zaenpm/beaver/app/admin/permissions"
-import { clientAddress, isWithinRateLimit } from "@zaenpm/beaver/router/security"
+import { getAdminSession } from "@zbeaver/beaver/app/admin/api-guard"
+import { can } from "@zbeaver/beaver/app/admin/permissions"
+import { clientAddress, isWithinRateLimit } from "@zbeaver/beaver/router/security"
 
 export type AdminApiEnvironment = {
   Variables: { session: { user: { id: string } } }

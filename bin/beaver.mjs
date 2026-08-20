@@ -61,7 +61,7 @@ function installDeps() {
   const cwd = process.cwd()
   const pm = detectPm()
   const installCmd = pm === "npm" ? "install" : "add"
-  const packageDependencies = existsSync(resolve(cwd, "node_modules", "@zaenpm", "@zaenpm/beaver", "package.json"))
+  const packageDependencies = existsSync(resolve(cwd, "node_modules", "@zbeaver", "beaver", "package.json"))
     ? installDepsList
     : [packageName, ...installDepsList]
   console.log(`Installing dependencies with ${pm}...`)

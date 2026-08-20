@@ -1,6 +1,6 @@
-import type { AdminRoute } from "@zaenpm/beaver/router/route"
+import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { handleBulkDeletePosts } from "@zaenpm/beaver/app/handlers"
+import { handleBulkDeletePosts } from "@zbeaver/beaver/app/handlers"
 
 export const POST: AdminRoute = async ({ request, locals }) => {
   const body = await request.json()

@@ -22,14 +22,14 @@ import {
   adminApiDelete,
   adminApiPost,
   adminApiPut,
-} from "@zaenpm/beaver/ui/admin/shared/api-client"
-import { SortableMenuItem } from "@zaenpm/beaver/ui/admin/menus/sortable-menu-item"
-import { Button } from "@zaenpm/beaver/ui/admin/components/ui/button"
-import { Input } from "@zaenpm/beaver/ui/admin/components/ui/input"
-import { Label } from "@zaenpm/beaver/ui/admin/components/ui/label"
-import { Badge } from "@zaenpm/beaver/ui/admin/components/ui/badge"
-import { adminToast } from "@zaenpm/beaver/ui/admin/shared/admin-toast"
-import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zaenpm/beaver/ui/admin/layout/admin-form-layout"
+} from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { SortableMenuItem } from "@zbeaver/beaver/ui/admin/menus/sortable-menu-item"
+import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
+import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
+import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
+import { Badge } from "@zbeaver/beaver/ui/admin/components/ui/badge"
+import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import { AdminFormCard, AdminFormLayout, AdminFormMain, AdminFormSidebar } from "@zbeaver/beaver/ui/admin/layout/admin-form-layout"
 
 
 // ─── Types ───────────────────────────────────────────────────────────────────

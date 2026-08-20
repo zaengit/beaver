@@ -1,10 +1,10 @@
 import { and, asc, count, desc, eq, like, or, type SQL } from "drizzle-orm"
 
-import { db } from "@zaenpm/beaver/app/db"
-import { permissions as permissionsTable, rolePermissions, roles, users } from "@zaenpm/beaver/app/db/schema"
-import type { RoleRecord } from "@zaenpm/beaver/app/models/role"
-import { sanitizeText } from "@zaenpm/beaver/pkg/security/sanitize"
-import { generateId } from "@zaenpm/beaver/pkg/utils/index"
+import { db } from "@zbeaver/beaver/app/db"
+import { permissions as permissionsTable, rolePermissions, roles, users } from "@zbeaver/beaver/app/db/schema"
+import type { RoleRecord } from "@zbeaver/beaver/app/models/role"
+import { sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
+import { generateId } from "@zbeaver/beaver/pkg/utils/index"
 
 export type RoleRow = RoleRecord
 export type PermissionRow = typeof permissionsTable.$inferSelect
