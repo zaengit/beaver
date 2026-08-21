@@ -25,18 +25,6 @@ export const adminRefreshSessions = sqliteTable("admin_refresh_sessions", {
   createdAt: integer("created_at").notNull(),
 });
 
-// ─── Password Reset Tokens ───────────────────────────────────────────────────
-
-export const passwordResetTokens = sqliteTable("password_reset_tokens", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  token: text("token").notNull().unique(),
-  expiresAt: integer("expires_at").notNull(),
-  createdAt: integer("created_at").notNull(),
-});
-
 // ─── Posts ───────────────────────────────────────────────────────────────────
 
 export const posts = sqliteTable("posts", {
@@ -182,7 +170,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.roleId],
     references: [roles.id],
   }),
-  passwordResetTokens: many(passwordResetTokens),
   posts: many(posts),
   media: many(media),
 }));

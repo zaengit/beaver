@@ -3,7 +3,6 @@ import type { ReactNode } from "react"
 import { SidebarTrigger } from "@zbeaver/beaver/ui/admin/components/ui/sidebar"
 
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
-import { Badge } from "@zbeaver/beaver/ui/admin/components/ui/badge"
 import {
   Card,
   CardContent,

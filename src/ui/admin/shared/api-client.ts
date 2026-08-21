@@ -1,20 +1,21 @@
-export interface AdminApiSuccess<T> {
+interface AdminApiSuccess<T> {
   success: true
   message: string
   data: T
 }
 
-export interface AdminApiFailure {
+interface AdminApiFailure {
   success: false
   message: string
   data?: null
   errors?: Record<string, string[]>
 }
 
-export type AdminApiResult<T> = AdminApiSuccess<T> | AdminApiFailure
+type AdminApiResult<T> = AdminApiSuccess<T> | AdminApiFailure
 
 let refreshRequest: Promise<boolean> | null = null
 let unauthorizedHandler: (() => void) | null = null
+let forbiddenHandler: (() => void) | null = null
 
 /**
  * Registers the active admin session owner. A terminal 401 means both the
@@ -23,6 +24,10 @@ let unauthorizedHandler: (() => void) | null = null
  */
 export function setAdminUnauthorizedHandler(handler: (() => void) | null) {
   unauthorizedHandler = handler
+}
+
+export function setAdminForbiddenHandler(handler: (() => void) | null) {
+  forbiddenHandler = handler
 }
 
 async function refreshAccessToken(): Promise<boolean> {
@@ -70,6 +75,9 @@ async function adminApiRequest<T>(
   // session makes ProtectedAdminLayout redirect to the configured login path.
   if (response.status === 401) {
     unauthorizedHandler?.()
+  }
+  if (response.status === 403) {
+    forbiddenHandler?.()
   }
 
   const fallbackError: AdminApiFailure = {

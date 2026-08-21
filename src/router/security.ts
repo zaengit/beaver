@@ -1,6 +1,8 @@
 import type { Context } from "hono"
+import { isIP } from "node:net"
+import { isWithinRateLimit } from "@zbeaver/beaver/app/security/rate-limit"
 
-const RATE_LIMITS = new Map<string, { count: number; resetAt: number }>()
+export { isWithinRateLimit }
 
 export function applySecurityHeaders(context: Pick<Context, "header">) {
   context.header("X-Content-Type-Options", "nosniff")
@@ -38,7 +40,10 @@ export async function enforceRequestBodyLimit(context: Context, maximum: number)
     const { done, value } = await reader.read()
     if (done) break
     size += value.byteLength
-    if (size > maximum) return "Request body is too large."
+    if (size > maximum) {
+      await reader.cancel()
+      return "Request body is too large."
+    }
     chunks.push(value)
   }
 
@@ -61,22 +66,14 @@ export function hasValidSameOrigin(request: Request) {
 
 export function clientAddress(request: Request) {
   if (process.env.TRUST_PROXY === "true") {
-    return request.headers.get("cf-connecting-ip")
-      ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-      ?? request.headers.get("x-real-ip")
-      ?? "unknown"
+    const forwarded = [
+      request.headers.get("cf-connecting-ip"),
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+      request.headers.get("x-real-ip"),
+    ]
+    for (const candidate of forwarded) {
+      if (candidate && isIP(candidate) !== 0) return candidate
+    }
   }
   return "unknown"
-}
-
-export function isWithinRateLimit(key: string, limit: number, windowMs: number) {
-  const now = Date.now()
-  const current = RATE_LIMITS.get(key)
-  if (!current || current.resetAt <= now) {
-    RATE_LIMITS.set(key, { count: 1, resetAt: now + windowMs })
-    return true
-  }
-  if (current.count >= limit) return false
-  current.count += 1
-  return true
 }

@@ -1,6 +1,15 @@
 ---
+import type { PublicPost } from "@/shared/types/posts"
+import type { Section } from "./shared/types"
 import SectionHeading from "./shared/section-heading.astro"
-const { section, contentItems = [] } = Astro.props as any
+import { safeContentHref } from "../safe-url"
+
+interface Props {
+  section: Section
+  contentItems?: PublicPost[]
+}
+
+const { section, contentItems = [] } = Astro.props as Props
 ---
 
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 my-6">
@@ -8,11 +17,11 @@ const { section, contentItems = [] } = Astro.props as any
     <div class="mx-auto max-w-7xl">
       <SectionHeading content={section} theme="light" />
       <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {contentItems.map((post: any) => (
+        {contentItems.map((post) => (
           <article class="rounded-[24px] border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-indigo-300 hover:shadow-xl group flex flex-col justify-between">
             <div>
               <h3 class="text-xl font-bold tracking-tight text-slate-950 transition-colors group-hover:text-indigo-600">
-                <a href={`/${post.type}/${post.slug}`} class="focus:outline-none">
+                <a href={safeContentHref(post.type, post.slug)} class="focus:outline-none">
                   {post.title}
                 </a>
               </h3>
@@ -20,7 +29,7 @@ const { section, contentItems = [] } = Astro.props as any
             </div>
             <div class="mt-6 pt-4 border-t border-slate-100">
               <a
-                href={`/${post.type}/${post.slug}`}
+                href={safeContentHref(post.type, post.slug)}
                 class="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200/80 px-4 py-2 text-xs font-bold text-indigo-700 transition-all duration-200 hover:bg-indigo-600 hover:text-white group-hover:translate-x-1"
               >
                 <span>Read article</span>

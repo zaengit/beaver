@@ -109,6 +109,11 @@ const AdminSettingsPage = lazy(async () => {
   return { default: mod.AdminSettingsPage }
 })
 
+const AdminForbiddenPage = lazy(async () => {
+  const mod = await import("@zbeaver/beaver/ui/admin/core/admin-forbidden-page")
+  return { default: mod.AdminForbiddenPage }
+})
+
 export function AdminRouter() {
   return (
     <Suspense fallback={<AdminLoadingState />}>
@@ -128,6 +133,7 @@ export function AdminRouter() {
           <Route path="categories/:id/edit" element={<AdminCategoryEditRoute />} />
           <Route path="menus" element={<AdminMenusPage />} />
           <Route path="profile" element={<AdminProfilePage />} />
+          <Route path="403" element={<AdminForbiddenPage />} />
           <Route path="roles" element={<AdminRolesPage />} />
           <Route path="roles/new" element={<AdminRoleCreatePage />} />
           <Route path="roles/:id/edit" element={<AdminRoleEditRoute />} />
@@ -172,9 +178,7 @@ function ProtectedAdminLayout() {
   return (
     <SidebarProvider>
       <AdminSidebar
-        user={session.user}
         permissions={session.permissions}
-        roleName={session.roleName}
         pathname={location.pathname}
       />
       <SidebarInset>

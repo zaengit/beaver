@@ -54,7 +54,6 @@ const LANGUAGES = [
 export function CodeBlockView({
   node,
   updateAttributes,
-  extension,
 }: ReactNodeViewProps) {
   const language = (node.attrs.language as string) || ""
 

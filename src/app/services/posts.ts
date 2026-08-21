@@ -1,10 +1,8 @@
 import {
   findPostByIdRecord,
   findPostBySlugRecord,
-  findPublishedBySlugRecord,
   findPublishedByTypeAndSlugRecord,
   listPostRecords,
-  listPublishedPostRecords,
   listPublishedPostRecordsByType,
   listPublishedPostRecordsByTag,
   listPublishedArchiveFilterOptionsByType,
@@ -17,13 +15,15 @@ import {
 import { getServerContentTypeRegistry } from "@zbeaver/beaver/app/registry/server-content-types"
 import { sanitizeText, sanitizeHtml } from "@zbeaver/beaver/pkg/security/sanitize"
 import { generateId } from "@zbeaver/beaver/pkg/utils/id"
+import { clampPage, clampPerPage } from "@zbeaver/beaver/pkg/utils/pagination"
+import { slugRegex } from "@zbeaver/beaver/app/validations/shared"
 import type { CreatePostInput, UpdatePostInput } from "@zbeaver/beaver/app/validations/posts"
 import type {
   Post,
   PostWithRelations,
+  PublicPost,
   PublicArchiveFilterOptions,
   PublicArchiveFilters,
-  PublicSearchResult,
   ServiceResult,
   PaginatedResult,
   PostFilters,
@@ -163,7 +163,6 @@ export function createPost(
 export function updatePost(
   id: string,
   data: UpdatePostInput,
-  _userId: string,
 ): ServiceResult<Post> {
   const existing = findPostByIdRecord(id)
   if (!existing) return serviceNotFound("Post")
@@ -240,7 +239,7 @@ export function duplicatePost(id: string, userId: string): ServiceResult<Post> {
 
     invalidatePublicDataCache()
     return serviceSuccess(post, "Post duplicated.")
-  } catch (err) {
+  } catch {
     return { success: false, error: { code: "db_error", message: "Failed to duplicate post." } }
   }
 }
@@ -329,7 +328,7 @@ export function deletePost(id: string): ServiceResult<null> {
     deletePostRecord(id)
     invalidatePublicDataCache()
     return serviceSuccess(null, "Post deleted.")
-  } catch (err) {
+  } catch {
     return { success: false, error: { code: "db_error", message: "Failed to delete post." } }
   }
 }
@@ -349,24 +348,22 @@ export function listPosts(filters: PostFilters): ServiceResult<PaginatedResult<P
 
 // ─── Public Queries ──────────────────────────────────────────────────────────
 
-export function getPublishedPost(slug: string): ServiceResult<Post & { authorName: string | null }> {
-  const post = getCachedPublicData(`post:published:${slug}`, () => findPublishedBySlugRecord(slug))
-  if (!post) return serviceNotFound("Post")
-  return serviceSuccess(post, "OK")
-}
-
-export function listPublishedPosts(page = 1, perPage = 12): ServiceResult<PaginatedResult<unknown>> {
-  const result = getCachedPublicData(`posts:published:${page}:${perPage}`, () => listPublishedPostRecords(page, perPage))
-  return serviceSuccess(result, "OK")
-}
-
 export function getPublishedPostByType(type: string, slug: string): ServiceResult<Post & { authorName: string | null }> {
-  const post = getCachedPublicData(`post:published:${type}:${slug}`, () => findPublishedByTypeAndSlugRecord(type, slug))
+  if (!slugRegex.test(type) || !slugRegex.test(slug)) return serviceNotFound("Post")
+
+  const post = getCachedPublicData(`post:published:${type}:${slug}`, () => {
+    const record = findPublishedByTypeAndSlugRecord(type, slug)
+    return record
+      ? { ...record, description: record.description ? sanitizeHtml(record.description) : null }
+      : record
+  })
   if (!post) return serviceNotFound("Post")
   return serviceSuccess(post, "OK")
 }
 
-export function listPublishedPostsByType(type: string, page = 1, perPage = 12, filters: PublicArchiveFilters = {}): ServiceResult<PaginatedResult<unknown>> {
+export function listPublishedPostsByType(type: string, page = 1, perPage = 12, filters: PublicArchiveFilters = {}): ServiceResult<PaginatedResult<PublicPost>> {
+  const normalizedPage = clampPage(page)
+  const normalizedPerPage = clampPerPage(perPage, 12)
   const availableCustomFields = getPublicCustomFieldFilters(type)
   const requestedCustomFields = filters.customFields ?? {}
   const customFields = Object.fromEntries(
@@ -385,8 +382,8 @@ export function listPublishedPostsByType(type: string, page = 1, perPage = 12, f
     sortOrder: filters.sortOrder === "asc" || filters.sortOrder === "desc" ? filters.sortOrder : undefined,
   }
   const customFieldCacheKey = Object.entries(normalizedFilters.customFields ?? {}).sort(([a], [b]) => a.localeCompare(b)).map(([name, value]) => `${name}=${value}`).join(",")
-  const cacheKey = [type, page, perPage, normalizedFilters.search?.toLowerCase() ?? "", normalizedFilters.category?.toLowerCase() ?? "", normalizedFilters.tag?.toLowerCase() ?? "", customFieldCacheKey, normalizedFilters.sortBy ?? "", normalizedFilters.sortOrder ?? ""].join(":")
-  return serviceSuccess(getCachedPublicData(`posts:published:${cacheKey}`, () => listPublishedPostRecordsByType(type, page, perPage, normalizedFilters)), "OK")
+  const cacheKey = [type, normalizedPage, normalizedPerPage, normalizedFilters.search?.toLowerCase() ?? "", normalizedFilters.category?.toLowerCase() ?? "", normalizedFilters.tag?.toLowerCase() ?? "", customFieldCacheKey, normalizedFilters.sortBy ?? "", normalizedFilters.sortOrder ?? ""].join(":")
+  return serviceSuccess(getCachedPublicData(`posts:published:${cacheKey}`, () => listPublishedPostRecordsByType(type, normalizedPage, normalizedPerPage, normalizedFilters)), "OK")
 }
 
 export function getPublishedArchiveFilterOptions(type: string): ServiceResult<PublicArchiveFilterOptions> {
@@ -396,11 +393,13 @@ export function getPublishedArchiveFilterOptions(type: string): ServiceResult<Pu
   })), "OK")
 }
 
-export function getPublicCustomFieldFilters(type: string) {
+function getPublicCustomFieldFilters(type: string) {
   const registry = getServerContentTypeRegistry()
   const contentType = registry.contentTypes.find((candidate) => candidate.slug === type)
   if (!contentType) return []
   return (registry.templates.find((template) => template.id === contentType.detailTemplate && template.kind === "detail")?.fieldSlots ?? [])
+    .filter((field) => /^[A-Za-z0-9_-]{1,64}$/.test(field.key))
+    .slice(0, 50)
     .flatMap((field) => ["text", "number", "boolean", "select", "date"].includes(field.type)
       ? [{ name: field.key, label: field.label, type: field.type as "text" | "number" | "boolean" | "select" | "date", options: [] as string[] }]
       : [])
@@ -408,8 +407,15 @@ export function getPublicCustomFieldFilters(type: string) {
 
 export function getPublicCustomFieldFiltersFromSearchParams(type: string, searchParams: URLSearchParams) {
   const allowedNames = new Set(getPublicCustomFieldFilters(type).map((field) => field.name))
-  return Object.fromEntries([...searchParams.entries()]
-    .flatMap(([key, value]) => key.startsWith("field_") && allowedNames.has(key.slice(6)) ? [[key.slice(6), value]] : []))
+  const result: Record<string, string> = {}
+  let inspected = 0
+  for (const [key, value] of searchParams.entries()) {
+    inspected += 1
+    if (inspected > 200 || Object.keys(result).length >= 50) break
+    const name = key.startsWith("field_") ? key.slice(6) : ""
+    if (name && allowedNames.has(name)) result[name] = value.slice(0, 100)
+  }
+  return result
 }
 
 function isValidCustomFieldFilterValue(field: ReturnType<typeof getPublicCustomFieldFilters>[number], value: string) {
@@ -420,29 +426,33 @@ function isValidCustomFieldFilterValue(field: ReturnType<typeof getPublicCustomF
   return true
 }
 
-export function searchPublishedPosts(query: string, page = 1, perPage = 12): ServiceResult<PaginatedResult<PublicSearchResult>> {
+export function searchPublishedPosts(query: string, page = 1, perPage = 12): ServiceResult<PaginatedResult<PublicPost>> {
   const normalizedQuery = query.trim().slice(0, 100)
+  const normalizedPage = clampPage(page)
+  const normalizedPerPage = clampPerPage(perPage, 12)
   if (!normalizedQuery) {
-    return serviceSuccess({ data: [], meta: { currentPage: 1, perPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK")
+    return serviceSuccess({ data: [], meta: { currentPage: 1, perPage: normalizedPerPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK")
   }
 
   const result = getCachedPublicData(
-    `posts:published:search:${normalizedQuery.toLowerCase()}:${page}:${perPage}`,
-    () => searchPublishedPostRecords(normalizedQuery, page, perPage),
+    `posts:published:search:${normalizedQuery.toLowerCase()}:${normalizedPage}:${normalizedPerPage}`,
+    () => searchPublishedPostRecords(normalizedQuery, normalizedPage, normalizedPerPage),
   )
   return serviceSuccess(result, "OK")
 }
 
-export function listPublishedPostsByTag(tag: string, page = 1, perPage = 12): ServiceResult<PaginatedResult<unknown>> {
+export function listPublishedPostsByTag(tag: string, page = 1, perPage = 12): ServiceResult<PaginatedResult<PublicPost>> {
   const normalizedTag = tag.trim().slice(0, 100)
+  const normalizedPage = clampPage(page)
+  const normalizedPerPage = clampPerPage(perPage, 12)
   if (!normalizedTag) {
-    return serviceSuccess({ data: [], meta: { currentPage: 1, perPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK")
+    return serviceSuccess({ data: [], meta: { currentPage: 1, perPage: normalizedPerPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK")
   }
 
   return serviceSuccess(
     getCachedPublicData(
-      `posts:published:tag:${normalizedTag.toLowerCase()}:${page}:${perPage}`,
-      () => listPublishedPostRecordsByTag(normalizedTag, page, perPage),
+      `posts:published:tag:${normalizedTag.toLowerCase()}:${normalizedPage}:${normalizedPerPage}`,
+      () => listPublishedPostRecordsByTag(normalizedTag, normalizedPage, normalizedPerPage),
     ),
     "OK",
   )

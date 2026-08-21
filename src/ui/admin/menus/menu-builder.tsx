@@ -190,9 +190,7 @@ export const MenuBuilder = forwardRef<MenuBuilderHandle, MenuBuilderProps>(funct
 
       // Rebuild items from current state with updated collapsed
       setItems((currentItems) => {
-        // Rebuild the tree from current items, then re-flatten
-        const allItems = getAllItemsIncludingCollapsed(currentItems, collapsedIds)
-        const tree = buildMenuTreeFromFlat(allItems)
+        const allItems = getAllItemsIncludingCollapsed(currentItems)
         const newCollapsed = new Set(collapsedIds)
         if (newCollapsed.has(id)) {
           newCollapsed.delete(id)
@@ -455,7 +453,7 @@ export const MenuBuilder = forwardRef<MenuBuilderHandle, MenuBuilderProps>(funct
     setSaving(true)
 
     // First, persist any inline edits via updateMenuAction
-    const allItems = getAllItemsIncludingCollapsed(items, collapsedIds)
+    const allItems = getAllItemsIncludingCollapsed(items)
 
     // Build tree structure for reorder
     const tree = buildTreeFromFlat(allItems)
@@ -676,7 +674,6 @@ function updateChildrenDepth(items: FlattenedMenuItem[], parentIndex: number) {
 
 function getAllItemsIncludingCollapsed(
   visibleItems: FlattenedMenuItem[],
-  _collapsedIds: Set<string>
 ): FlattenedMenuItem[] {
   // For now, since we track all items in state (collapsed items are just hidden from render),
   // we return the visible items. In a more complex implementation, we'd track hidden items separately.

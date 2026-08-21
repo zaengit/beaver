@@ -36,7 +36,6 @@ vi.mock("@zbeaver/beaver/ui/admin/components/ui/sidebar", () => ({
   SidebarProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SidebarTrigger: () => <button type="button">toggle</button>,
   SidebarInset: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  useSidebar: () => ({ open: true, setOpen: vi.fn() }),
 }))
 
 describe("RoleForm", () => {

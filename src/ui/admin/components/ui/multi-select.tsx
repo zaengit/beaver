@@ -5,7 +5,7 @@ import * as React from "react"
 import { Badge } from "@zbeaver/beaver/ui/admin/components/ui/badge"
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
-export interface MultiSelectOption {
+interface MultiSelectOption {
   value: string
   label: string
 }

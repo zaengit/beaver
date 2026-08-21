@@ -3,6 +3,7 @@ import {
   emptyToNull,
   imageUrlSimpleSchema,
   publishStatusEnum,
+  slugRegex,
 } from "@zbeaver/beaver/app/validations/shared"
 
 // ---------------------------------------------------------------------------
@@ -15,7 +16,7 @@ export const createCategorySchema = z.object({
     .min(1, "Name is required")
     .max(100, "Name must be at most 100 characters"),
 
-  type: z.string().default("post"),
+  type: z.string().min(1).max(64).regex(slugRegex, "Type must contain only lowercase alphanumeric characters and hyphens").default("post"),
   status: publishStatusEnum.default("published"),
 
   description: emptyToNull,

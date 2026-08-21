@@ -1,12 +1,12 @@
 
 import { useEffect, useId, useState } from "react";
-import { X } from "lucide-react";
 import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button";
 import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input";
 import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label";
 import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea";
 import { Checkbox } from "@zbeaver/beaver/ui/admin/components/ui/checkbox";
 import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker";
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url";
 import {
   ITEM_FIELD_LABELS,
   ITEM_FIELD_PLACEHOLDERS,
@@ -129,7 +129,7 @@ export function ItemFieldRenderer({
           {hasValue && (
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted">
               <img
-                src={strValue}
+                src={safeAdminImageUrl(strValue) ?? undefined}
                 alt=""
                 className="h-full w-full object-cover"
               />

@@ -11,18 +11,18 @@ interface Props {
 }
 
 const { contentType, post } = Astro.props
-const Template = getDetailTemplateComponent(contentType.detailTemplate) as any
+const Template = getDetailTemplateComponent(contentType.detailTemplate)
 let customFieldValues: Record<string, unknown> = {}
 
 try {
-  const parsed = post.customFieldValues ? JSON.parse(post.customFieldValues) : {}
+  const parsed = post.customFieldValues && post.customFieldValues.length <= 1_000_000 ? JSON.parse(post.customFieldValues) : {}
   if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) customFieldValues = parsed
 } catch { /* Invalid stored values are rendered as no custom fields. */ }
 
 const detailTemplate = registry.templates.find((template) => template.id === contentType.detailTemplate && template.kind === "detail")
-const renderedCustomFields = (detailTemplate?.fieldSlots ?? []).flatMap((field) => {
+const renderedCustomFields = (detailTemplate?.fieldSlots ?? []).slice(0, 50).flatMap((field) => {
   const value = customFieldValues[field.key]
-  return value !== undefined && value !== null && value !== "" ? [{ label: field.label, type: field.type, value }] : []
+  return value !== undefined && value !== null && value !== "" ? [{ label: field.label, type: field.type, value: typeof value === "string" ? value.slice(0, 10_000) : value }] : []
 })
 ---
 

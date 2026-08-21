@@ -18,7 +18,7 @@ interface TemplateSeed {
   categories?: Array<{ name: string; description?: string }>
   posts?: Array<Record<string, unknown> & { title: string; slug: string }>
   pages?: Array<Record<string, unknown> & { title: string; slug: string }>
-  menus?: Array<{ title: string; url: string; type: string }>
+  menus?: Array<{ title: string; url: string; type: "navbar" | "footer" | "sidebar" }>
 }
 
 function templatePath(name: string) {

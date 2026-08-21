@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.build.json",
   "compilerOptions": {
-    "noCheck": false
+    "noCheck": false,
+    "strict": true
   }
 }

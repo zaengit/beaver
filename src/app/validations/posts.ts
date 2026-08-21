@@ -6,57 +6,58 @@ import {
   featuredImageSchema,
   galleryImageSchema,
   publishStatusEnum,
+  safeHrefSchema,
+  safeImageUrlSchema,
 } from "@zbeaver/beaver/app/validations/shared"
 
 // Section object schema - embedded full section data (Req 20.2)
+const sectionText = z.string().max(10_000).nullable().optional()
+const sectionShortText = z.string().max(512).nullable().optional()
+const sectionLinkSchema = z.object({
+  label: z.string().max(200),
+  url: safeHrefSchema,
+})
+const sectionItemSchema = z.object({
+  caption: sectionShortText,
+  title: sectionShortText,
+  text: sectionText,
+  image: safeImageUrlSchema.nullable().optional(),
+  alt_image: sectionShortText,
+  video: z.string().max(2048).nullable().optional(),
+  map: z.string().max(256).nullable().optional(),
+  question: sectionShortText,
+  answer: sectionText,
+  icon: sectionShortText,
+  form_inquiry: z.boolean().nullable().optional(),
+  embed: z.string().max(4_000).nullable().optional(),
+  bg_color: z.string().max(200).nullable().optional(),
+  bg_image: safeImageUrlSchema.nullable().optional(),
+  links: z.array(sectionLinkSchema).max(20, "Too many section links").nullable().optional(),
+  style_css: z.string().max(1_000).nullable().optional(),
+  style_css_inline: z.string().max(4_000).nullable().optional(),
+  style_id: z.string().max(128).nullable().optional(),
+})
 const sectionSchema = z.object({
-  id: z.string().min(1, "Section id is required"),
-  type: z.string().min(1, "Section type is required"),
-  caption: z.string().nullable().optional(),
-  title: z.string().nullable().optional(),
-  text: z.string().nullable().optional(),
-  image: z.string().nullable().optional(),
-  alt_image: z.string().nullable().optional(),
-  bg_color: z.string().nullable().optional(),
-  bg_image: z.string().nullable().optional(),
-  style_css: z.string().nullable().optional(),
-  style_css_inline: z.string().nullable().optional(),
-  style_id: z.string().nullable().optional(),
-  alignment: z.string().nullable().optional(),
-  limit: z.number().int().min(0).nullable().optional(),
-  sort: z.number().int().min(0).optional(),
-  sort_by: z.string().nullable().optional(),
+  id: z.string().min(1, "Section id is required").max(128),
+  type: z.string().min(1, "Section type is required").max(64),
+  caption: sectionShortText,
+  title: sectionShortText,
+  text: sectionText,
+  image: safeImageUrlSchema.nullable().optional(),
+  alt_image: sectionShortText,
+  bg_color: z.string().max(200).nullable().optional(),
+  bg_image: safeImageUrlSchema.nullable().optional(),
+  style_css: z.string().max(1_000).nullable().optional(),
+  style_css_inline: z.string().max(4_000).nullable().optional(),
+  style_id: z.string().max(128).nullable().optional(),
+  alignment: z.string().max(32).nullable().optional(),
+  limit: z.number().int().min(0).max(100).nullable().optional(),
+  sort: z.number().int().min(0).max(1_000_000).optional(),
+  sort_by: z.string().max(32).nullable().optional(),
   sort_order: z.enum(["asc", "desc"]).nullable().optional(),
-  category: z.string().nullable().optional(),
-  links: z.array(z.object({
-    label: z.string(),
-    url: z.string(),
-  })).nullable().optional(),
-  item: z.array(
-    z.object({
-      caption: z.string().nullable().optional(),
-      title: z.string().nullable().optional(),
-      text: z.string().nullable().optional(),
-      image: z.string().nullable().optional(),
-      alt_image: z.string().nullable().optional(),
-      video: z.string().nullable().optional(),
-      map: z.string().nullable().optional(),
-      question: z.string().nullable().optional(),
-      answer: z.string().nullable().optional(),
-      icon: z.string().nullable().optional(),
-      form_inquiry: z.boolean().nullable().optional(),
-      embed: z.string().nullable().optional(),
-      bg_color: z.string().nullable().optional(),
-      bg_image: z.string().nullable().optional(),
-      links: z.array(z.object({
-        label: z.string(),
-        url: z.string(),
-      })).nullable().optional(),
-      style_css: z.string().nullable().optional(),
-      style_css_inline: z.string().nullable().optional(),
-      style_id: z.string().nullable().optional(),
-    })
-  ).nullable().optional(),
+  category: z.string().max(128).nullable().optional(),
+  links: z.array(sectionLinkSchema).max(20, "Too many section links").nullable().optional(),
+  item: z.array(sectionItemSchema).max(100, "Too many section items").nullable().optional(),
 })
 
 // Tag schema: non-empty string, max 50 chars (Req 20.1)
@@ -79,13 +80,13 @@ export const createPostSchema = z.object({
     .regex(slugRegex, "Slug must contain only lowercase alphanumeric characters and hyphens")
     .optional(),
 
-  type: z.string().default("post"),
+  type: z.string().min(1).max(64).regex(slugRegex, "Type must contain only lowercase alphanumeric characters and hyphens").default("post"),
   status: publishStatusEnum.default("draft"),
   publishedAt: z.number().int().positive().nullable().optional(),
 
   // Optional string fields with empty-to-null transform (Req 9.9)
   excerpt: emptyToNull,
-  description: z.string().optional(),
+  description: z.string().max(100_000, "Description must be at most 100000 characters").optional(),
 
   // Tags: array of strings, max 30 items (Req 20.1)
   tags: z
@@ -135,10 +136,14 @@ export const createPostSchema = z.object({
   // Category IDs: array of ULIDs (Req 9.7)
   categoryIds: z
     .array(z.string().regex(ulidRegex, "Invalid category ID format"))
+    .max(100, "Too many categories")
     .optional(),
 
   // Custom field values: record of arbitrary values (Req 20.3)
-  customFieldValues: z.record(z.string(), z.unknown()).optional(),
+  customFieldValues: z
+    .record(z.string().max(64), z.unknown())
+    .refine((value) => Object.keys(value).length <= 100, "Too many custom fields")
+    .optional(),
 })
 
 // Update schema: all fields optional (partial update)

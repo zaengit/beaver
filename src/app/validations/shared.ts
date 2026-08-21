@@ -24,25 +24,48 @@ export const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 /** Transforms empty strings to `null` for optional text fields (Req 9.9). */
 export const emptyToNull = z
   .string()
+  .max(10_000, "Text must be at most 10000 characters")
   .transform((val) => (val.trim() === "" ? null : val))
   .nullable()
   .optional()
 
-/** Image URL: valid http/https URL or relative path starting with `/`. */
-export const imageUrlSchema = z
+const SAFE_SCHEMES = new Set(["http:", "https:", "mailto:", "tel:"])
+
+export function isSafeHref(value: string) {
+  const candidate = value.trim()
+  if (!candidate || /[\u0000-\u001f\u007f\\]/.test(candidate) || candidate.startsWith("//")) return false
+  if (candidate.startsWith("/") || candidate.startsWith("#") || candidate.startsWith("?")) return true
+
+  try {
+    return SAFE_SCHEMES.has(new URL(candidate).protocol)
+  } catch {
+    return false
+  }
+}
+
+export const safeHrefSchema = z
   .string()
+  .trim()
+  .min(1, "URL is required")
+  .max(2048, "URL must be at most 2048 characters")
+  .refine(isSafeHref, "URL must be a relative path or use http, https, mailto, or tel")
+
+export const safeImageUrlSchema = z
+  .string()
+  .trim()
   .max(2048, "Image URL must be at most 2048 characters")
-  .refine(
-    (val) => {
-      if (val.startsWith("http://") || val.startsWith("https://")) {
-        return z.string().url().safeParse(val).success
+  .refine((value) => {
+    if (/^https?:\/\//i.test(value)) {
+      try {
+        return ["http:", "https:"].includes(new URL(value).protocol)
+      } catch {
+        return false
       }
-      return val.startsWith("/")
-    },
-    "Image must be a valid URL (http/https) or a relative path starting with /",
-  )
-  .nullable()
-  .optional()
+    }
+    return value.startsWith("/") && !value.startsWith("//") && !/[\u0000-\u001f\u007f\\]/.test(value)
+  }, "Image must be a valid http/https URL or a relative path starting with /")
+
+const imageUrlSchema = safeImageUrlSchema.nullable().optional()
 
 /** Featured image field — empty → null, then piped through `imageUrlSchema`. */
 export const featuredImageSchema = z
@@ -69,15 +92,7 @@ export const imageUrlSimpleSchema = z
   .pipe(
     z
       .string()
-      .refine(
-        (val) => {
-          if (val.startsWith("http://") || val.startsWith("https://")) {
-            return z.string().url().safeParse(val).success
-          }
-          return val.startsWith("/")
-        },
-        "Image must be a valid URL (http/https) or a relative path starting with /",
-      )
+      .refine((val) => safeImageUrlSchema.safeParse(val).success, "Image must be a valid http/https URL or a relative path starting with /")
       .nullable()
       .optional(),
   )

@@ -13,8 +13,8 @@ import { updateProfile } from "@zbeaver/beaver/app/services/profile"
 const updateProfileSchema = z
   .object({
     name: z.string().min(1, "Name must be between 1 and 100 characters.").max(100).optional(),
-    email: z.string().email("Invalid email address.").optional(),
-    password: z.string().min(8, "Password must be between 8 and 128 characters.").max(128).optional(),
+    email: z.string().max(254, "Email is too long.").email("Invalid email address.").optional(),
+    password: z.string().min(12, "Password must be between 12 and 128 characters.").max(128).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field (name, email, or password) must be provided to update.",

@@ -8,6 +8,7 @@ import { Badge } from "@zbeaver/beaver/ui/admin/components/ui/badge"
 import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
 import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
 import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker"
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url"
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 import { useAdminSession } from "@zbeaver/beaver/ui/admin/auth/admin-session-provider"
 import type { FlattenedMenuItem } from "@zbeaver/beaver/ui/admin/menus/menu-builder"
@@ -173,7 +174,7 @@ export function SortableMenuItem({
 
         {/* Title and URL */}
         <div className="flex-1 min-w-0">
-          {item.image ? <img src={item.image} alt="" className="mr-2 inline-block size-8 rounded-sm object-cover" /> : null}
+          {safeAdminImageUrl(item.image) ? <img src={safeAdminImageUrl(item.image) ?? undefined} alt="" className="mr-2 inline-block size-8 rounded-sm object-cover" /> : null}
           <span className="font-medium text-sm">{item.title}</span>
           <span className="ml-2 text-xs text-muted-foreground truncate">
             {item.url.length > 40 ? item.url.slice(0, 40) + "…" : item.url}
@@ -235,7 +236,7 @@ export function SortableMenuItem({
               <div className="flex items-center gap-2">
                 {editImage ? (
                   <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted">
-                    <img src={editImage} alt="" className="h-full w-full object-cover" />
+                    <img src={safeAdminImageUrl(editImage) ?? undefined} alt="" className="h-full w-full object-cover" />
                   </div>
                 ) : null}
                 <MediaPicker value={editImage || null} onChange={(media) => setEditImage(media?.url ?? "")} accept="image/*" />

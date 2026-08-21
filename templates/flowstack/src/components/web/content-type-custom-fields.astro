@@ -1,4 +1,6 @@
 ---
+import { safeImageSrc } from "./safe-url"
+
 interface Field {
   label: string
   type: string
@@ -20,8 +22,8 @@ const formatValue = (value: unknown) => value === true ? "Yes" : value === false
         <div class="rounded-2xl bg-white p-5 border border-slate-200/80 shadow-2xs transition-all duration-200 hover:border-indigo-200">
           <dt class="text-xs font-bold uppercase tracking-wider text-indigo-700">{field.label}</dt>
           <dd class="mt-1.5 text-sm font-semibold leading-relaxed text-slate-950">
-            {field.type === "image" && typeof field.value === "string"
-              ? <img src={field.value} alt={field.label} class="max-h-64 w-full rounded-xl object-cover shadow-xs mt-1" loading="lazy" />
+            {field.type === "image" && safeImageSrc(field.value)
+              ? <img src={safeImageSrc(field.value) || undefined} alt={field.label} class="max-h-64 w-full rounded-xl object-cover shadow-xs mt-1" loading="lazy" />
               : formatValue(field.value)}
           </dd>
         </div>

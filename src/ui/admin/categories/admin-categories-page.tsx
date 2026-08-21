@@ -13,13 +13,6 @@ import { Button, buttonVariants } from "@zbeaver/beaver/ui/admin/components/ui/b
 import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
 import { Checkbox } from "@zbeaver/beaver/ui/admin/components/ui/checkbox"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@zbeaver/beaver/ui/admin/components/ui/select"
-import {
   Table,
   TableBody,
   TableCell,
@@ -31,9 +24,10 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 import { buildNavigationUrl } from "@zbeaver/beaver/ui/admin/navigation"
 import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import type { AdminCategory } from "@zbeaver/beaver/ui/admin/shared/admin-data"
 
 export function AdminCategoriesPage() {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<AdminCategory[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isPending, setIsPending] = useState(false)
@@ -58,7 +52,7 @@ export function AdminCategoriesPage() {
     if (sortOrder) params.set("sortOrder", sortOrder)
     params.set("type", type)
     const qs = params.toString() ? `?${params.toString()}` : ""
-    const nextData = await adminApiGet(`/api/admin/categories${qs}`)
+    const nextData = await adminApiGet<AdminCategory[]>(`/api/admin/categories${qs}`)
     setData(nextData)
     setSelectedIds([])
   }
@@ -107,7 +101,7 @@ export function AdminCategoriesPage() {
   const handleSelectAll = useCallback((checked: boolean) => {
     if (!data) return
     if (checked) {
-      setSelectedIds(data.map((c: any) => c.id))
+      setSelectedIds(data.map((category) => category.id))
     } else {
       setSelectedIds([])
     }
@@ -119,7 +113,7 @@ export function AdminCategoriesPage() {
     )
   }, [])
 
-  const isAllSelected = data?.length > 0 && selectedIds.length === data.length
+  const isAllSelected = data !== null && data.length > 0 && selectedIds.length === data.length
   const isSomeSelected = selectedIds.length > 0
 
   // ─── Bulk action handlers ────────────────────────────────────────────────
@@ -127,7 +121,7 @@ export function AdminCategoriesPage() {
   async function performBulkAction(path: string, extra: Record<string, unknown> = {}) {
     if (selectedIds.length === 0) return
     setIsPending(true)
-    const result = await adminApiPost<any>(path, { ids: selectedIds, ...extra })
+    const result = await adminApiPost<unknown>(path, { ids: selectedIds, ...extra })
     setIsPending(false)
     if (result.success) {
       adminToast.success("update", "category")
@@ -154,7 +148,7 @@ export function AdminCategoriesPage() {
   if (error) return <main className="p-6"><p className="text-destructive">Error: {error}</p></main>
   if (!data) return <AdminLoadingState />
 
-  const categories = data ?? []
+  const categories = data
 
   return (
     <AdminPageShell>
@@ -271,7 +265,7 @@ export function AdminCategoriesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                categories.map((cat: any) => (
+                categories.map((cat) => (
                   <TableRow key={cat.id} className="hover:bg-muted/25">
                     <TableCell className="px-4 py-3">
                       <Checkbox

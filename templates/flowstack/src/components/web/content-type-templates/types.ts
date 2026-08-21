@@ -14,5 +14,13 @@ export interface DetailProps {
 }
 
 export function parseGallery(gallery: string | null) {
-  try { return gallery ? JSON.parse(gallery) as string[] : [] } catch { return [] }
+  if (!gallery || gallery.length > 100_000) return []
+  try {
+    const value = JSON.parse(gallery)
+    return Array.isArray(value)
+      ? value.filter((image): image is string => typeof image === "string").map((image) => image.slice(0, 2_048)).slice(0, 20)
+      : []
+  } catch {
+    return []
+  }
 }

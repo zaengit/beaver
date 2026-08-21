@@ -41,14 +41,7 @@ import { getContentTypeRegistry } from "@zbeaver/beaver/app/registry/content-typ
 import packageJson from "../../../../package.json" with { type: "json" }
 
 interface AdminSidebarProps {
-  user: {
-    id: string
-    name: string
-    email: string
-    roleId: string | null
-  }
   permissions: string[]
-  roleName: string | null
   pathname: string
 }
 
@@ -66,7 +59,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 const baseNavItems = [
-  { title: "Dashboard", href: "/admin", icon: LayoutDashboard, permission: null },
+  { title: "Dashboard", href: "/admin", icon: LayoutDashboard, permission: "dashboard.view" },
   { title: "Media", href: "/admin/media", icon: Image, permission: "media.view" },
   { title: "Menus", href: "/admin/menus", icon: Menu, permission: "menus.view" },
   { title: "Users", href: "/admin/users", icon: Users, permission: "users.view" },
@@ -74,7 +67,7 @@ const baseNavItems = [
   { title: "Settings", href: "/admin/settings", icon: Globe, permission: "settings.manage" },
 ] as const
 
-export function AdminSidebar({ user, permissions, roleName, pathname }: AdminSidebarProps) {
+export function AdminSidebar({ permissions, pathname }: AdminSidebarProps) {
   const contentTypesForSidebar = [
     { id: "page", name: "page", label: "Pages", slug: "page", icon: "Layout", position: 0 },
     ...getContentTypeRegistry().contentTypes.map((contentType) => ({ ...contentType, id: contentType.slug })),

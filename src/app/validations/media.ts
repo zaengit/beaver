@@ -7,16 +7,16 @@ import { emptyToNull } from "@zbeaver/beaver/app/validations/shared"
  */
 export const uploadMediaSchema = z.object({
   // Optional display name (defaults to filename at the service layer)
-  name: z.string().optional(),
+  name: z.string().trim().max(255, "Name must be at most 255 characters").optional(),
 
   // Optional alt text: empty → null (Req 9.9)
-  alt: emptyToNull,
+  alt: emptyToNull.pipe(z.string().max(500).nullable().optional()),
 
   // Optional caption: empty → null (Req 9.9)
-  caption: emptyToNull,
+  caption: emptyToNull.pipe(z.string().max(2000).nullable().optional()),
 
   // Optional virtual folder: empty → null (Req 9.9)
-  folder: emptyToNull,
+  folder: emptyToNull.pipe(z.string().max(255).nullable().optional()),
 })
 
 /**
@@ -25,16 +25,16 @@ export const uploadMediaSchema = z.object({
  */
 export const updateMediaSchema = z.object({
   // Optional name, but must be non-empty if provided
-  name: z.string().min(1, "Name must not be empty").optional(),
+  name: z.string().trim().min(1, "Name must not be empty").max(255, "Name must be at most 255 characters").optional(),
 
   // Optional alt text: empty → null (Req 9.9)
-  alt: emptyToNull,
+  alt: emptyToNull.pipe(z.string().max(500).nullable().optional()),
 
   // Optional caption: empty → null (Req 9.9)
-  caption: emptyToNull,
+  caption: emptyToNull.pipe(z.string().max(2000).nullable().optional()),
 
   // Optional virtual folder: empty → null (Req 9.9)
-  folder: emptyToNull,
+  folder: emptyToNull.pipe(z.string().max(255).nullable().optional()),
 })
 
 // Inferred types

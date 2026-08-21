@@ -11,7 +11,6 @@
  */
 
 import { adminError } from "@zbeaver/beaver/app/admin/api-response"
-import type { HandlerResponse } from "@zbeaver/beaver/app/handlers/types"
 
 /** Maps well-known `error.code` strings to HTTP status codes. */
 const CODE_STATUS: Record<string, number> = {
@@ -29,7 +28,7 @@ const CODE_STATUS: Record<string, number> = {
 export function mapServiceError(
   result: { error?: { code?: string; message: string; fieldErrors?: Record<string, string[]> } },
   fallbackStatus = 400,
-): HandlerResponse {
+): Response {
   const code = result.error?.code ?? ""
   const status = CODE_STATUS[code] ?? fallbackStatus
   return adminError(result.error?.message ?? "Unknown error.", status, result.error?.fieldErrors)

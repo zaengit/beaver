@@ -79,7 +79,7 @@ describe("AdminDashboardPage", () => {
     expect(screen.getByText("Published")).toBeTruthy()
     expect(screen.getByText("Drafts")).toBeTruthy()
 
-    expect(screen.getByRole("link", { name: /new pages/i }).getAttribute("href")).toBe("/admin/posts/page/new")
+    expect(screen.getByRole("link", { name: /^pages /i }).getAttribute("href")).toBe("/admin/posts/page")
     expect(screen.getByText("Content workspace")).toBeTruthy()
     expect(screen.queryByRole("link", { name: /media/i })).toBeNull()
   })

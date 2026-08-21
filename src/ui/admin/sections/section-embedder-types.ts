@@ -1,3 +1,5 @@
+import type { SectionTemplate } from "@zbeaver/beaver/app/registry/sections"
+
 export interface EmbeddedSection {
   _instanceId: string
   id: string
@@ -27,6 +29,30 @@ export interface SectionEmbedderProps {
   onChange: (sections: EmbeddedSection[]) => void
 }
 
+export interface AvailableSection {
+  id: string
+  type: string
+  caption: string | null
+  title: string | null
+  text: string | null
+  image: string | null
+  alt_image: string | null
+  bg_color: string | null
+  bg_image: string | null
+  style_css: string | null
+  style_css_inline: string | null
+  style_id: string | null
+  alignment: string | null
+  limit: number | null
+  sort: number
+  sort_by: string | null
+  sort_order: string | null
+  category: string | null
+  links: string | null
+  item: Record<string, unknown>
+  template: SectionTemplate
+}
+
 export const ITEM_FIELD_LABELS: Record<string, string> = {
   question: "Question",
   answer: "Answer",
@@ -52,7 +78,7 @@ export const ITEM_FIELD_PLACEHOLDERS: Record<string, string> = {
   map: "Latitude, longitude (example: -6.208763, 106.845599)",
 }
 
-export const EMPTY_ITEM_LINKS = [
+const EMPTY_ITEM_LINKS = [
   { label: "", url: "" },
   { label: "", url: "" },
 ]

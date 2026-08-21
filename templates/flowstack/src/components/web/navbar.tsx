@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import type { MenuTree } from "@zbeaver/beaver/server"
+import { safeHref, safeImageSrc, safeTarget } from "./safe-url"
 
 interface NavbarProps {
   items: MenuTree[]
@@ -37,8 +38,9 @@ function NavDropdown({ item }: { item: MenuTree }) {
   return (
     <div className="relative group">
       <a
-        href={item.url}
-        target={item.target ?? undefined}
+        href={safeHref(item.url)}
+        target={safeTarget(item.target)}
+        rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
         className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-indigo-50/90 hover:text-indigo-600 active:scale-95 ${item.cssClass ?? ""}`}
       >
         {item.title}
@@ -56,8 +58,9 @@ function NavDropdown({ item }: { item: MenuTree }) {
           {item.children.map((child) => (
             <div key={child.id}>
               <a
-                href={child.url}
-                target={child.target ?? undefined}
+                href={safeHref(child.url)}
+                target={safeTarget(child.target)}
+                rel={child.target === "_blank" ? "noopener noreferrer" : undefined}
                 className={`block rounded-2xl px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600 ${child.cssClass ?? ""}`}
               >
                 {child.title}
@@ -67,8 +70,9 @@ function NavDropdown({ item }: { item: MenuTree }) {
                   {child.children.map((grandchild) => (
                     <a
                       key={grandchild.id}
-                      href={grandchild.url}
-                      target={grandchild.target ?? undefined}
+                      href={safeHref(grandchild.url)}
+                      target={safeTarget(grandchild.target)}
+                      rel={grandchild.target === "_blank" ? "noopener noreferrer" : undefined}
                       className={`block rounded-xl px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-indigo-50/70 hover:text-indigo-600 ${grandchild.cssClass ?? ""}`}
                     >
                       {grandchild.title}
@@ -92,8 +96,9 @@ function MobileMenuItem({ item, depth = 0 }: { item: MenuTree; depth?: number })
     <div>
       <div className="flex items-center">
         <a
-          href={item.url}
-          target={item.target ?? undefined}
+          href={safeHref(item.url)}
+          target={safeTarget(item.target)}
+          rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
           className={`flex-1 block rounded-2xl px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-indigo-50 hover:text-indigo-600 ${item.cssClass ?? ""}`}
           style={{ paddingLeft: `${1 + depth * 0.75}rem` }}
         >
@@ -129,6 +134,7 @@ function MobileMenuItem({ item, depth = 0 }: { item: MenuTree; depth?: number })
 
 export function Navbar({ items, siteName = "Site", logo }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const safeLogo = safeImageSrc(logo)
 
   return (
     <header className="sticky top-0 z-50 w-full px-4 sm:px-6 lg:px-8 py-3">
@@ -137,7 +143,7 @@ export function Navbar({ items, siteName = "Site", logo }: NavbarProps) {
           {/* Site title / logo */}
           <div className="flex-shrink-0">
             <a href="/" className="flex items-center gap-2.5 rounded-full px-2 py-1 text-base font-extrabold tracking-tight text-slate-900 transition-colors hover:text-indigo-600">
-              {logo && <img src={logo} alt="" className="h-8 w-8 rounded-full object-cover shadow-xs" />}
+              {safeLogo && <img src={safeLogo} alt="" className="h-8 w-8 rounded-full object-cover shadow-xs" />}
               <span>{siteName}</span>
             </a>
           </div>
@@ -150,8 +156,9 @@ export function Navbar({ items, siteName = "Site", logo }: NavbarProps) {
               ) : (
                 <a
                   key={item.id}
-                  href={item.url}
-                  target={item.target ?? undefined}
+                  href={safeHref(item.url)}
+                  target={safeTarget(item.target)}
+                  rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
                   className={`rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-indigo-50/90 hover:text-indigo-600 active:scale-95 ${item.cssClass ?? ""}`}
                 >
                   {item.title}

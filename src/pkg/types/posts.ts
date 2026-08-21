@@ -34,9 +34,6 @@ export interface PublicPost {
   authorName: string | null
 }
 
-/** A published item returned by public search. */
-export type PublicSearchResult = PublicPost
-
 export interface PublicArchiveFilters {
   search?: string
   category?: string
@@ -55,40 +52,6 @@ export interface PublicArchiveFilterOptions {
 export interface PostWithRelations extends Post {
   author?: { id: string; name: string; email: string } | null
   categories?: { id: string; name: string; slug: string }[]
-}
-
-export interface CreatePostInput {
-  title: string
-  slug?: string
-  type?: string
-  status?: string
-  excerpt?: string | null
-  description?: string | null
-  tags?: string[]
-  sections?: unknown
-  customFieldValues?: unknown
-  metaTitle?: string | null
-  metaDescription?: string | null
-  featuredImage?: string | null
-  gallery?: string[] | null
-  categoryIds?: string[]
-}
-
-export interface UpdatePostInput {
-  title?: string
-  slug?: string
-  type?: string
-  status?: string
-  excerpt?: string | null
-  description?: string | null
-  tags?: string[]
-  sections?: unknown
-  customFieldValues?: unknown
-  metaTitle?: string | null
-  metaDescription?: string | null
-  featuredImage?: string | null
-  gallery?: string[] | null
-  categoryIds?: string[]
 }
 
 export interface PostFilters extends PaginationInput {

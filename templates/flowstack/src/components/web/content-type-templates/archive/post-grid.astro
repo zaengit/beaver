@@ -3,6 +3,7 @@ import type { ArchiveProps } from "../types";
 import ResponsiveImage from "@/components/web/responsive-image.astro";
 import ArchiveFilters from "./archive-filters.astro";
 import ArchivePagination from "./archive-pagination.astro";
+import { safeContentHref } from "../../safe-url";
 const { contentType, posts, filterOptions, filters, pagination } = Astro.props as ArchiveProps;
 ---
 
@@ -40,7 +41,7 @@ const { contentType, posts, filterOptions, filters, pagination } = Astro.props a
           )}
           <div class="space-y-2.5 p-6">
             <h2 class="text-xl font-bold tracking-tight text-slate-950 transition-colors group-hover:text-indigo-600">
-              <a href={`/${contentType.slug}/${post.slug}`} class="focus:outline-none">
+              <a href={safeContentHref(contentType.slug, post.slug)} class="focus:outline-none">
                 {post.title}
               </a>
             </h2>
@@ -51,7 +52,7 @@ const { contentType, posts, filterOptions, filters, pagination } = Astro.props a
         </div>
         <div class="p-6 pt-0">
           <a
-            href={`/${contentType.slug}/${post.slug}`}
+            href={safeContentHref(contentType.slug, post.slug)}
             class="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200/80 px-4 py-2 text-xs font-bold text-indigo-700 transition-all duration-200 hover:bg-indigo-600 hover:text-white group-hover:translate-x-1"
           >
             <span>View project</span>

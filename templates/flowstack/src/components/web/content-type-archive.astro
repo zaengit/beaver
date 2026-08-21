@@ -13,7 +13,7 @@ interface Props {
 }
 
 const { contentType, posts, filterOptions, filters, pagination } = Astro.props
-const Template = getArchiveTemplateComponent(contentType.archiveTemplate) as any
+const Template = getArchiveTemplateComponent(contentType.archiveTemplate)
 ---
 
 <Template {contentType} {posts} {filterOptions} {filters} {pagination} />

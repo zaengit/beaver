@@ -4,8 +4,6 @@ import {
   findRoleByIdRecord,
   findRoleBySlugRecord,
   listRolesWithUserCountRecords,
-  listAllPermissionRecords,
-  listPermissionGroupsRecord,
   createRoleRecord,
   updateRoleRecord,
   deleteRoleRecord,
@@ -14,6 +12,10 @@ import {
 } from "@zbeaver/beaver/app/repositories/roles"
 import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
 import { serviceSuccess, serviceNotFound, serviceConflict, serviceForbidden } from "@zbeaver/beaver/app/services/utils"
+import { canAssignPermissionIds, canManageExistingRole, hasAnyAdminPermission, loadAdminActor } from "@zbeaver/beaver/app/admin/authorization"
+import { deleteRefreshSessionsForRole } from "@zbeaver/beaver/app/admin/session-store"
+import { getPermissionDefinitions } from "@zbeaver/beaver/app/admin/permission-catalog"
+import { syncPermissionRecords, type SyncPermissionsResult } from "@zbeaver/beaver/app/repositories/permissions"
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -42,14 +44,21 @@ export function getRole(id: string): ServiceResult<RoleRow & { permissionIds: st
 
 // ─── List Permissions ────────────────────────────────────────────────────────
 
-export function listPermissionsService(): ServiceResult<Record<string, unknown[]>> {
-  const grouped = listPermissionGroupsRecord()
-  return serviceSuccess(grouped, "Permissions retrieved.")
+export async function syncPermissions(actorId: string): Promise<ServiceResult<SyncPermissionsResult>> {
+  const actor = await loadAdminActor(actorId)
+  if (!actor || !hasAnyAdminPermission(actor, ["roles.manage"])) return serviceForbidden("Insufficient permissions.")
+
+  const result = syncPermissionRecords(getPermissionDefinitions())
+  return serviceSuccess(result, "Permissions synced.")
 }
 
 // ─── Create Role ─────────────────────────────────────────────────────────────
 
-export function createRole(data: CreateRoleInput): ServiceResult<RoleRow> {
+export async function createRole(data: CreateRoleInput, actorId: string): Promise<ServiceResult<RoleRow>> {
+  const actor = await loadAdminActor(actorId)
+  if (!actor || !hasAnyAdminPermission(actor, ["roles.create", "roles.manage"])) return serviceForbidden("Insufficient permissions.")
+  if (!canAssignPermissionIds(actor, data.permissionIds)) return serviceForbidden("You cannot assign these permissions.")
+
   const slug = data.slug ?? generateRoleSlug(data.name)
 
   // Check slug uniqueness
@@ -64,7 +73,7 @@ export function createRole(data: CreateRoleInput): ServiceResult<RoleRow> {
     name: data.name,
     slug,
     description: data.description ?? null,
-    permissionIds: data.permissionIds,
+    permissionIds: [...new Set(data.permissionIds)],
     createdAt: now,
     updatedAt: now,
   })
@@ -74,12 +83,19 @@ export function createRole(data: CreateRoleInput): ServiceResult<RoleRow> {
 
 // ─── Update Role ─────────────────────────────────────────────────────────────
 
-export function updateRole(id: string, data: UpdateRoleInput): ServiceResult<RoleRow> {
+export async function updateRole(id: string, data: UpdateRoleInput, actorId: string): Promise<ServiceResult<RoleRow>> {
+  const actor = await loadAdminActor(actorId)
+  if (!actor || !hasAnyAdminPermission(actor, ["roles.edit", "roles.manage"])) return serviceForbidden("Insufficient permissions.")
+
   const existing = findRoleByIdRecord(id)
   if (!existing) return serviceNotFound("Role")
 
   // Prevent modifying system roles
   if (existing.isSystem === 1) return serviceForbidden("System roles cannot be modified.")
+  if (!canManageExistingRole(actor, id)) return serviceForbidden("You cannot manage this role.")
+  if (data.permissionIds !== undefined && !canAssignPermissionIds(actor, data.permissionIds)) {
+    return serviceForbidden("You cannot assign these permissions.")
+  }
 
   // Slug uniqueness check
   if (data.name !== undefined) {
@@ -102,32 +118,44 @@ export function updateRole(id: string, data: UpdateRoleInput): ServiceResult<Rol
     updateData.slug = generateRoleSlug(data.name)
   }
   if (data.description !== undefined) updateData.description = data.description
-  if (data.permissionIds !== undefined) updateData.permissionIds = data.permissionIds
+  if (data.permissionIds !== undefined) updateData.permissionIds = [...new Set(data.permissionIds)]
 
   const updated = updateRoleRecord(id, updateData)
   if (!updated) return serviceNotFound("Role")
+
+  deleteRefreshSessionsForRole(id)
 
   return serviceSuccess(updated, "Role updated.")
 }
 
 // ─── Delete Role ─────────────────────────────────────────────────────────────
 
-export function deleteRole(id: string): ServiceResult<null> {
+export async function deleteRole(id: string, actorId: string): Promise<ServiceResult<null>> {
+  const actor = await loadAdminActor(actorId)
+  if (!actor || !hasAnyAdminPermission(actor, ["roles.delete", "roles.manage"])) return serviceForbidden("Insufficient permissions.")
+
   const existing = findRoleByIdRecord(id)
   if (!existing) return serviceNotFound("Role")
 
   // Prevent deleting system roles
   if (existing.isSystem === 1) return serviceForbidden("System roles cannot be deleted.")
+  if (actor.roleId === id) return serviceForbidden("You cannot delete your own role.")
+  if (!canManageExistingRole(actor, id)) return serviceForbidden("You cannot manage this role.")
 
+  deleteRefreshSessionsForRole(id)
   deleteRoleRecord(id)
   return serviceSuccess(null, "Role deleted.")
 }
 
 // ─── Duplicate Role ──────────────────────────────────────────────────────────
 
-export function duplicateRole(id: string): ServiceResult<RoleRow> {
+export async function duplicateRole(id: string, actorId: string): Promise<ServiceResult<RoleRow>> {
+  const actor = await loadAdminActor(actorId)
+  if (!actor || !hasAnyAdminPermission(actor, ["roles.create", "roles.manage"])) return serviceForbidden("Insufficient permissions.")
+
   const existing = findRoleByIdRecord(id)
   if (!existing) return serviceNotFound("Role")
+  if (!canManageExistingRole(actor, id)) return serviceForbidden("You cannot duplicate this role.")
 
   const newId = generateId()
   const now = getCurrentTimestamp()
@@ -156,19 +184,19 @@ export function duplicateRole(id: string): ServiceResult<RoleRow> {
 
 // ─── Bulk Operations ──────────────────────────────────────────────────────────
 
-export function bulkDeleteRoles(ids: string[]): ServiceResult<{ id: string; success: boolean; error?: string }[]> {
+export async function bulkDeleteRoles(ids: string[], actorId: string): Promise<ServiceResult<{ id: string; success: boolean; error?: string }[]>> {
   const results: { id: string; success: boolean; error?: string }[] = []
   for (const id of ids) {
-    const result = deleteRole(id)
+    const result = await deleteRole(id, actorId)
     results.push({ id, success: result.success, error: !result.success ? result.error.message : undefined })
   }
   return serviceSuccess(results, "Bulk delete completed.")
 }
 
-export function bulkDuplicateRoles(ids: string[]): ServiceResult<{ id: string; success: boolean; newId?: string }[]> {
+export async function bulkDuplicateRoles(ids: string[], actorId: string): Promise<ServiceResult<{ id: string; success: boolean; newId?: string }[]>> {
   const results: { id: string; success: boolean; newId?: string }[] = []
   for (const id of ids) {
-    const result = duplicateRole(id)
+    const result = await duplicateRole(id, actorId)
     if (result.success) {
       results.push({ id, success: true, newId: result.data.id })
     } else {

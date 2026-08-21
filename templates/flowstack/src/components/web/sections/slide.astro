@@ -1,5 +1,5 @@
 ---
-import { getSectionStyle, type Section } from "./shared/types"
+import { getSectionStyle, safeHref, type Section } from "./shared/types"
 import ResponsiveImage from "@/components/web/responsive-image.astro"
 import SectionHeading from "./shared/section-heading.astro"
 
@@ -43,9 +43,9 @@ const { section } = Astro.props
                 section.alignment === "center" && "justify-center",
                 section.alignment === "right" && "justify-end"
               ]}>
-                {item.links.filter((link) => link.label && link.url).map((link) => (
+                {item.links.filter((link) => link.label && safeHref(link.url) !== "#").map((link) => (
                   <a
-                    href={link.url}
+                    href={safeHref(link.url)}
                     class="rounded-full bg-white px-7 py-3.5 text-sm font-bold text-slate-950 shadow-lg transition-all duration-200 hover:bg-indigo-50 hover:scale-105 active:scale-95 inline-flex items-center gap-2"
                   >
                     <span>{link.label}</span>

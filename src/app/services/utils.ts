@@ -16,10 +16,6 @@ export function serviceConflict(field: string, message = "Already exists."): Ser
   return { success: false, error: { code: "conflict", message, fieldErrors: { [field]: [message] } } }
 }
 
-export function serviceValidationError(fieldErrors: Record<string, string[]>): ServiceResult<never> {
-  return { success: false, error: { code: "validation", message: "Validation error.", fieldErrors } }
-}
-
-export function serviceUnauthorized(): ServiceResult<never> {
-  return { success: false, error: { code: "unauthorized", message: "Unauthorized." } }
+export function serviceValidation(message: string): ServiceResult<never> {
+  return { success: false, error: { code: "validation", message } }
 }

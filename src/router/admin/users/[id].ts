@@ -7,9 +7,9 @@ import {
   handleUpdateUser,
 } from "@zbeaver/beaver/app/handlers"
 
-export const GET: AdminRoute = async ({ params }) => {
+export const GET: AdminRoute = async ({ params, locals }) => {
   if (!params.id) return adminError("User id is required.", 400)
-  return handleGetUser(params.id)
+  return handleGetUser(locals.session as { user: { id: string } } | null, params.id)
 }
 
 export const PUT: AdminRoute = async ({ params, request, locals }) => {

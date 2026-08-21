@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react"
 import { Link } from "react-router"
-import { ArrowRight, FileText, Image, type LucideIcon } from "lucide-react"
+import { ArrowRight, FileText, type LucideIcon } from "lucide-react"
 
 import { getContentTypeRegistry } from "@zbeaver/beaver/app/registry/content-types"
 import { useAdminSession } from "@zbeaver/beaver/ui/admin/auth/admin-session-provider"
@@ -14,8 +14,6 @@ import {
   AdminStatCard,
   AdminStatsGrid,
 } from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
-import { buttonVariants } from "@zbeaver/beaver/ui/admin/components/ui/button"
-import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
 type DashboardStats = {
   totalPosts: number
@@ -37,11 +35,6 @@ export function AdminDashboardPage() {
       (contentType) => contentType.slug !== "page" && contentType.slug !== "post",
     ),
   ]
-  const primaryContentType = contentTypes.find((contentType) =>
-    session?.permissions.includes(`content.${contentType.slug}.create`),
-  )
-  const canViewMedia = session?.permissions.includes("media.view")
-
   async function loadStats() {
     setError(null)
     const data = await adminApiGet<DashboardStats>("/api/admin/dashboard")

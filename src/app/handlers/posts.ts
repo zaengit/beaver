@@ -1,7 +1,7 @@
 import { adminCreated, adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
 import { requireAuth } from "@zbeaver/beaver/app/handlers/guard"
 import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
-import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import { parseBulkIds, parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
 import type { Session } from "@zbeaver/beaver/app/handlers/types"
 import { can } from "@zbeaver/beaver/app/admin/permissions"
 import {
@@ -53,9 +53,10 @@ async function guardPost(session: Session, type: string, action: ContentAction) 
 async function guardBulkPost(session: Session, ids: string[], action: ContentAction) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
-  if (ids.length === 0) return adminError("At least one post id is required.", 400)
+  const parsedIds = parseBulkIds(ids)
+  if (!parsedIds.success) return adminError(parsedIds.message, 400)
   const allowed = await Promise.all(
-    ids.map(async (id) => {
+    parsedIds.ids.map(async (id) => {
       const post = getPost(id)
       return post.success && canPost(session!.user.id, post.data.type, action)
     }),
@@ -124,7 +125,7 @@ export async function handleUpdatePost(session: Session, id: string, body: unkno
   )
     return adminError(INSUFFICIENT, 403)
 
-  const result = updatePost(id, parsed.data, session!.user.id)
+  const result = updatePost(id, parsed.data)
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result)
 }
 
@@ -185,10 +186,11 @@ export async function handleBulkUnpublishPosts(session: Session, ids: string[]) 
 export async function handleBulkDuplicatePosts(session: Session, ids: string[]) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
-  if (ids.length === 0) return adminError("At least one post id is required.", 400)
+  const parsedIds = parseBulkIds(ids)
+  if (!parsedIds.success) return adminError(parsedIds.message, 400)
 
   const allowed = await Promise.all(
-    ids.map(async (id) => {
+    parsedIds.ids.map(async (id) => {
       const post = getPost(id)
       return (
         post.success &&
@@ -199,6 +201,6 @@ export async function handleBulkDuplicatePosts(session: Session, ids: string[]) 
   )
   if (!allowed.every(Boolean)) return adminError(INSUFFICIENT, 403)
 
-  const result = bulkDuplicatePosts(ids, session!.user.id)
+  const result = bulkDuplicatePosts(parsedIds.ids, session!.user.id)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }

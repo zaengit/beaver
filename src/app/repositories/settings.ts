@@ -12,7 +12,7 @@ export function getAllSettingsRecords(): SettingRow[] {
 
 // ─── Get Single Setting ──────────────────────────────────────────────────────
 
-export function getSettingRecord(key: string): SettingRow | undefined {
+function getSettingRecord(key: string): SettingRow | undefined {
   return db
     .select()
     .from(settings)
@@ -40,10 +40,4 @@ export function upsertSettingRecord(key: string, value: string): SettingRow {
     .run()
 
   return { key, value, createdAt: now, updatedAt: now }
-}
-
-// ─── Upsert Multiple Settings ────────────────────────────────────────────────
-
-export function upsertSettingsRecord(entries: Array<{ key: string; value: string }>): SettingRow[] {
-  return entries.map(({ key, value }) => upsertSettingRecord(key, value))
 }

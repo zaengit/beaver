@@ -75,10 +75,13 @@ ADMIN_NAME=Administrator
 UPLOAD_DIR=./public
 # Set this only behind a proxy that overwrites forwarded-IP headers.
 TRUST_PROXY=false
+# Cookies are automatically marked Secure outside development and test.
+COOKIE_SECURE=true
 # Obtain both values from Cloudflare Turnstile. The site key is safe for client use.
 PUBLIC_TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
-CONTACT_TURNSTILE_REQUIRED=false
+# Production-like environments fail closed when Turnstile is not configured.
+CONTACT_TURNSTILE_REQUIRED=true
 ```
 
 Media files are stored below `storage/` in `UPLOAD_DIR`, so the default path is
@@ -86,11 +89,11 @@ Media files are stored below `storage/` in `UPLOAD_DIR`, so the default path is
 cPanel, set `UPLOAD_DIR` to the domain document root, for example
 `/home/CPANEL_USER/public_html`.
 
-`POST /api/contact` is same-origin only, limited to five requests per 15 minutes
-per client address, and accepts an optional `turnstileToken`. Set
-`CONTACT_TURNSTILE_REQUIRED=true` and `TURNSTILE_SECRET_KEY` in production to
-require server-side Turnstile validation. When `TRUST_PROXY=true`, ensure the
-proxy overwrites `CF-Connecting-IP` or `X-Forwarded-For`.
+`POST /api/contact` is same-origin only, rate-limited per client address and
+email, and accepts a `turnstileToken`. Production-like environments require
+server-side Turnstile validation; configure `TURNSTILE_SECRET_KEY` and the
+public site key. When `TRUST_PROXY=true`, ensure the proxy overwrites
+`CF-Connecting-IP` or `X-Forwarded-For`.
 
 The host is responsible for applying the exported Drizzle schema and running the seed module as part of its own deployment workflow.
 
@@ -115,7 +118,7 @@ Generates `.env` and `astro.config.mjs` from bundled templates. Skips existing f
 
 Copies a template profile into the consuming project. `flowstack` is the bundled profile:
 - `src/components/web/` — all web components (sections, templates, navbar, footer)
-- `src/pages/` — `index.astro`, `search.astro`, `tag/[tag].astro`, `system/*`, `[type]/*`
+- `src/pages/` — `index.astro`, `search.astro`, `tag/[tag].astro`, `[type]/*`
 - `skills/design-web-components/` — skill definition and references
 
 Existing files are never overwritten.

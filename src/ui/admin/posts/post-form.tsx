@@ -32,6 +32,7 @@ import { adminApiPost, adminApiPut } from "@zbeaver/beaver/ui/admin/shared/api-c
 import { navigateToPath } from "@zbeaver/beaver/ui/admin/navigation"
 import { slugify } from "@zbeaver/beaver/pkg/utils/slug"
 import { ContentTypeFieldsRenderer } from "@zbeaver/beaver/ui/admin/posts/content-type-fields-renderer"
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url"
 import { SectionEmbedder, type EmbeddedSection } from "@zbeaver/beaver/ui/admin/sections/section-embedder"
 import { getContentTypeRegistry } from "@zbeaver/beaver/app/registry/content-types"
 import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker"
@@ -100,7 +101,7 @@ export function PostForm({ post, categories = [], mode, pageTitle, defaultType }
   const isScheduled = visibility === "published" && !!publishedAt && publishedAt > Date.now()
   const [slug, setSlug] = useState(post?.slug ?? "")
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!post?.slug)
-  const [type, setType] = useState(post?.type ?? defaultType ?? "post")
+  const [type] = useState(post?.type ?? defaultType ?? "post")
   const canPublish = session?.permissions.includes(`content.${type}.publish`) ?? false
   const canUnpublish = session?.permissions.includes(`content.${type}.unpublish`) ?? false
   const [excerpt, setExcerpt] = useState(post?.excerpt ?? "")
@@ -148,10 +149,16 @@ export function PostForm({ post, categories = [], mode, pageTitle, defaultType }
       try {
         const parsed = JSON.parse(post.sections)
         const sections = Array.isArray(parsed) ? parsed : []
-        return sections.map((s: any) => ({
-          ...s,
-          _instanceId: s._instanceId || `sec-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        }))
+        return sections.map((section) => {
+          const value = section && typeof section === "object"
+            ? section as Partial<EmbeddedSection>
+            : {}
+          return {
+            ...value,
+            _instanceId:
+              value._instanceId || `sec-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          } as EmbeddedSection
+        })
       } catch {
         return []
       }
@@ -226,7 +233,11 @@ export function PostForm({ post, categories = [], mode, pageTitle, defaultType }
     if (selectedCategoryIds.length > 0) input.categoryIds = selectedCategoryIds
     if (Object.keys(customFieldValues).length > 0) input.customFieldValues = customFieldValues
     if (embeddedSections.length > 0) {
-      input.sections = embeddedSections.map(({ _instanceId, ...rest }) => rest)
+      input.sections = embeddedSections.map((section) => {
+        const payload = { ...section }
+        Reflect.deleteProperty(payload, "_instanceId")
+        return payload
+      })
     }
     if (gallery.length > 0) input.gallery = gallery
     if (visibility === "published" && publishedAt) input.publishedAt = publishedAt
@@ -530,7 +541,7 @@ export function PostForm({ post, categories = [], mode, pageTitle, defaultType }
                       {featuredImage ? (
                         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-sm border bg-muted">
                           <img
-                            src={featuredImage}
+                            src={safeAdminImageUrl(featuredImage) ?? undefined}
                             alt="Featured image preview"
                             className="object-cover h-full w-full"
                           />
@@ -684,7 +695,7 @@ function GalleryItem({
         </Button>
       </div>
       <div className="relative aspect-square">
-        <img src={url} alt="Gallery image" className="object-cover h-full w-full" />
+        <img src={safeAdminImageUrl(url) ?? undefined} alt="Gallery image" className="object-cover h-full w-full" />
       </div>
     </div>
   )

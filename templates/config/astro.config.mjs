@@ -32,6 +32,7 @@ function resolveRegistryPath(value, fallback, envName) {
 
 const environment = loadEnv(process.env.NODE_ENV ?? "development", process.cwd(), "")
 Object.assign(process.env, environment)
+const astroHost = environment.ASTRO_HOST?.trim() || false
 const adminPath = normalizePath(environment.ADMIN_PATH, "admin", "ADMIN_PATH")
 const sectionRegistryPath = resolveRegistryPath(
   environment.SECTION_REGISTRY_PATH,
@@ -71,7 +72,7 @@ export default defineConfig({
     contentTypeRegistry: contentTypeRegistryPath,
     menuGroupRegistry: menuGroupRegistryPath,
   })],
-  server: { host: true },
+  server: { host: astroHost },
   security: {
     checkOrigin: true,
   },

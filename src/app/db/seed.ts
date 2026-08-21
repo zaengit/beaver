@@ -1,52 +1,11 @@
 import { db } from "./index";
 import { permissions, roles, rolePermissions, users } from "./schema";
-import { ulid } from "ulidx";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
-
-function getCurrentTimestamp(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
-const DEFAULT_PERMISSIONS = [
-  ...["post", "page", "article", "project", "product", "portfolio"].flatMap((type) => [
-    { slug: `content.${type}.view`, name: `View ${type} content`, group: type },
-    { slug: `content.${type}.create`, name: `Create ${type} content`, group: type },
-    { slug: `content.${type}.edit`, name: `Edit any ${type} content`, group: type },
-    { slug: `content.${type}.edit-own`, name: `Edit own ${type} content`, group: type },
-    { slug: `content.${type}.delete`, name: `Delete ${type} content`, group: type },
-    { slug: `content.${type}.publish`, name: `Publish ${type} content`, group: type },
-    { slug: `content.${type}.unpublish`, name: `Unpublish ${type} content`, group: type },
-    { slug: `category.${type}.view`, name: `View ${type} categories`, group: type },
-    { slug: `category.${type}.manage`, name: `Manage ${type} categories`, group: type },
-    { slug: `category.${type}.publish`, name: `Publish ${type} categories`, group: type },
-    { slug: `category.${type}.unpublish`, name: `Unpublish ${type} categories`, group: type },
-  ]),
-  // media group
-  { slug: "media.view", name: "View media library", group: "media" },
-  { slug: "media.upload", name: "Upload new media", group: "media" },
-  { slug: "media.edit", name: "Edit media metadata", group: "media" },
-  { slug: "media.delete", name: "Delete media files", group: "media" },
-  // menus group
-  { slug: "menus.view", name: "View menus", group: "menus" },
-  { slug: "menus.create", name: "Create menus", group: "menus" },
-  { slug: "menus.edit", name: "Edit menus", group: "menus" },
-  { slug: "menus.delete", name: "Delete menus", group: "menus" },
-  { slug: "menus.publish", name: "Publish menus", group: "menus" },
-  { slug: "menus.unpublish", name: "Unpublish menus", group: "menus" },
-  // users group
-  { slug: "users.view", name: "View users list", group: "users" },
-  { slug: "users.create", name: "Create new users", group: "users" },
-  { slug: "users.edit", name: "Edit user profiles", group: "users" },
-  { slug: "users.delete", name: "Delete users", group: "users" },
-  // roles group
-  { slug: "roles.view", name: "View roles and permissions", group: "roles" },
-  { slug: "roles.create", name: "Create roles", group: "roles" },
-  { slug: "roles.edit", name: "Edit roles and assign permissions", group: "roles" },
-  { slug: "roles.delete", name: "Delete roles", group: "roles" },
-  // settings group
-  { slug: "settings.manage", name: "Manage system settings", group: "settings" },
-] as const;
+import { generateId, getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index";
+import { getSeedAdminCredentials } from "@zbeaver/beaver/app/config/security";
+import { getPermissionDefinitions, isContentPermissionSlug, type PermissionDefinition } from "@zbeaver/beaver/app/admin/permission-catalog";
+import { syncPermissionRecords } from "@zbeaver/beaver/app/repositories/permissions";
 
 const DEFAULT_ROLES = [
   {
@@ -76,10 +35,12 @@ const DEFAULT_ROLES = [
 ] as const;
 
 // Permission slugs assigned to each role
-const ROLE_PERMISSION_MAP: Record<string, string[]> = {
-  "super-admin": DEFAULT_PERMISSIONS.map((p) => p.slug),
-  editor: [
-    ...DEFAULT_PERMISSIONS.filter((permission) => permission.slug.startsWith("content.") || permission.slug.startsWith("category.")).map((permission) => permission.slug),
+function getRolePermissionMap(definitions: PermissionDefinition[]): Record<string, string[]> {
+  return {
+    "super-admin": definitions.map((permission) => permission.slug),
+    editor: [
+    ...definitions.filter((permission) => isContentPermissionSlug(permission.slug)).map((permission) => permission.slug),
+    "dashboard.view",
     "media.view",
     "media.upload",
     "media.edit",
@@ -90,51 +51,34 @@ const ROLE_PERMISSION_MAP: Record<string, string[]> = {
     "menus.delete",
     "menus.publish",
     "menus.unpublish",
-  ],
-  author: [
-    "content.post.view",
-    "content.post.create",
-    "content.post.edit-own",
-    "media.view",
-    "media.upload",
-  ],
-  viewer: [
-    "content.post.view",
-    "media.view",
-    "category.post.view",
-  ],
-};
+    ],
+    author: [
+      "content.post.view",
+      "content.post.create",
+      "content.post.edit-own",
+      "media.view",
+      "media.upload",
+    ],
+    viewer: [
+      "content.post.view",
+      "media.view",
+      "category.post.view",
+    ],
+  }
+}
 
 export async function seed() {
   console.log("🌱 Seeding database...");
 
+  const permissionDefinitions = getPermissionDefinitions();
+  const rolePermissionMap = getRolePermissionMap(permissionDefinitions);
   const now = getCurrentTimestamp();
 
-  // Use a transaction for atomicity
+  console.log("  → Inserting permissions...");
+  const permissionSync = syncPermissionRecords(permissionDefinitions);
+  console.log(`  ✓ ${permissionSync.total} permissions ready`);
+
   db.transaction((tx) => {
-    // ─── Seed Permissions ──────────────────────────────────────────────────────
-    console.log("  → Inserting permissions...");
-
-    const permissionRecords: Array<{ id: string; slug: string }> = [];
-
-    for (const perm of DEFAULT_PERMISSIONS) {
-      const id = ulid();
-      tx.insert(permissions)
-        .values({
-          id,
-          name: perm.name,
-          slug: perm.slug,
-          group: perm.group,
-          description: perm.name,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoNothing({ target: permissions.slug })
-        .run();
-
-      permissionRecords.push({ id, slug: perm.slug });
-    }
-
     // Fetch actual permission IDs (in case some already existed)
     const existingPermissions = tx
       .select({ id: permissions.id, slug: permissions.slug })
@@ -145,15 +89,13 @@ export async function seed() {
       existingPermissions.map((p) => [p.slug, p.id])
     );
 
-    console.log(`  ✓ ${existingPermissions.length} permissions ready`);
-
     // ─── Seed Roles ────────────────────────────────────────────────────────────
     console.log("  → Inserting roles...");
 
     for (const role of DEFAULT_ROLES) {
       tx.insert(roles)
         .values({
-          id: ulid(),
+          id: generateId(),
           name: role.name,
           slug: role.slug,
           description: role.description,
@@ -192,7 +134,7 @@ export async function seed() {
 
     let assignmentCount = 0;
 
-    for (const [roleSlug, permSlugs] of Object.entries(ROLE_PERMISSION_MAP)) {
+    for (const [roleSlug, permSlugs] of Object.entries(rolePermissionMap)) {
       const roleId = roleSlugToId.get(roleSlug);
       if (!roleId) {
         console.warn(`  ⚠ Role "${roleSlug}" not found, skipping assignments`);
@@ -208,7 +150,7 @@ export async function seed() {
 
         tx.insert(rolePermissions)
           .values({
-            id: ulid(),
+            id: generateId(),
             roleId,
             permissionId,
             createdAt: now,
@@ -224,17 +166,10 @@ export async function seed() {
     // ─── Seed Super Admin User ───────────────────────────────────────────────────
     console.log("  → Creating super-admin user...");
 
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    const adminName = process.env.ADMIN_NAME;
-
-    if (process.env.NODE_ENV === "production" && (!adminEmail || !adminPassword || !adminName || adminPassword.length < 12)) {
-      throw new Error("Production seeding requires ADMIN_EMAIL, ADMIN_NAME, and an ADMIN_PASSWORD of at least 12 characters.");
-    }
-
-    const resolvedAdminEmail = adminEmail || "admin@example.com";
-    const resolvedAdminPassword = adminPassword || "password123";
-    const resolvedAdminName = adminName || "Super Admin";
+    const admin = getSeedAdminCredentials();
+    const resolvedAdminEmail = admin.email;
+    const resolvedAdminPassword = admin.password;
+    const resolvedAdminName = admin.name;
 
     const hashedPassword = bcrypt.hashSync(resolvedAdminPassword, 12);
 
@@ -244,7 +179,7 @@ export async function seed() {
     } else {
       tx.insert(users)
         .values({
-          id: ulid(),
+          id: generateId(),
           name: resolvedAdminName,
           email: resolvedAdminEmail,
           password: hashedPassword,

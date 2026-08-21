@@ -7,10 +7,10 @@ export type AdminToastEntity =
   | "post"
   | "page"
   | "category"
-  | "custom field"
-  | "section"
+  | "settings"
   | "user"
   | "role"
+  | "permission"
   | "media"
   | "menu"
   | "menu item"
@@ -22,10 +22,10 @@ const entityLabels: Record<AdminToastEntity, string> = {
   post: "Post",
   page: "Page",
   category: "Category",
-  "custom field": "Custom field",
-  section: "Section",
+  settings: "Settings",
   user: "User",
   role: "Role",
+  permission: "Permissions",
   media: "Media",
   menu: "Menu",
   "menu item": "Menu item",
@@ -47,20 +47,14 @@ export const adminToast = {
   error(message: string) {
     toast.error(message)
   },
+  close(id?: string | number) {
+    toast.dismiss(id)
+  },
   uploaded(name: string) {
     toast.success(`Uploaded ${name}.`)
   },
-  uploadedMany(count: number) {
-    toast.success(count === 1 ? "Media uploaded." : `${count} files uploaded.`)
-  },
   copied(entity: "url") {
     toast.success(`${entityLabels[entity]} copied.`)
-  },
-  published(entity: "post") {
-    toast.success(`${entityLabels[entity]} published.`)
-  },
-  unpublished(entity: "post") {
-    toast.success(`${entityLabels[entity]} unpublished.`)
   },
   saved(entity: "menu") {
     toast.success(`${entityLabels[entity]} saved.`)

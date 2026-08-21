@@ -4,6 +4,7 @@ import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
 import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea"
 import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
 import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker"
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url"
 import { getContentTypeRegistry } from "@zbeaver/beaver/app/registry/content-types"
 
 interface Props {
@@ -33,7 +34,7 @@ export function ContentTypeFieldsRenderer({ detailTemplate, values, onChange }: 
               <MediaPicker value={typeof (values as Record<string, unknown>)[field.key] === "string" ? String((values as Record<string, unknown>)[field.key]) : null} onChange={(media) => onChange({ ...values, [field.key]: media?.url ?? "" })} accept="image/*" />
               {typeof (values as Record<string, unknown>)[field.key] === "string" && String((values as Record<string, unknown>)[field.key]) && (
                 <div className="flex items-start gap-3">
-                  <img src={(values as Record<string, unknown>)[field.key] as string} alt={field.label} className="h-32 w-48 rounded-sm border object-cover" />
+                  <img src={safeAdminImageUrl((values as Record<string, unknown>)[field.key]) ?? undefined} alt={field.label} className="h-32 w-48 rounded-sm border object-cover" />
                   <Button type="button" variant="outline" onClick={() => onChange({ ...values, [field.key]: "" })}>Remove image</Button>
                 </div>
               )}

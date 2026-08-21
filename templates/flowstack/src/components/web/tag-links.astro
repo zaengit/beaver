@@ -7,9 +7,12 @@ const { tags } = Astro.props
 let parsedTags: string[] = []
 
 try {
-  const value = tags ? JSON.parse(tags) : []
+  const value = tags && tags.length <= 100_000 ? JSON.parse(tags) : []
   if (Array.isArray(value)) {
-    parsedTags = [...new Set(value.filter((tag): tag is string => typeof tag === "string").map((tag) => tag.trim()).filter(Boolean))]
+    parsedTags = [...new Set(value
+      .filter((tag): tag is string => typeof tag === "string")
+      .map((tag) => tag.trim().slice(0, 100))
+      .filter(Boolean))].slice(0, 100)
   }
 } catch {
   // A malformed legacy value should not prevent a public page from rendering.

@@ -39,6 +39,7 @@ export {
 } from "./users"
 export {
   handleListRoles,
+  handleSyncPermissions,
   handleCreateRole,
   handleGetRole,
   handleUpdateRole,
@@ -65,8 +66,3 @@ export {
   handleBulkDeleteMedia,
   handleUploadMedia,
 } from "./media"
-
-export type { Session, HandlerResponse } from "./types"
-export { mapServiceError } from "./error-mapper"
-export { requireAuth, requirePermission, requireAnyPermission } from "./guard"
-export { parseWithSchema, toFieldErrors } from "./utils"

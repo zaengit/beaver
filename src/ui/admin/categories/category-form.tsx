@@ -6,6 +6,7 @@ import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
 import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea"
 import { adminApiPost, adminApiPut } from "@zbeaver/beaver/ui/admin/shared/api-client"
 import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker"
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url"
 import { navigateToPath } from "@zbeaver/beaver/ui/admin/navigation"
 import { slugify } from "@zbeaver/beaver/pkg/utils/slug"
 import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
@@ -46,7 +47,7 @@ export function CategoryForm({ category, mode, pageTitle, defaultType }: Categor
   const [name, setName] = useState(category?.name ?? "")
   const [slug, setSlug] = useState(category?.slug ?? "")
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(!!category?.slug)
-  const [type, setType] = useState(category?.type ?? defaultType ?? "post")
+  const [type] = useState(category?.type ?? defaultType ?? "post")
   const [description, setDescription] = useState(category?.description ?? "")
   const [imageUrl, setImageUrl] = useState(category?.image ?? "")
   const [status, setStatus] = useState<"draft" | "published">(category?.status ?? "published")
@@ -221,7 +222,7 @@ export function CategoryForm({ category, mode, pageTitle, defaultType }: Categor
                     {imageUrl ? (
                       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-sm border bg-muted">
                         <img
-                          src={imageUrl}
+                          src={safeAdminImageUrl(imageUrl) ?? undefined}
                           alt="Category image preview"
                           className="object-cover h-full w-full"
                         />

@@ -31,9 +31,10 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 import { buildNavigationUrl } from "@zbeaver/beaver/ui/admin/navigation"
 import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import type { AdminRole, AdminUserListResponse } from "@zbeaver/beaver/ui/admin/shared/admin-data"
 
 export function AdminUsersPage() {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<AdminUserListResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isPending, setIsPending] = useState(false)
@@ -54,7 +55,7 @@ export function AdminUsersPage() {
 
   async function loadUsers() {
     setError(null)
-    const nextData = await adminApiGet(`/api/admin/users${location.search}`)
+    const nextData = await adminApiGet<AdminUserListResponse>(`/api/admin/users${location.search}`)
     setData(nextData)
     setSelectedIds([])
   }
@@ -104,7 +105,7 @@ export function AdminUsersPage() {
   const handleSelectAll = useCallback((checked: boolean) => {
     if (!data?.data) return
     if (checked) {
-      setSelectedIds(data.data.map((u: any) => u.id))
+      setSelectedIds(data.data.map((user) => user.id))
     } else {
       setSelectedIds([])
     }
@@ -116,7 +117,7 @@ export function AdminUsersPage() {
     )
   }, [])
 
-  const isAllSelected = data?.data?.length > 0 && selectedIds.length === data.data.length
+  const isAllSelected = data !== null && data.data.length > 0 && selectedIds.length === data.data.length
   const isSomeSelected = selectedIds.length > 0
 
   // ─── Bulk action handlers ────────────────────────────────────────────────
@@ -124,7 +125,7 @@ export function AdminUsersPage() {
   async function performBulkAction(path: string) {
     if (selectedIds.length === 0) return
     setIsPending(true)
-    const result = await adminApiPost<any>(path, { ids: selectedIds })
+    const result = await adminApiPost<unknown>(path, { ids: selectedIds })
     setIsPending(false)
     if (result.success) {
       adminToast.success("update", "user")
@@ -182,7 +183,7 @@ export function AdminUsersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              {data.roles?.map((role: any) => (
+              {data.roles?.map((role: AdminRole) => (
                 <SelectItem key={role.id} value={role.id}>
                   {role.name}
                 </SelectItem>
@@ -279,7 +280,7 @@ export function AdminUsersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((user: any) => (
+              users.map((user) => (
                 <TableRow key={user.id} className="hover:bg-muted/25">
                   <TableCell className="px-4 py-3">
                     <Checkbox

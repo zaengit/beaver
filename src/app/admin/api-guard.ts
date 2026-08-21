@@ -15,7 +15,7 @@ import {
   verifyAccessToken,
   verifyRefreshToken,
 } from "@zbeaver/beaver/app/admin/jwt"
-import { consumeRefreshSession, saveRefreshSession } from "@zbeaver/beaver/app/admin/session-store"
+import { consumeRefreshSession, findActiveRefreshSession, getRefreshSessionExpiry, saveRefreshSession } from "@zbeaver/beaver/app/admin/session-store"
 
 export async function getAdminSession(cookies: AstroLikeCookies) {
   const access = readAdminAccessToken(cookies)
@@ -23,9 +23,12 @@ export async function getAdminSession(cookies: AstroLikeCookies) {
 
   try {
     const payload = await verifyAccessToken(access)
+    if (typeof payload.sessionId !== "string") return null
+    const stored = findActiveRefreshSession(payload.sessionId)
+    if (!stored || stored.userId !== payload.sub) return null
     const user = findSafeUserByIdRecord(payload.sub)
     if (!user) return null
-    return { user, permissions: payload.permissions }
+    return { user, permissions: await getUserPermissions(user.id) }
   } catch {
     return null
   }
@@ -47,6 +50,7 @@ export async function refreshAdminSession(cookies: AstroLikeCookies) {
     const nextSessionId = crypto.randomUUID()
     const nextAccess = await signAccessToken({
       sub: user.id,
+      sessionId: nextSessionId,
       email: user.email,
       roleId: user.roleId,
       permissions,
@@ -56,7 +60,7 @@ export async function refreshAdminSession(cookies: AstroLikeCookies) {
       sessionId: nextSessionId,
     })
 
-    saveRefreshSession(nextSessionId, user.id, Date.now() + 30 * 24 * 60 * 60 * 1000)
+    saveRefreshSession(nextSessionId, user.id, getRefreshSessionExpiry())
     cookies.set(ADMIN_ACCESS_COOKIE, nextAccess, buildAdminAccessCookieOptions())
     cookies.set(ADMIN_REFRESH_COOKIE, nextRefresh, buildAdminRefreshCookieOptions())
 

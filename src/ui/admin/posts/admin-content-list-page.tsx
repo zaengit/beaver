@@ -31,6 +31,8 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 import { buildNavigationUrl } from "@zbeaver/beaver/ui/admin/navigation"
 import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import type { AdminPostListResponse } from "@zbeaver/beaver/ui/admin/shared/admin-data"
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url"
 
 interface AdminContentListPageProps {
   contentType?: string
@@ -38,7 +40,7 @@ interface AdminContentListPageProps {
 }
 
 export function AdminContentListPage({ contentType, pageTitle }: AdminContentListPageProps) {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<AdminPostListResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isPending, setIsPending] = useState(false)
@@ -69,7 +71,7 @@ export function AdminContentListPage({ contentType, pageTitle }: AdminContentLis
     if (sortOrder) params.set("sortOrder", sortOrder)
     params.set("type", type)
     const qs = params.toString() ? `?${params.toString()}` : ""
-    const nextData = await adminApiGet(`/api/admin/posts${qs}`)
+    const nextData = await adminApiGet<AdminPostListResponse>(`/api/admin/posts${qs}`)
     setData(nextData)
     setSelectedIds([])
   }
@@ -120,7 +122,7 @@ export function AdminContentListPage({ contentType, pageTitle }: AdminContentLis
   const handleSelectAll = useCallback((checked: boolean) => {
     if (!data?.data) return
     if (checked) {
-      setSelectedIds(data.data.map((p: any) => p.id))
+      setSelectedIds(data.data.map((post) => post.id))
     } else {
       setSelectedIds([])
     }
@@ -132,15 +134,15 @@ export function AdminContentListPage({ contentType, pageTitle }: AdminContentLis
     )
   }, [])
 
-  const isAllSelected = data?.data?.length > 0 && selectedIds.length === data.data.length
+  const isAllSelected = data !== null && data.data.length > 0 && selectedIds.length === data.data.length
   const isSomeSelected = selectedIds.length > 0
 
   // ─── Bulk action handlers ────────────────────────────────────────────────
 
-  async function performBulkAction(path: string, successMessage: string) {
+  async function performBulkAction(path: string) {
     if (selectedIds.length === 0) return
     setIsPending(true)
-    const result = await adminApiPost<any>(path, { ids: selectedIds })
+    const result = await adminApiPost<unknown>(path, { ids: selectedIds })
     setIsPending(false)
     if (result.success) {
       adminToast.success("update", "post")
@@ -153,19 +155,19 @@ export function AdminContentListPage({ contentType, pageTitle }: AdminContentLis
   const handleBulkDelete = useCallback(async () => {
     if (selectedIds.length === 0) return
     if (!confirm(`Delete ${selectedIds.length} post(s)? This action cannot be undone.`)) return
-    await performBulkAction("/api/admin/posts/bulk/delete", "Bulk delete completed.")
+    await performBulkAction("/api/admin/posts/bulk/delete")
   }, [selectedIds])
 
   const handleBulkPublish = useCallback(async () => {
-    await performBulkAction("/api/admin/posts/bulk/publish", "Bulk publish completed.")
+    await performBulkAction("/api/admin/posts/bulk/publish")
   }, [selectedIds])
 
   const handleBulkUnpublish = useCallback(async () => {
-    await performBulkAction("/api/admin/posts/bulk/unpublish", "Bulk unpublish completed.")
+    await performBulkAction("/api/admin/posts/bulk/unpublish")
   }, [selectedIds])
 
   const handleBulkDuplicate = useCallback(async () => {
-    await performBulkAction("/api/admin/posts/bulk/duplicate", "Bulk duplicate completed.")
+    await performBulkAction("/api/admin/posts/bulk/duplicate")
   }, [selectedIds])
 
   if (error) return <main className="p-6"><p className="text-destructive">Error: {error}</p></main>
@@ -316,7 +318,7 @@ export function AdminContentListPage({ contentType, pageTitle }: AdminContentLis
                   </TableCell>
                 </TableRow>
               ) : (
-                contentItems.map((post: any) => (
+                contentItems.map((post) => (
                   <TableRow key={post.id} className="hover:bg-muted/25">
                     <TableCell className="px-4 py-3">
                       <Checkbox
@@ -325,7 +327,7 @@ export function AdminContentListPage({ contentType, pageTitle }: AdminContentLis
                         aria-label={`Select ${post.title}`}
                       />
                     </TableCell>
-                    <TableCell className="px-4 py-3 font-medium"><div className="flex items-center gap-3">{post.featuredImage ? <img src={post.featuredImage} alt="" className="size-10 rounded-sm border object-cover" /> : <div className="size-10 rounded-sm border bg-muted" />}<Link to={`${contentPath}/${post.id}/edit`} className="underline">
+                    <TableCell className="px-4 py-3 font-medium"><div className="flex items-center gap-3">{safeAdminImageUrl(post.featuredImage) ? <img src={safeAdminImageUrl(post.featuredImage) ?? undefined} alt="" className="size-10 rounded-sm border object-cover" /> : <div className="size-10 rounded-sm border bg-muted" />}<Link to={`${contentPath}/${post.id}/edit`} className="underline">
                         {post.title}
                       </Link></div>
                     </TableCell>

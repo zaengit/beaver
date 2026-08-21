@@ -17,6 +17,7 @@ import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea"
 import { Checkbox } from "@zbeaver/beaver/ui/admin/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@zbeaver/beaver/ui/admin/components/ui/select"
 import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker"
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url"
 import type { SiteSettings, SocialLink, OpenHours } from "@zbeaver/beaver/app/models/setting"
 
 const TIMEZONES = Intl.supportedValuesOf?.("timeZone") ?? [
@@ -242,7 +243,7 @@ export function AdminSettingsPage() {
       const result = await adminApiPut<SiteSettings>("/api/admin/settings", payload)
       if (result.success) {
         setSettings(result.data)
-        adminToast.success("update", "settings" as never)
+        adminToast.success("update", "settings")
       } else {
         adminToast.error(result.message)
       }
@@ -361,7 +362,7 @@ export function AdminSettingsPage() {
                   {settings.logo ? (
                     <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-sm border bg-muted">
                       <img
-                        src={settings.logo}
+                        src={safeAdminImageUrl(settings.logo) ?? undefined}
                         alt="Logo preview"
                         className="object-contain h-full w-full"
                       />
@@ -408,7 +409,7 @@ export function AdminSettingsPage() {
                   {settings.favicon ? (
                     <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-sm border bg-muted">
                       <img
-                        src={settings.favicon}
+                        src={safeAdminImageUrl(settings.favicon) ?? undefined}
                         alt="Favicon preview"
                         className="object-contain h-full w-full"
                       />

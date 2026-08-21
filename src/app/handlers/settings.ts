@@ -10,7 +10,10 @@ import { updateSettingsSchema } from "@zbeaver/beaver/app/validations/settings"
 // Handlers
 // ---------------------------------------------------------------------------
 
-export function handleGetSettings() {
+export async function handleGetSettings(session: Session) {
+  const perm = await requirePermission(session, "settings.manage")
+  if (perm) return perm
+
   return adminSuccess(getSiteSettings())
 }
 

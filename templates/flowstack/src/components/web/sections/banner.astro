@@ -1,5 +1,5 @@
 ---
-import { getSectionStyle, type Section } from "./shared/types"
+import { getSectionStyle, safeHref, type Section } from "./shared/types"
 import ResponsiveImage from "@/components/web/responsive-image.astro"
 import SectionHeading from "./shared/section-heading.astro"
 
@@ -27,9 +27,9 @@ const { section } = Astro.props
           <div class="max-w-3xl">
             <SectionHeading content={item} theme="dark" />
           </div>
-          {item.links?.[0]?.label && item.links[0]?.url && (
+          {item.links?.[0]?.label && safeHref(item.links[0]?.url) !== "#" && (
             <a
-              href={item.links[0].url}
+              href={safeHref(item.links[0].url)}
               class="shrink-0 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-slate-950 shadow-lg transition-all duration-200 hover:bg-indigo-50 hover:scale-105 active:scale-95 inline-flex items-center gap-2"
             >
               <span>{item.links[0].label}</span>

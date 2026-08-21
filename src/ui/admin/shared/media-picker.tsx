@@ -3,8 +3,6 @@ import { useState, useEffect, useRef } from "react"
 import { ImageIcon, Search, Check, X, FileIcon } from "lucide-react"
 import { Button } from "@zbeaver/beaver/ui/admin/components/ui/button"
 import { Input } from "@zbeaver/beaver/ui/admin/components/ui/input"
-import { Label } from "@zbeaver/beaver/ui/admin/components/ui/label"
-import { Textarea } from "@zbeaver/beaver/ui/admin/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -25,6 +23,7 @@ import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
 import { MediaUploadZone } from "@zbeaver/beaver/ui/admin/shared/media-upload-zone"
 import { Skeleton } from "@zbeaver/beaver/ui/admin/components/ui/skeleton"
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -45,7 +44,7 @@ export interface MediaPickerMedia {
   updatedAt: number
 }
 
-export interface MediaPickerProps {
+interface MediaPickerProps {
   value?: string | null
   onChange: (media: MediaPickerMedia | null) => void
   onSelect?: (media: MediaPickerMedia[]) => void
@@ -84,7 +83,6 @@ export function MediaPicker({
       />
       <MediaPickerDialog
         open={open}
-        onOpenChange={setOpen}
         onSelect={(media) => {
           if (multiple) {
             onSelect?.(media)
@@ -106,7 +104,6 @@ export function MediaPicker({
 
 interface MediaPickerDialogProps {
   open: boolean
-  onOpenChange: (open: boolean) => void
   onSelect: (media: MediaPickerMedia[]) => void
   accept?: string
   multiple?: boolean
@@ -115,7 +112,6 @@ interface MediaPickerDialogProps {
 
 function MediaPickerDialog({
   open,
-  onOpenChange,
   onSelect,
   accept,
   multiple = false,
@@ -345,7 +341,7 @@ async function fetchMedia() {
                 >
                   {item.mimeType.startsWith("image/") ? (
                     <img
-                      src={item.thumbnailUrl || item.url}
+                      src={safeAdminImageUrl(item.thumbnailUrl || item.url) ?? undefined}
                       alt={item.alt || item.name}
                       className="object-cover h-full w-full"
                     />
@@ -418,7 +414,7 @@ function PickerGridItem({
     >
       {isImage && !imageError ? (
         <img
-          src={item.thumbnailUrl || item.url}
+          src={safeAdminImageUrl(item.thumbnailUrl || item.url) ?? undefined}
           alt={item.alt || item.name}
           className="object-cover h-full w-full"
           onError={() => setImageError(true)}
@@ -450,7 +446,7 @@ function SelectedPreview({ item }: { item: MediaPickerMedia }) {
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-sm border bg-muted">
         {item.mimeType.startsWith("image/") ? (
           <img
-            src={item.thumbnailUrl || item.url}
+            src={safeAdminImageUrl(item.thumbnailUrl || item.url) ?? undefined}
             alt={item.alt || item.name}
             className="object-cover h-full w-full"
           />

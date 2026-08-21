@@ -26,6 +26,7 @@ import {
 import { getSectionRegistry, type SectionTemplate } from "@zbeaver/beaver/app/registry/sections"
 import {
   createEmptyItem,
+  type AvailableSection,
   type EmbeddedSection,
   type SectionEmbedderProps,
 } from "./section-embedder-types"
@@ -33,7 +34,7 @@ import { EmbeddedSectionCard } from "./embedded-section-card"
 
 export type { EmbeddedSection } from "./section-embedder-types"
 
-function createTemplateSection(template: SectionTemplate) {
+function createTemplateSection(template: SectionTemplate): AvailableSection {
   const demo = (template.demo?.section ?? {}) as Record<string, unknown>
   const text = (field: "caption" | "title" | "text" | "image" | "alt_image" | "bg_color" | "bg_image" | "style_css" | "style_css_inline" | "style_id" | "alignment") =>
     typeof demo[field] === "string" ? (demo[field] as string) : null
@@ -66,7 +67,7 @@ function createTemplateSection(template: SectionTemplate) {
 
 export function SectionEmbedder({ embeddedSections, onChange }: SectionEmbedderProps) {
   const sectionTemplates = getSectionRegistry()
-  const [availableSections] = useState<any[]>(() => sectionTemplates.map(createTemplateSection))
+  const [availableSections] = useState<AvailableSection[]>(() => sectionTemplates.map(createTemplateSection))
   const [isSectionPickerOpen, setIsSectionPickerOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set())
   const [collapsedItems, setCollapsedItems] = useState<Set<string>>(new Set())
@@ -77,7 +78,7 @@ export function SectionEmbedder({ embeddedSections, onChange }: SectionEmbedderP
   )
 
   function addSection(sectionId: string) {
-    const section = availableSections.find((s: any) => s.id === sectionId)
+    const section = availableSections.find((candidate) => candidate.id === sectionId)
     if (!section) return
 
     let links: { label: string; url: string }[] | null = null
@@ -291,7 +292,7 @@ export function SectionEmbedder({ embeddedSections, onChange }: SectionEmbedderP
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
-            {availableSections.map((section: any) => (
+            {availableSections.map((section) => (
               <Button
                 key={section.id}
                 type="button"

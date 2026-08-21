@@ -3,11 +3,14 @@ import { and, asc, desc, eq, like, type SQL } from "drizzle-orm"
 import { db } from "@zbeaver/beaver/app/db"
 import { categories } from "@zbeaver/beaver/app/db/schema"
 import type { CategoryRecord } from "@zbeaver/beaver/app/models/category"
+import { sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
 
 export type CategoryRow = Pick<
   CategoryRecord,
   "id" | "name" | "slug" | "type" | "description" | "image" | "status" | "createdAt" | "updatedAt"
 >
+
+const MAX_CATEGORY_ROWS = 5_000
 
 export function findCategoryByIdRecord(id: string) {
   return db
@@ -47,12 +50,14 @@ export function findCategoryBySlugRecord(slug: string) {
 
 export function listCategoryRecords(filters?: { type?: string; search?: string; sortBy?: string; sortOrder?: string }) {
   const conditions: SQL<unknown>[] = []
+  const type = filters?.type?.slice(0, 64)
+  const search = filters?.search?.slice(0, 100)
 
-  if (filters?.type) {
-    conditions.push(eq(categories.type, filters.type))
+  if (type) {
+    conditions.push(eq(categories.type, type))
   }
-  if (filters?.search) {
-    conditions.push(like(categories.name, `%${filters.search}%`))
+  if (search) {
+    conditions.push(like(categories.name, `%${search}%`))
   }
 
   // Build sort
@@ -82,7 +87,7 @@ export function listCategoryRecords(filters?: { type?: string; search?: string; 
     .from(categories)
     .orderBy(orderColumn)
 
-  return (conditions.length > 0 ? query.where(and(...conditions)) : query).all() as CategoryRow[]
+  return (conditions.length > 0 ? query.where(and(...conditions)) : query).limit(MAX_CATEGORY_ROWS).all() as CategoryRow[]
 }
 
 export function categorySlugExistsRecord(slug: string, excludeId?: string) {
@@ -106,14 +111,18 @@ export function createCategoryRecord(input: {
   createdAt: number
   updatedAt: number
 }) {
-  db.insert(categories).values(input).run()
+  db.insert(categories).values({
+    ...input,
+    name: sanitizeText(input.name),
+    description: input.description ? sanitizeText(input.description) : null,
+  }).run()
 
   return {
     id: input.id,
-    name: input.name,
+    name: sanitizeText(input.name),
     slug: input.slug,
     type: input.type,
-    description: input.description,
+    description: input.description ? sanitizeText(input.description) : null,
     image: input.image,
     status: input.status,
     createdAt: input.createdAt,
@@ -131,10 +140,10 @@ export function updateCategoryRecord(id: string, input: {
   updatedAt: number
 }) {
   const updates: Record<string, unknown> = { updatedAt: input.updatedAt }
-  if (input.name !== undefined) updates.name = input.name
+  if (input.name !== undefined) updates.name = sanitizeText(input.name)
   if (input.slug !== undefined) updates.slug = input.slug
   if (input.type !== undefined) updates.type = input.type
-  if (input.description !== undefined) updates.description = input.description
+  if (input.description !== undefined) updates.description = input.description ? sanitizeText(input.description) : null
   if (input.image !== undefined) updates.image = input.image
   if (input.status !== undefined) updates.status = input.status
 

@@ -1,23 +1,48 @@
 ---
 import { toVideoEmbedUrl, type Section } from "./sections/shared/types"
 import ContactSection from "./sections/contact"
+import type { AstroComponentFactory } from "astro/runtime/server/index.js"
 import sectionTemplates from "@section-registry"
 import { listPublishedPostsByType } from "@zbeaver/beaver/server"
 
 interface Props { sections: string | null }
 
 const { sections } = Astro.props
+const MAX_SECTIONS = 50
+const MAX_SECTION_ITEMS = 100
+const MAX_SECTIONS_JSON_LENGTH = 1_000_000
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function normalizeSection(value: unknown): Section | null {
+  if (!isRecord(value) || typeof value.type !== "string") return null
+  const items = Array.isArray(value.item)
+    ? value.item.slice(0, MAX_SECTION_ITEMS).filter(isRecord)
+    : []
+  return {
+    ...value,
+    type: value.type.slice(0, 64),
+    category: typeof value.category === "string" ? value.category.slice(0, 128) : null,
+    limit: typeof value.limit === "number" && Number.isFinite(value.limit) ? Math.min(100, Math.max(0, Math.trunc(value.limit))) : null,
+    item: items as Section["item"],
+  } as Section
+}
+
 const sectionComponents = Object.fromEntries(
   Object.entries(import.meta.glob("./sections/*.astro", { eager: true })).map(([path, module]) => [
     path.replace("./sections/", "").replace(/\.astro$/, ""),
-    (module as { default: unknown }).default,
+    (module as { default: AstroComponentFactory }).default,
   ]),
-) as Record<string, any>
+) as Record<string, AstroComponentFactory>
 
 let parsedSections: Section[] = []
 try {
-  const parsed = sections ? JSON.parse(sections) : []
-  parsedSections = Array.isArray(parsed) ? parsed : []
+  const parsed = sections && sections.length <= MAX_SECTIONS_JSON_LENGTH ? JSON.parse(sections) : []
+  parsedSections = Array.isArray(parsed)
+    ? parsed.slice(0, MAX_SECTIONS).map(normalizeSection).filter((section): section is Section => section !== null)
+    : []
 } catch { /* Invalid stored JSON is rendered as no sections. */ }
 
 const renderedSections = parsedSections.flatMap((section) => {
