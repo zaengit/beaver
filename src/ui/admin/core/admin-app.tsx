@@ -21,10 +21,10 @@ function NavigationTracker() {
   return null
 }
 
-export function AdminApp({ pathname: _initialPathname }: { pathname: string }) {
+export function AdminApp() {
   return (
     <BrowserRouter>
-      <Toaster richColors position="top-right" />
+      <Toaster richColors position="top-right" closeButton />
       <NavigationTracker />
       <AdminSessionProvider>
         <AdminRouter />

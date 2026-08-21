@@ -1,13 +1,12 @@
 import type { Section } from "./shared/types"
+import { safeCssColor, safeCssImageSrc, safeHref, safeImageSrc } from "../safe-url"
 import { SaasContactForm } from "../saas-contact-form"
 
 interface Props { section: Section; hasInquiryForm?: boolean }
 
 export default function Contact({ section, hasInquiryForm = false }: Props) {
-  // Determine theme: dark by default (matches other sections), light if bg_color is explicitly light or section forces it
-  const isDark = !section.bg_color || section.bg_color === "" || section.bg_color?.includes("slate-9") || section.bg_color?.startsWith("#0") || section.bg_color?.startsWith("#1") || section.bg_color?.startsWith("#2")
-
-  const sectionBg = section.bg_color ? undefined : "bg-slate-950"
+  const safeBackgroundColor = safeCssColor(section.bg_color)
+  const sectionBg = safeBackgroundColor ? undefined : "bg-slate-950"
   const borderColor = "border-slate-800/80"
   const titleColor = "text-white"
   const textColor = "text-slate-300"
@@ -27,7 +26,8 @@ export default function Contact({ section, hasInquiryForm = false }: Props) {
     section.alignment === "right" && "text-right",
   ].filter(Boolean).join(" ")
 
-  const validLinks = section.links?.filter((link) => link.label && link.url) ?? []
+  const validLinks = section.links?.filter((link) => link.label && safeHref(link.url) !== "#") ?? []
+  const safeBackgroundImage = safeCssImageSrc(section.bg_image)
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 my-6">
@@ -35,8 +35,8 @@ export default function Contact({ section, hasInquiryForm = false }: Props) {
         id={section.style_id || undefined}
         className={classes}
         style={{
-          backgroundColor: section.bg_color || undefined,
-          backgroundImage: section.bg_image ? `url(${section.bg_image})` : undefined,
+          backgroundColor: safeBackgroundColor || undefined,
+          backgroundImage: safeBackgroundImage ? `url(${safeBackgroundImage})` : undefined,
         }}
       >
         <div className={contentClasses}>
@@ -65,9 +65,9 @@ export default function Contact({ section, hasInquiryForm = false }: Props) {
           )}
 
           {/* Featured image */}
-          {section.image && (
+          {safeImageSrc(section.image) && (
             <img
-              src={section.image}
+              src={safeImageSrc(section.image) || undefined}
               alt={section.alt_image || section.title || ""}
               className="mt-8 max-h-[32rem] w-full rounded-[24px] object-cover shadow-lg"
               loading="lazy"
@@ -83,7 +83,7 @@ export default function Contact({ section, hasInquiryForm = false }: Props) {
               {validLinks.map((link) => (
                 <a
                   key={`${link.label}-${link.url}`}
-                  href={link.url}
+                  href={safeHref(link.url)}
                   className="rounded-full bg-white/10 border border-white/20 px-6 py-3 text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-indigo-600 hover:border-indigo-600 hover:scale-105 active:scale-95 inline-flex items-center gap-2 backdrop-blur-sm"
                 >
                   <span>{link.label}</span>

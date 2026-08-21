@@ -1,16 +1,11 @@
 // ─── Core Response Types ─────────────────────────────────────────────────────
 
-/** Returned by Server Actions to the client. */
-export type ActionResponse<T> =
-  | { success: true; message: string; data: T }
-  | { success: false; message: string; errors?: Record<string, string[]> }
-
 /** Returned by Service Layer methods. */
 export type ServiceResult<T> =
   | { success: true; data: T; message: string }
   | { success: false; error: ServiceError }
 
-export interface ServiceError {
+interface ServiceError {
   code: "unauthorized" | "forbidden" | "not_found" | "conflict" | "validation" | "db_error"
   message: string
   fieldErrors?: Record<string, string[]>
@@ -39,11 +34,4 @@ export interface PaginationInput {
   perPage?: number
 }
 
-// ─── Re-exports from sub-modules ──────────────────────────────────────────────
-
-export type { Post, PublicPost, PublicSearchResult, PublicArchiveFilters, PublicArchiveFilterOptions, PostWithRelations, PostFilters } from "./posts"
-export type { Category, CreateCategoryInput, UpdateCategoryInput } from "./categories"
-export type { User, SafeUser, CreateUserInput, UpdateUserInput } from "./users"
-export type { Role, RoleWithPermissions, CreateRoleInput, UpdateRoleInput } from "./roles"
-export type { Media, CreateMediaInput, UpdateMediaInput, MediaFilters } from "./media"
-export type { Menu, MenuTree, CreateMenuInput, UpdateMenuInput } from "./menus"
+export type { Post, PublicPost, PublicArchiveFilters, PublicArchiveFilterOptions, PostWithRelations, PostFilters } from "./posts"

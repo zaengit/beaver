@@ -18,6 +18,8 @@ export interface MenuTree {
   children: MenuTree[]
 }
 
+const MAX_MENU_ROWS = 5_000
+
 export function findMenuById(id: string) {
   return db.select().from(menus).where(eq(menus.id, id)).get() as MenuRow | undefined
 }
@@ -26,7 +28,7 @@ export function listMenus(type?: string, publishedOnly = false) {
   const query = db.select().from(menus)
   const condition = type ? eq(menus.type, type) : undefined
   const where = publishedOnly ? (condition ? and(condition, eq(menus.status, "published")) : eq(menus.status, "published")) : condition
-  return (where ? query.where(where) : query).all() as MenuRow[]
+  return (where ? query.where(where) : query).limit(MAX_MENU_ROWS).all() as MenuRow[]
 }
 
 export function getMenuTreeRecords(items?: MenuRow[], type?: string) {
@@ -57,13 +59,32 @@ export function getMenuTreeRecords(items?: MenuRow[], type?: string) {
     }
   }
 
-  const sortTree = (tree: MenuTree[]): MenuTree[] =>
-    tree.sort((a, b) => a.position - b.position).map((node) => ({
-      ...node,
-      children: sortTree(node.children),
-    }))
+  const visited = new Set<string>()
+  const MAX_RENDER_DEPTH = 50
+  const sortTree = (tree: MenuTree[], depth = 0): MenuTree[] => {
+    const result: MenuTree[] = []
+    for (const node of [...tree].sort((a, b) => a.position - b.position)) {
+      if (visited.has(node.id)) continue
+      visited.add(node.id)
+      result.push({
+        ...node,
+        children: depth < MAX_RENDER_DEPTH ? sortTree(node.children, depth + 1) : [],
+      })
+    }
+    return result
+  }
 
-  return sortTree(roots)
+  const sortedRoots = sortTree(roots)
+  // Recover orphaned/cyclic rows as additional roots instead of recursing
+  // forever when older or manually edited data contains an invalid hierarchy.
+  for (const node of map.values()) {
+    if (!visited.has(node.id)) {
+      node.parentId = null
+      sortedRoots.push(...sortTree([node]))
+    }
+  }
+
+  return sortedRoots
 }
 
 export function createMenuRecord(input: {

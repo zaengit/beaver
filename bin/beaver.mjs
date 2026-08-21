@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
+import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
 import { execSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
-import { resolve, dirname } from "node:path"
+import { resolve, dirname, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const templatesDir = resolve(__dirname, "..", "dist", "templates")
@@ -19,6 +19,9 @@ const installDepsList = ["astro", "@astrojs/react", "@astrojs/node", "react", "r
 function loadDotEnv() {
   const envPath = resolve(process.cwd(), ".env")
   if (!existsSync(envPath)) return
+  const envStat = lstatSync(envPath)
+  if (!envStat.isFile() || envStat.isSymbolicLink()) throw new Error("Refusing to read a non-regular .env path.")
+  chmodSync(envPath, 0o600)
 
   for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
     const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/)
@@ -76,16 +79,16 @@ function ensureDir(dirPath) {
   }
 }
 
-function copyDir(src, dest, overwrite = false) {
+function copyDir(src, dest) {
   ensureDir(dest)
   const entries = readdirSync(src, { withFileTypes: true })
   for (const entry of entries) {
     const srcPath = resolve(src, entry.name)
     const destPath = resolve(dest, entry.name)
     if (entry.isDirectory()) {
-      copyDir(srcPath, destPath, overwrite)
+      copyDir(srcPath, destPath)
     } else if (entry.isFile()) {
-      if (!overwrite && existsSync(destPath)) {
+      if (existsSync(destPath)) {
         console.warn(`Skipping existing file: ${destPath}`)
         continue
       }
@@ -107,6 +110,11 @@ function copyFileIfMissing(source, destination) {
 
 function createInitialEnv(source, destination) {
   if (existsSync(destination)) {
+    const existing = lstatSync(destination)
+    if (!existing.isFile() || existing.isSymbolicLink()) {
+      throw new Error("Refusing to use a non-regular .env path.")
+    }
+    chmodSync(destination, 0o600)
     console.warn(`Skipping existing file: ${destination}`)
     return null
   }
@@ -127,12 +135,12 @@ function createInitialEnv(source, destination) {
     .replace(/^ADMIN_PASSWORD=.*$/m, `ADMIN_PASSWORD=${credentials.password}`)
     .replace(/^ADMIN_NAME=.*$/m, `ADMIN_NAME=${credentials.name}`)
 
-  writeFileSync(destination, contents)
+  writeFileSync(destination, contents, { mode: 0o600, flag: "wx" })
+  chmodSync(destination, 0o600)
   console.log(`Created: ${destination}`)
   console.log("Initial Super Admin credentials (save these now; the password is only shown once):")
   console.log(`  Email: ${credentials.email}`)
   console.log(`  Password: ${credentials.password}`)
-  return credentials
 }
 
 function generateConfig() {
@@ -147,7 +155,13 @@ function generateConfig() {
 }
 
 function templateSource(templateName = "flowstack") {
+  if (!/^[a-z0-9-]+$/.test(templateName)) {
+    throw new Error("Invalid template name.")
+  }
   const source = resolve(templatesDir, templateName)
+  if (source !== templatesDir && !source.startsWith(`${templatesDir}${sep}`)) {
+    throw new Error("Invalid template path.")
+  }
   if (!existsSync(source)) throw new Error(`Template "${templateName}" was not found. Ensure the package is built correctly.`)
   return source
 }
@@ -167,7 +181,7 @@ function validateSeedEnvironment() {
   const name = process.env.ADMIN_NAME?.trim()
   const placeholders = new Set(["admin@example.com", "password123", "change-this-password", "Super Admin"])
 
-  if (!email || !password || !name || password.length < 12 || placeholders.has(email) || placeholders.has(password)) {
+  if (!email || !password || !name || password.length < 12 || password.length > 128 || placeholders.has(email) || placeholders.has(password)) {
     throw new Error("Set ADMIN_EMAIL, ADMIN_NAME, and a non-placeholder ADMIN_PASSWORD of at least 12 characters in .env before running install.")
   }
 }
@@ -179,6 +193,7 @@ try {
 
   if (command === "install") {
     const templateName = target || "flowstack"
+    templateSource(templateName)
     generateConfig()
     copyExample(templateName)
     installDeps()
@@ -192,6 +207,7 @@ try {
     migrate()
     console.log("CMS database migrations complete.")
   } else if (command === "seed") {
+    if (target) templateSource(target)
     await seed()
     if (target) await seedTemplate(target)
   } else if (command === "reset" && target === "superadmin") {
@@ -201,7 +217,9 @@ try {
     generateConfig()
     installDeps()
   } else if (command === "example") {
-    copyExample(target || "flowstack")
+    const templateName = target || "flowstack"
+    templateSource(templateName)
+    copyExample(templateName)
     installDeps()
   } else {
     console.error(usage)

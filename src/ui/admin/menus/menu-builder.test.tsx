@@ -5,21 +5,16 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 
 import { MenuBuilder } from "@zbeaver/beaver/ui/admin/menus/menu-builder"
 
-const { adminApiPost, adminApiPut, adminApiDelete, reloadPage } = vi.hoisted(() => ({
+const { adminApiPost, adminApiPut, adminApiDelete } = vi.hoisted(() => ({
   adminApiPost: vi.fn(),
   adminApiPut: vi.fn(),
   adminApiDelete: vi.fn(),
-  reloadPage: vi.fn(),
 }))
 
 vi.mock("@zbeaver/beaver/ui/admin/shared/api-client", () => ({
   adminApiPost,
   adminApiPut,
   adminApiDelete,
-}))
-
-vi.mock("@zbeaver/beaver/ui/admin/navigation", () => ({
-  reloadPage,
 }))
 
 vi.mock("@dnd-kit/core", () => ({
@@ -74,10 +69,9 @@ describe("MenuBuilder", () => {
     adminApiPost.mockReset()
     adminApiPut.mockReset()
     adminApiDelete.mockReset()
-    reloadPage.mockClear()
   })
 
-  it("keeps the update in local state after save without reloading the page", async () => {
+  it("keeps the update in local state after save", async () => {
     adminApiPost.mockResolvedValue({ success: true, data: null })
     adminApiPut.mockResolvedValue({ success: true, data: null })
 
@@ -118,7 +112,6 @@ describe("MenuBuilder", () => {
       expect(screen.queryByText("Unsaved changes")).toBeNull()
     })
 
-    expect(reloadPage).not.toHaveBeenCalled()
   })
 
   it("promotes a deleted item's subtree by one level", async () => {

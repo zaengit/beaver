@@ -4,7 +4,7 @@ import * as React from "react"
 
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 
-export interface CheckboxProps
+interface CheckboxProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "checked" | "onChange"> {
   checked?: boolean
   onCheckedChange?: (checked: boolean) => void

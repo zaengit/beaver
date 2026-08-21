@@ -1,15 +1,19 @@
 import { and, asc, count, desc, eq, like, or } from "drizzle-orm"
 
 import { db } from "@zbeaver/beaver/app/db"
-import { users } from "@zbeaver/beaver/app/db/schema"
+import { roles, users } from "@zbeaver/beaver/app/db/schema"
 import { sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
 import type { UserRecord } from "@zbeaver/beaver/app/models/user"
+import { clampPagination } from "@zbeaver/beaver/pkg/utils/pagination"
 
 export type UserSafe = Omit<UserRecord, "password">
+export type UserListItem = UserSafe & { roleName: string | null }
+const MAX_FILTER_TEXT_LENGTH = 100
 
 function toSafe(user: UserRecord): UserSafe {
-  const { password, ...safe } = user
-  return safe
+  const safe = { ...user }
+  Reflect.deleteProperty(safe, "password")
+  return safe as UserSafe
 }
 
 export function findUserByIdRecord(id: string) {
@@ -32,18 +36,18 @@ export function listUsersPaginatedRecord(filters: {
   sortBy?: string
   sortOrder?: string
 }) {
-  const page = Math.max(1, filters.page ?? 1)
-  const perPage = Math.min(100, Math.max(1, filters.perPage ?? 20))
-  const offset = (page - 1) * perPage
+  const { page, perPage, offset } = clampPagination(filters)
 
   const conditions: ReturnType<typeof eq>[] = []
-  if (filters.search) {
+  const search = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH)
+  const roleId = filters.roleId?.slice(0, 128)
+  if (search) {
     conditions.push(
-      or(like(users.name, `%${filters.search}%`), like(users.email, `%${filters.search}%`)) as ReturnType<typeof eq>,
+      or(like(users.name, `%${search}%`), like(users.email, `%${search}%`)) as ReturnType<typeof eq>,
     )
   }
-  if (filters.roleId) {
-    conditions.push(eq(users.roleId, filters.roleId))
+  if (roleId) {
+    conditions.push(eq(users.roleId, roleId))
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -70,15 +74,24 @@ export function listUsersPaginatedRecord(filters: {
     }
   }
 
-  const dataQuery = db.select().from(users)
+  const dataQuery = db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    roleId: users.roleId,
+    emailVerified: users.emailVerified,
+    createdAt: users.createdAt,
+    updatedAt: users.updatedAt,
+    roleName: roles.name,
+  }).from(users).leftJoin(roles, eq(users.roleId, roles.id))
   const paged = (whereClause ? dataQuery.where(whereClause) : dataQuery)
     .orderBy(orderColumn)
     .limit(perPage)
     .offset(offset)
-    .all() as UserRecord[]
+    .all() as UserListItem[]
 
   return {
-    data: paged.map(toSafe),
+    data: paged,
     meta: {
       currentPage: page,
       perPage,
@@ -88,10 +101,6 @@ export function listUsersPaginatedRecord(filters: {
       to: Math.min(offset + perPage, total),
     },
   }
-}
-
-export function userCountByRoleRecord(roleId: string) {
-  return (db.select({ value: count() }).from(users).where(eq(users.roleId, roleId)).get() as { value: number } | undefined)?.value ?? 0
 }
 
 export function createUserRecord(input: {

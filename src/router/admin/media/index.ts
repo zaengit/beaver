@@ -6,7 +6,7 @@ import { handleListMedia, handleUploadMedia } from "@zbeaver/beaver/app/handlers
 const VALID_SORT_BY = new Set(["name", "createdAt", "size"])
 const VALID_SORT_ORDER = new Set(["asc", "desc"])
 
-export const GET: AdminRoute = async ({ request }) => {
+export const GET: AdminRoute = async ({ request, locals }) => {
   const url = new URL(request.url)
 
   const filters: MediaFilters = {}
@@ -27,7 +27,7 @@ export const GET: AdminRoute = async ({ request }) => {
   if (sortBy && VALID_SORT_BY.has(sortBy)) filters.sortBy = sortBy
   if (sortOrder && VALID_SORT_ORDER.has(sortOrder as "asc" | "desc")) filters.sortOrder = sortOrder as "asc" | "desc"
 
-  return handleListMedia(filters)
+  return handleListMedia(locals.session as { user: { id: string } } | null, filters)
 }
 
 export const POST: AdminRoute = async ({ request, locals }) => {

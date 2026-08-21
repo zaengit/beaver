@@ -3,13 +3,12 @@ import { adminSecurity, type AdminApiEnvironment } from "@zbeaver/beaver/router/
 import { createAdminRouteContext, type AdminRoute } from "@zbeaver/beaver/router/route"
 import { applySecurityHeaders, enforceRequestBodyLimit, hasValidSameOrigin, isReadRequest } from "@zbeaver/beaver/router/security"
 
-type RouteModule = Partial<Record<"DELETE" | "GET" | "HEAD" | "OPTIONS" | "PATCH" | "POST" | "PUT", AdminRoute>>
+type RouteModule = Partial<Record<"DELETE" | "GET" | "PATCH" | "POST" | "PUT", AdminRoute>>
 type ApiEnvironment = AdminApiEnvironment
 
 const routeModules = {
   ...import.meta.glob(["./admin/**/*.ts", "!./admin/**/*.test.ts"]),
   ...import.meta.glob(["./public/**/*.ts", "!./public/**/*.test.ts"]),
-  ...import.meta.glob(["./media/**/*.ts", "!./media/**/*.test.ts"]),
 }
 
 function toHonoPath(modulePath: string) {
@@ -34,12 +33,27 @@ const routes = Object.entries(routeModules)
 
 export const apiApp = new Hono<ApiEnvironment>().basePath("/api")
 
+apiApp.onError((error, context) => {
+  const invalidBody = error instanceof SyntaxError
+  if (!invalidBody) console.error("API request failed", error)
+  return context.json(
+    { success: false, message: invalidBody ? "Invalid request body." : "Request could not be processed." },
+    invalidBody ? 400 : 500,
+  )
+})
+
 apiApp.use("*", async (context, next) => {
   applySecurityHeaders(context)
 
   const request = context.req.raw
+  if (request.url.length > 8_192) {
+    return context.json({ success: false, message: "Request URL is too long." }, 414)
+  }
+  // Use Hono's canonical path so encoded route segments receive the same
+  // security headers and body limits as their decoded equivalents.
+  const pathname = context.req.path
+  if (pathname.startsWith("/api/admin/")) context.header("Cache-Control", "no-store, private")
   if (!isReadRequest(request.method)) {
-    const pathname = new URL(request.url).pathname
     const maximum = pathname === "/api/admin/media/upload"
       ? 11 * 1024 * 1024
       : 1024 * 1024

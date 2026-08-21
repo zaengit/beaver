@@ -4,8 +4,9 @@ import { findUserByIdRecord, updateUserRecord, type UserSafe } from "@zbeaver/be
 import { findUserByEmailRecord } from "@zbeaver/beaver/app/repositories/users"
 import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
 import { serviceSuccess, serviceNotFound, serviceConflict } from "@zbeaver/beaver/app/services/utils"
+import { deleteRefreshSessionsForUser } from "@zbeaver/beaver/app/admin/session-store"
 
-export interface UpdateProfileInput {
+interface UpdateProfileInput {
   name?: string
   email?: string
   password?: string
@@ -38,6 +39,10 @@ export async function updateProfile(
 
   const updated = updateUserRecord(userId, updateData)
   if (!updated) return serviceNotFound("User")
+
+  if (data.email !== undefined || data.password !== undefined) {
+    deleteRefreshSessionsForUser(userId)
+  }
 
   return serviceSuccess(updated, "Profile updated.")
 }

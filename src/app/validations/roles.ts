@@ -20,6 +20,7 @@ export const createRoleSchema = z.object({
   // Required: array of ULID strings (permission IDs)
   permissionIds: z
     .array(z.string().regex(ulidRegex, "Invalid permission ID format"))
+    .max(100, "Too many permissions")
     .min(1, "At least one permission is required"),
 })
 
@@ -37,18 +38,10 @@ export const updateRoleSchema = z.object({
   // Optional: array of ULID strings (permission IDs)
   permissionIds: z
     .array(z.string().regex(ulidRegex, "Invalid permission ID format"))
+    .max(100, "Too many permissions")
     .optional(),
-})
-
-export const assignRoleSchema = z.object({
-  // Required: valid ULID
-  userId: z.string().regex(ulidRegex, "Invalid user ID format"),
-
-  // Required: valid ULID
-  roleId: z.string().regex(ulidRegex, "Invalid role ID format"),
 })
 
 // Inferred types
 export type CreateRoleInput = z.infer<typeof createRoleSchema>
 export type UpdateRoleInput = z.infer<typeof updateRoleSchema>
-export type AssignRoleInput = z.infer<typeof assignRoleSchema>

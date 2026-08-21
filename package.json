@@ -1,6 +1,6 @@
 {
   "name": "@zbeaver/beaver",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "license": "MIT",
   "type": "module",
   "repository": {
@@ -26,6 +26,15 @@
   ],
   "bin": {
     "beaver": "bin/beaver.mjs"
+  },
+  "overrides": {
+    "esbuild": "0.28.2",
+    "fast-uri": "3.1.5",
+    "js-yaml": "4.3.1",
+    "nanoid": "3.3.18",
+    "tsx": {
+      "esbuild": "0.28.2"
+    }
   },
   "exports": {
     ".": {
@@ -55,18 +64,13 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@tiptap/extension-bubble-menu": "^3.23.4",
     "@tiptap/extension-character-count": "^3.23.4",
     "@tiptap/extension-code-block-lowlight": "^3.23.4",
-    "@tiptap/extension-floating-menu": "^3.23.4",
     "@tiptap/extension-highlight": "^3.23.4",
     "@tiptap/extension-image": "^3.23.4",
     "@tiptap/extension-link": "^3.23.4",
     "@tiptap/extension-placeholder": "^3.23.4",
     "@tiptap/extension-table": "^3.23.4",
-    "@tiptap/extension-table-cell": "^3.23.4",
-    "@tiptap/extension-table-header": "^3.23.4",
-    "@tiptap/extension-table-row": "^3.23.4",
     "@tiptap/extension-task-item": "^3.23.4",
     "@tiptap/extension-task-list": "^3.23.4",
     "@tiptap/extension-text-align": "^3.23.4",

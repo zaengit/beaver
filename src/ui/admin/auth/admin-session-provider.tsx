@@ -2,7 +2,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 
 import { fetchAdminSession } from "@zbeaver/beaver/ui/admin/auth/auth-client"
-import { setAdminUnauthorizedHandler } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { setAdminForbiddenHandler, setAdminUnauthorizedHandler } from "@zbeaver/beaver/ui/admin/shared/api-client"
+import { ADMIN_PATH } from "@zbeaver/beaver/app/admin/admin-path"
+import { navigateToPath } from "@zbeaver/beaver/ui/admin/navigation"
 
 interface AdminSession {
   user: {
@@ -72,6 +74,11 @@ export function AdminSessionProvider({ children }: { children: React.ReactNode }
       }
     })
 
+    setAdminForbiddenHandler(() => {
+      if (!mountedRef.current) return
+      navigateToPath(`${ADMIN_PATH}/403`)
+    })
+
     // Fetch awal
     refreshSession().finally(() => {
       if (mountedRef.current) setLoading(false)
@@ -85,6 +92,7 @@ export function AdminSessionProvider({ children }: { children: React.ReactNode }
     return () => {
       mountedRef.current = false
       setAdminUnauthorizedHandler(null)
+      setAdminForbiddenHandler(null)
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
         intervalRef.current = null

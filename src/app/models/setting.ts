@@ -1,9 +1,6 @@
 import type { settings } from "@zbeaver/beaver/app/db/schema"
 
-export const TABLE = "settings" as const
-
 export type SettingRow = typeof settings.$inferSelect
-export type SettingInsert = typeof settings.$inferInsert
 
 // ─── Typed Setting Keys ─────────────────────────────────────────────────────
 
@@ -23,8 +20,6 @@ export const SETTING_KEYS = {
   TRANSLATE_COUNTRIES: "translate_countries",
   EMAIL_NOTIFICATIONS: "email_notifications",
 } as const
-
-export type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS]
 
 // ─── Typed Setting Values ───────────────────────────────────────────────────
 

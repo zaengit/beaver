@@ -24,12 +24,14 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
 import { buildNavigationUrl } from "@zbeaver/beaver/ui/admin/navigation"
 import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import type { AdminRoleListResponse } from "@zbeaver/beaver/ui/admin/shared/admin-data"
 
 export function AdminRolesPage() {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<AdminRoleListResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isPending, setIsPending] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const [search, setSearch] = useState(
@@ -44,7 +46,7 @@ export function AdminRolesPage() {
 
   async function loadRoles() {
     setError(null)
-    const nextData = await adminApiGet(`/api/admin/roles${location.search}`)
+    const nextData = await adminApiGet<AdminRoleListResponse>(`/api/admin/roles${location.search}`)
     setData(nextData)
     setSelectedIds([])
   }
@@ -93,7 +95,7 @@ export function AdminRolesPage() {
   const handleSelectAll = useCallback((checked: boolean) => {
     if (!data?.roles) return
     if (checked) {
-      setSelectedIds(data.roles.map((r: any) => r.id))
+      setSelectedIds(data.roles.map((role) => role.id))
     } else {
       setSelectedIds([])
     }
@@ -105,15 +107,15 @@ export function AdminRolesPage() {
     )
   }, [])
 
-  const isAllSelected = data?.roles?.length > 0 && selectedIds.length === data.roles.length
+  const isAllSelected = data !== null && data.roles.length > 0 && selectedIds.length === data.roles.length
   const isSomeSelected = selectedIds.length > 0
 
   // ─── Bulk action handlers ────────────────────────────────────────────────
 
-  async function performBulkAction(path: string, successMessage: string) {
+  async function performBulkAction(path: string) {
     if (selectedIds.length === 0) return
     setIsPending(true)
-    const result = await adminApiPost<any>(path, { ids: selectedIds })
+    const result = await adminApiPost<unknown>(path, { ids: selectedIds })
     setIsPending(false)
     if (result.success) {
       adminToast.success("update", "role")
@@ -126,12 +128,29 @@ export function AdminRolesPage() {
   const handleBulkDelete = useCallback(async () => {
     if (selectedIds.length === 0) return
     if (!confirm(`Delete ${selectedIds.length} role(s)? This action cannot be undone.`)) return
-    await performBulkAction("/api/admin/roles/bulk/delete", "Bulk delete completed.")
+    await performBulkAction("/api/admin/roles/bulk/delete")
   }, [selectedIds])
 
   const handleBulkDuplicate = useCallback(async () => {
-    await performBulkAction("/api/admin/roles/bulk/duplicate", "Bulk duplicate completed.")
+    await performBulkAction("/api/admin/roles/bulk/duplicate")
   }, [selectedIds])
+
+  async function handleSyncPermissions() {
+    if (!confirm("Sync permissions from the content type registry? Permissions for removed content types will be removed from roles.")) return
+
+    setIsSyncing(true)
+    try {
+      const result = await adminApiPost<unknown>("/api/admin/roles/sync-permissions")
+      if (result.success) {
+        adminToast.success("update", "permission")
+        await loadRoles()
+      } else {
+        adminToast.error(result.message)
+      }
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   if (error) return <main className="p-6"><p className="text-destructive">Error: {error}</p></main>
   if (!data) return <AdminLoadingState />
@@ -157,9 +176,14 @@ export function AdminRolesPage() {
           />
         }
         actions={
-          <Link to="/admin/roles/new" className={cn(buttonVariants({ size: "lg" }))}>
-            New Role
-          </Link>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="lg" onClick={handleSyncPermissions} disabled={isSyncing}>
+              {isSyncing ? "Syncing…" : "Sync Permissions"}
+            </Button>
+            <Link to="/admin/roles/new" className={cn(buttonVariants({ size: "lg" }))}>
+              New Role
+            </Link>
+          </div>
         }
       />
 
@@ -249,7 +273,7 @@ export function AdminRolesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                roles.map((role: any) => (
+                roles.map((role) => (
                   <TableRow key={role.id} className="hover:bg-muted/25">
                     <TableCell className="px-4 py-3">
                       <Checkbox

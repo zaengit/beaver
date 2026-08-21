@@ -3,7 +3,6 @@ import type { UpdateMediaInput, UploadMediaInput } from "@zbeaver/beaver/app/val
 import {
   findMediaByIdRecord,
   listMediaRecords,
-  getMediaFolderRecords,
   createMediaRecord as repoCreateMedia,
   updateMediaRecord,
   deleteMediaRecord,
@@ -13,6 +12,8 @@ import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
 import { serviceSuccess, serviceNotFound } from "@zbeaver/beaver/app/services/utils"
 import {
   MAX_FILE_SIZE,
+  MAX_IMAGE_PIXELS,
+  MAX_IMAGE_DIMENSION,
   ALLOWED_MIME_TYPES,
   isImageMimeType,
   generateMediaPath,
@@ -37,17 +38,28 @@ function validateFile(file: File): { valid: boolean; error?: string } {
 }
 
 async function validateFileContents(buffer: Buffer, mimeType: string): Promise<{ valid: boolean; error?: string }> {
+  const hasSignature =
+    mimeType === "image/jpeg" && buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
+    || mimeType === "image/png" && buffer.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex"))
+    || mimeType === "image/gif" && buffer.subarray(0, 4).toString("ascii") === "GIF8"
+    || mimeType === "image/webp" && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP"
+    || mimeType === "application/pdf" && buffer.subarray(0, 5).toString("ascii") === "%PDF-"
+    || mimeType === "video/mp4" && buffer.subarray(4, 8).toString("ascii") === "ftyp"
+    || mimeType === "audio/mpeg" && (buffer.subarray(0, 3).toString("ascii") === "ID3" || (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0))
+
+  if (!hasSignature) return { valid: false, error: "The uploaded file content does not match its type." }
+
   if (["image/jpeg", "image/png", "image/gif", "image/webp"].includes(mimeType)) {
     try {
-      const metadata = await sharp(buffer, { failOn: "error" }).metadata()
-      if (!metadata.format) return { valid: false, error: "The uploaded image is invalid." }
+      const metadata = await sharp(buffer, { failOn: "error", limitInputPixels: MAX_IMAGE_PIXELS }).metadata()
+      if (!metadata.format || !metadata.width || !metadata.height) return { valid: false, error: "The uploaded image is invalid." }
+      if (metadata.width > MAX_IMAGE_DIMENSION || metadata.height > MAX_IMAGE_DIMENSION || metadata.width * metadata.height > MAX_IMAGE_PIXELS) {
+        return { valid: false, error: "The uploaded image dimensions are too large." }
+      }
+      if (metadata.pages && metadata.pages > 100) return { valid: false, error: "The uploaded image has too many frames." }
     } catch {
       return { valid: false, error: "The uploaded image is invalid." }
     }
-  }
-
-  if (mimeType === "application/pdf" && !buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
-    return { valid: false, error: "The uploaded PDF is invalid." }
   }
 
   return { valid: true }
@@ -74,17 +86,6 @@ export function getMedia(id: string): ServiceResult<MediaRow> {
   return serviceSuccess(item, "OK")
 }
 
-// ─── List Folders ───────────────────────────────────────────────────────────
-
-export function listFoldersService(): ServiceResult<string[]> {
-  const folders = getMediaFolderRecords()
-  return serviceSuccess(folders, "OK")
-}
-
-export function validateFileUpload(file: File): { valid: boolean; error?: string } {
-  return validateFile(file)
-}
-
 export async function uploadMediaForUser(
   formData: FormData,
   userId: string,
@@ -98,7 +99,7 @@ export async function uploadMediaForUser(
     return { success: false, error: { code: "validation", message: "No file provided." } }
   }
 
-  const fileCheck = validateFileUpload(file)
+  const fileCheck = validateFile(file)
   if (!fileCheck.valid) {
     return {
       success: false,
@@ -115,7 +116,6 @@ export async function uploadMediaForUser(
   const fileResult = await processUploadedFile(
     buffer,
     file.type,
-    file.name,
   )
 
   return createMediaRecord({
@@ -137,7 +137,7 @@ export async function uploadMediaForUser(
 
 // ─── Create Media Record (after file is saved to disk) ──────────────────────
 
-export function createMediaRecord(params: {
+function createMediaRecord(params: {
   userId: string
   name: string
   fileName: string
@@ -214,7 +214,7 @@ export function deleteMedia(id: string): ServiceResult<null> {
 
 // ─── Process Uploaded File ─────────────────────────────────────────────────
 
-export interface ProcessedFile {
+interface ProcessedFile {
   url: string
   thumbnailUrl: string | null
   width: number | null
@@ -224,10 +224,9 @@ export interface ProcessedFile {
 /**
  * Writes a file buffer to disk and optionally generates a thumbnail for images.
  */
-export async function processUploadedFile(
+async function processUploadedFile(
   buffer: Buffer,
   mimeType: string,
-  fileName: string,
   id?: string,
 ): Promise<ProcessedFile & { id: string }> {
   const fileId = id ?? generateId()
@@ -247,14 +246,14 @@ export async function processUploadedFile(
 
   if (isImageMimeType(mimeType) && mimeType !== "image/svg+xml") {
     try {
-      const metadata = await sharp(buffer).metadata()
+      const metadata = await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS }).metadata()
       width = metadata.width ?? null
       height = metadata.height ?? null
 
       const thumbRelativePath = generateThumbnailPath(fileId)
       const thumbAbsolutePath = path.resolve(uploadDir, thumbRelativePath)
 
-      await sharp(buffer)
+      await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS })
         .resize(300, 300, { fit: "cover" })
         .webp({ quality: 80 })
         .toFile(thumbAbsolutePath)
@@ -263,7 +262,7 @@ export async function processUploadedFile(
         await Promise.all(
           [640, 1280]
             .filter((responsiveWidth) => width !== null && width > responsiveWidth)
-            .map((responsiveWidth) => sharp(buffer)
+            .map((responsiveWidth) => sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS })
               .resize({ width: responsiveWidth, withoutEnlargement: true })
               .webp({ quality: 82 })
               .toFile(path.resolve(uploadDir, relativePath.replace(/\.[^.]+$/, `_w${responsiveWidth}.webp`)))),

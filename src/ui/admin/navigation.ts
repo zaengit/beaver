@@ -1,11 +1,11 @@
-export type NavigationParamValue =
+type NavigationParamValue =
   | string
   | number
   | boolean
   | null
   | undefined
 
-export type NavigationParams =
+type NavigationParams =
   | URLSearchParams
   | Record<string, NavigationParamValue>
 
@@ -43,7 +43,7 @@ export function setGlobalNavigator(navigator: NavigateFunction | null) {
   globalNavigator = navigator
 }
 
-export function navigateTo(url: string, options?: { replace?: boolean }) {
+function navigateTo(url: string, options?: { replace?: boolean }) {
   if (globalNavigator) {
     globalNavigator(url, options)
     return
@@ -82,18 +82,4 @@ export function navigateTo(url: string, options?: { replace?: boolean }) {
 
 export function navigateToPath(pathname: string, params?: NavigationParams) {
   navigateTo(buildNavigationUrl(pathname, params))
-}
-
-export function getCurrentSearchParams() {
-  if (typeof window === "undefined") {
-    return new URLSearchParams()
-  }
-
-  return new URLSearchParams(window.location.search)
-}
-
-export function reloadPage() {
-  if (typeof window !== "undefined") {
-    window.location.reload()
-  }
 }

@@ -1,15 +1,17 @@
 import { SignJWT, jwtVerify } from "jose"
 import { createHash } from "node:crypto"
+import { assertSecureSecrets, isTestEnvironment } from "@zbeaver/beaver/app/config/security"
 
 const encoder = new TextEncoder()
 
 function getJwtSecret(name: "ADMIN_JWT_ACCESS_SECRET" | "ADMIN_JWT_REFRESH_SECRET") {
   const value = process.env[name]
-  if (value && value.length >= 32) return encoder.encode(value)
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(`${name} must be set to a random value of at least 32 characters in production.`)
+  if (!isTestEnvironment()) {
+    assertSecureSecrets()
+    return encoder.encode(value!)
   }
+
+  if (value && value.length >= 32) return encoder.encode(value)
 
   // Reuse the local session secret to keep development sessions valid across
   // dev-server restarts without introducing a predictable fallback.
@@ -37,6 +39,7 @@ function getRefreshSecret() {
 
 type AccessClaims = {
   sub: string
+  sessionId: string
   email: string
   roleId: string | null
   permissions: string[]
@@ -66,11 +69,11 @@ export async function signRefreshToken(claims: RefreshClaims) {
 }
 
 export async function verifyAccessToken(token: string) {
-  const result = await jwtVerify<AccessClaims>(token, getAccessSecret())
+  const result = await jwtVerify<AccessClaims>(token, getAccessSecret(), { algorithms: ["HS256"] })
   return result.payload
 }
 
 export async function verifyRefreshToken(token: string) {
-  const result = await jwtVerify<RefreshClaims>(token, getRefreshSecret())
+  const result = await jwtVerify<RefreshClaims>(token, getRefreshSecret(), { algorithms: ["HS256"] })
   return result.payload
 }

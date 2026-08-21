@@ -1,7 +1,7 @@
 import { adminCreated, adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
 import { requireAuth } from "@zbeaver/beaver/app/handlers/guard"
 import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
-import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import { parseBulkIds, parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
 import type { Session } from "@zbeaver/beaver/app/handlers/types"
 import { can } from "@zbeaver/beaver/app/admin/permissions"
 import {
@@ -36,10 +36,11 @@ async function canCategory(userId: string, type: string, action: CategoryAction)
 /** Bulk permission check for categories. */
 async function guardBulkCategory(session: Session, ids: string[], action: CategoryAction) {
   const unauth = requireAuth(session)
-  if (unauth) return { unauth, ids }
-  if (ids.length === 0) return { perm: adminError("At least one category id is required.", 400), ids }
+  if (unauth) return { perm: unauth, ids }
+  const parsedIds = parseBulkIds(ids)
+  if (!parsedIds.success) return { perm: adminError(parsedIds.message, 400), ids }
   const allowed = await Promise.all(
-    ids.map(async (id) => {
+    parsedIds.ids.map(async (id) => {
       const category = findCategoryByIdRecord(id)
       return category && canCategory(session!.user.id, category.type, action)
     }),

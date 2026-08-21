@@ -12,7 +12,9 @@ export function migrate() {
   const migrationTable = "__drizzle_migrations"
 
   sqlite.exec(`CREATE TABLE IF NOT EXISTS ${migrationTable} (id INTEGER PRIMARY KEY, hash text NOT NULL, created_at numeric)`)
-  const lastMigration = sqlite.prepare(`SELECT created_at FROM ${migrationTable} ORDER BY created_at DESC LIMIT 1`).get()
+  const lastMigration = sqlite
+    .prepare(`SELECT created_at FROM ${migrationTable} ORDER BY created_at DESC LIMIT 1`)
+    .get() as { created_at?: number | null } | undefined
   const lastCreatedAt = Number(lastMigration?.created_at ?? -1)
   const recordMigration = sqlite.prepare(`INSERT INTO ${migrationTable} (hash, created_at) VALUES (?, ?)`)
 

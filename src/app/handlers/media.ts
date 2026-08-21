@@ -4,7 +4,7 @@ import path from "path"
 import { adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
 import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
 import { requirePermission } from "@zbeaver/beaver/app/handlers/guard"
-import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import { parseBulkIds, parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
 import type { Session } from "@zbeaver/beaver/app/handlers/types"
 import { getUploadDir } from "@zbeaver/beaver/pkg/media/media"
 import {
@@ -15,6 +15,7 @@ import {
   updateMedia,
 } from "@zbeaver/beaver/app/services/media"
 import { updateMediaSchema, uploadMediaSchema } from "@zbeaver/beaver/app/validations/media"
+import { isWithinRateLimit } from "@zbeaver/beaver/app/security/rate-limit"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,8 +24,26 @@ import { updateMediaSchema, uploadMediaSchema } from "@zbeaver/beaver/app/valida
 async function deleteFileIfExists(fileUrl: string | null) {
   if (!fileUrl) return
   try {
-    const filePath = path.join(getUploadDir(), fileUrl.replace(/^\//, ""))
-    await unlink(filePath)
+    const relativePath = fileUrl.replace(/^\/+/, "")
+    const match = relativePath.match(/^storage\/([A-Za-z0-9_-]+?)(?:_(thumb|w640|w1280))?\.[A-Za-z0-9]+$/)
+    if (!match) return
+    const uploadRoot = path.resolve(getUploadDir())
+    const fileId = match[1]
+    const candidates = new Set([
+      relativePath,
+      `storage/${fileId}_thumb.webp`,
+      `storage/${fileId}_w640.webp`,
+      `storage/${fileId}_w1280.webp`,
+    ])
+    for (const candidate of candidates) {
+      const filePath = path.resolve(uploadRoot, candidate)
+      if (filePath === uploadRoot || !filePath.startsWith(`${uploadRoot}${path.sep}`)) continue
+      try {
+        await unlink(filePath)
+      } catch {
+        // A missing derivative is not a deletion failure.
+      }
+    }
   } catch {
     // Non-fatal cleanup failure.
   }
@@ -34,18 +53,24 @@ async function deleteFileIfExists(fileUrl: string | null) {
 // Handlers
 // ---------------------------------------------------------------------------
 
-export function handleListMedia(filters: {
+export async function handleListMedia(session: Session, filters: {
   page?: number
   perPage?: number
   search?: string
   folder?: string | null
   mimeType?: string
 }) {
+  const perm = await requirePermission(session, "media.view")
+  if (perm) return perm
+
   const result = listMediaService(filters)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 
-export function handleGetMedia(id: string) {
+export async function handleGetMedia(session: Session, id: string) {
+  const perm = await requirePermission(session, "media.view")
+  if (perm) return perm
+
   if (!id) return adminError("Media id is required.", 400)
   const result = getMedia(id)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 404)
@@ -85,10 +110,11 @@ export async function handleBulkDeleteMedia(session: Session, ids: string[]) {
   const perm = await requirePermission(session, "media.delete")
   if (perm) return perm
 
-  if (ids.length === 0) return adminError("At least one media id is required.", 400)
+  const parsedIds = parseBulkIds(ids)
+  if (!parsedIds.success) return adminError(parsedIds.message, 400)
 
   const results: { id: string; success: boolean }[] = []
-  for (const id of ids) {
+  for (const id of parsedIds.ids) {
     const mediaResult = getMedia(id)
     if (!mediaResult.success) {
       results.push({ id, success: false })
@@ -107,6 +133,9 @@ export async function handleBulkDeleteMedia(session: Session, ids: string[]) {
 export async function handleUploadMedia(session: Session, formData: FormData) {
   const perm = await requirePermission(session, "media.upload")
   if (perm) return perm
+  if (!isWithinRateLimit(`media-upload:user:${session!.user.id}`, 20, 15 * 60 * 1000)) {
+    return adminError("Too many uploads. Please try again later.", 429)
+  }
 
   const metadata: Record<string, unknown> = {}
   for (const [key, value] of formData.entries()) {

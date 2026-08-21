@@ -38,9 +38,10 @@ import {
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import { buildNavigationUrl } from "@zbeaver/beaver/ui/admin/navigation"
 import { adminToast } from "@zbeaver/beaver/ui/admin/shared/admin-toast"
+import type { AdminPostListResponse } from "@zbeaver/beaver/ui/admin/shared/admin-data"
 
 export function AdminContentListPage() {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<AdminPostListResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isPending, setIsPending] = useState(false)
@@ -74,7 +75,7 @@ export function AdminContentListPage() {
     if (sortOrder) params.set("sortOrder", sortOrder)
     params.set("type", type)
     const qs = params.toString() ? `?${params.toString()}` : ""
-    const nextData = await adminApiGet(`/api/admin/posts${qs}`)
+    const nextData = await adminApiGet<AdminPostListResponse>(`/api/admin/posts${qs}`)
     setData(nextData)
     setSelectedIds([])
   }
@@ -124,7 +125,7 @@ export function AdminContentListPage() {
   const handleSelectAll = useCallback((checked: boolean) => {
     if (!data?.data) return
     if (checked) {
-      setSelectedIds(data.data.map((p: any) => p.id))
+      setSelectedIds(data.data.map((post) => post.id))
     } else {
       setSelectedIds([])
     }
@@ -136,7 +137,7 @@ export function AdminContentListPage() {
     )
   }, [])
 
-  const isAllSelected = data?.data?.length > 0 && selectedIds.length === data.data.length
+  const isAllSelected = data !== null && data.data.length > 0 && selectedIds.length === data.data.length
   const isSomeSelected = selectedIds.length > 0
 
   function handleCreateDialogChange(open: boolean) {
@@ -177,10 +178,10 @@ export function AdminContentListPage() {
 
   // ─── Bulk action handlers ────────────────────────────────────────────────
 
-  async function performBulkAction(path: string, successMessage: string) {
+  async function performBulkAction(path: string) {
     if (selectedIds.length === 0) return
     setIsPending(true)
-    const result = await adminApiPost<any>(path, { ids: selectedIds })
+    const result = await adminApiPost<unknown>(path, { ids: selectedIds })
     setIsPending(false)
     if (result.success) {
       adminToast.success("update", "page")
@@ -193,19 +194,19 @@ export function AdminContentListPage() {
   const handleBulkDelete = useCallback(async () => {
     if (selectedIds.length === 0) return
     if (!confirm(`Delete ${selectedIds.length} page(s)? This action cannot be undone.`)) return
-    await performBulkAction("/api/admin/posts/bulk/delete", "Bulk delete completed.")
+    await performBulkAction("/api/admin/posts/bulk/delete")
   }, [selectedIds])
 
   const handleBulkPublish = useCallback(async () => {
-    await performBulkAction("/api/admin/posts/bulk/publish", "Bulk publish completed.")
+    await performBulkAction("/api/admin/posts/bulk/publish")
   }, [selectedIds])
 
   const handleBulkUnpublish = useCallback(async () => {
-    await performBulkAction("/api/admin/posts/bulk/unpublish", "Bulk unpublish completed.")
+    await performBulkAction("/api/admin/posts/bulk/unpublish")
   }, [selectedIds])
 
   const handleBulkDuplicate = useCallback(async () => {
-    await performBulkAction("/api/admin/posts/bulk/duplicate", "Bulk duplicate completed.")
+    await performBulkAction("/api/admin/posts/bulk/duplicate")
   }, [selectedIds])
 
   if (error) return <main className="p-6"><p className="text-destructive">Error: {error}</p></main>
@@ -389,7 +390,7 @@ export function AdminContentListPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                contentItems.map((post: any) => (
+                contentItems.map((post) => (
                   <TableRow key={post.id} className="hover:bg-muted/25">
                     <TableCell className="px-4 py-3">
                       <Checkbox

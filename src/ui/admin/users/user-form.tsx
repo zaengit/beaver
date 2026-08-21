@@ -179,10 +179,10 @@ export function UserForm({ user, roles = [], mode, pageTitle }: UserFormProps) {
                     placeholder={
                       mode === "edit"
                         ? "Leave blank to keep current"
-                        : "Minimum 8 characters"
+                        : "Minimum 12 characters"
                     }
                     required={mode === "create"}
-                    minLength={mode === "create" ? 8 : undefined}
+                    minLength={mode === "create" ? 12 : undefined}
                     maxLength={128}
                     aria-invalid={!!fieldErrors.password}
                     aria-describedby={fieldErrors.password ? "password-error" : undefined}

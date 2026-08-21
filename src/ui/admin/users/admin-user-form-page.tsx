@@ -3,13 +3,14 @@ import { useEffect, useState } from "react"
 import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
 import { AdminLoadingState } from "@zbeaver/beaver/ui/admin/core/admin-loading-state"
 import { UserForm } from "@zbeaver/beaver/ui/admin/users/user-form"
+import type { AdminRole, AdminUser } from "@zbeaver/beaver/ui/admin/shared/admin-data"
 
 export function AdminUserCreatePage() {
-  const [roles, setRoles] = useState<any[]>([])
+  const [roles, setRoles] = useState<AdminRole[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    adminApiGet<{ roles: any[] }>("/api/admin/roles").then((data) => {
+    adminApiGet<{ roles: AdminRole[] }>("/api/admin/roles").then((data) => {
       setRoles(data.roles)
       setLoading(false)
     })
@@ -29,14 +30,14 @@ export function AdminUserCreatePage() {
 }
 
 export function AdminUserEditPage({ id }: { id: string }) {
-  const [user, setUser] = useState<any>(null)
-  const [roles, setRoles] = useState<any[]>([])
+  const [user, setUser] = useState<AdminUser | null>(null)
+  const [roles, setRoles] = useState<AdminRole[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
-      adminApiGet<any>(`/api/admin/users/${id}`),
-      adminApiGet<{ roles: any[] }>("/api/admin/roles"),
+      adminApiGet<AdminUser>(`/api/admin/users/${id}`),
+      adminApiGet<{ roles: AdminRole[] }>("/api/admin/roles"),
     ]).then(([userData, roleData]) => {
       setUser(userData)
       setRoles(roleData.roles)

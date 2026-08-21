@@ -4,6 +4,7 @@ import { useParams } from "react-router"
 import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
 import { AdminLoadingState } from "@zbeaver/beaver/ui/admin/core/admin-loading-state"
 import { CategoryForm } from "@zbeaver/beaver/ui/admin/categories/category-form"
+import type { AdminCategory } from "@zbeaver/beaver/ui/admin/shared/admin-data"
 
 export function AdminCategoryCreatePage() {
   const { type = "post" } = useParams()
@@ -29,11 +30,11 @@ export function AdminCategoryCreatePage() {
 
 export function AdminCategoryEditPage({ id }: { id: string }) {
   const { type = "post" } = useParams()
-  const [category, setCategory] = useState<any>(null)
+  const [category, setCategory] = useState<AdminCategory | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    adminApiGet<any>(`/api/admin/categories/${id}`).then((data) => {
+    adminApiGet<AdminCategory>(`/api/admin/categories/${id}`).then((data) => {
       setCategory(data)
       setLoading(false)
     })

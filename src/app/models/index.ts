@@ -1,7 +1,0 @@
-export * from "./category"
-export * from "./media"
-export * from "./menu"
-export * from "./post"
-export * from "./role"
-export * from "./setting"
-export * from "./user"

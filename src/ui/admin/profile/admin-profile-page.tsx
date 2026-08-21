@@ -142,7 +142,7 @@ export function AdminProfilePage() {
                 name="password"
                 type="password"
                 placeholder="Leave blank to keep current"
-                minLength={8}
+                minLength={12}
                 maxLength={128}
                 aria-invalid={!!errors.password}
               />
@@ -150,7 +150,7 @@ export function AdminProfilePage() {
                 <p className="text-xs text-destructive">{errors.password[0]}</p>
               )}
               <p className="text-xs text-muted-foreground">
-                Minimum 8 characters. Leave empty to keep your current password.
+                Minimum 12 characters. Leave empty to keep your current password.
               </p>
             </div>
           </AdminFormCard>

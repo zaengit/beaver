@@ -1,7 +1,7 @@
 import { adminCreated, adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
-import { requireAuth, requireAnyPermission, requirePermission } from "@zbeaver/beaver/app/handlers/guard"
+import { requireAnyPermission, requirePermission } from "@zbeaver/beaver/app/handlers/guard"
 import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
-import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
+import { parseBulkIds, parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
 import type { Session } from "@zbeaver/beaver/app/handlers/types"
 import {
   bulkDeleteUsers,
@@ -19,7 +19,6 @@ import { createUserSchema, updateUserSchema } from "@zbeaver/beaver/app/validati
 // Helpers
 // ---------------------------------------------------------------------------
 
-const INSUFFICIENT = "Insufficient permissions."
 const USER_CREATE_PERMS = ["users.create", "users.manage"]
 const USER_EDIT_PERMS = ["users.edit", "users.manage"]
 
@@ -27,12 +26,15 @@ const USER_EDIT_PERMS = ["users.edit", "users.manage"]
 // Handlers
 // ---------------------------------------------------------------------------
 
-export async function handleListUsers(filters?: {
+export async function handleListUsers(session: Session, filters?: {
   search?: string
   roleId?: string
   sortBy?: string
   sortOrder?: string
 }) {
+  const perm = await requirePermission(session, "users.view")
+  if (perm) return perm
+
   const result = listUsersPaginated(filters ?? {})
   return result.success ? adminSuccess(result.data) : adminError(result.error.message, 500)
 }
@@ -44,11 +46,14 @@ export async function handleCreateUser(session: Session, body: unknown) {
   const parsed = parseWithSchema(createUserSchema, body)
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors)
 
-  const result = await createUser(parsed.data)
+  const result = await createUser(parsed.data, session!.user.id)
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result)
 }
 
-export async function handleGetUser(id: string) {
+export async function handleGetUser(session: Session, id: string) {
+  const perm = await requirePermission(session, "users.view")
+  if (perm) return perm
+
   const result = getUser(id)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 404)
 }
@@ -68,15 +73,15 @@ export async function handleDuplicateUser(session: Session, id: string) {
   const perm = await requireAnyPermission(session, USER_CREATE_PERMS)
   if (perm) return perm
 
-  const result = duplicateUser(id, session!.user.id)
+  const result = await duplicateUser(id, session!.user.id)
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result)
 }
 
 export async function handleDeleteUser(session: Session, id: string) {
-  const perm = await requirePermission(session, "users.manage")
+  const perm = await requireAnyPermission(session, ["users.delete", "users.manage"])
   if (perm) return perm
 
-  const result = deleteUser(id, session!.user.id)
+  const result = await deleteUser(id, session!.user.id)
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result)
 }
 
@@ -84,18 +89,20 @@ export async function handleDeleteUser(session: Session, id: string) {
 // Bulk handlers
 // ---------------------------------------------------------------------------
 
-export function handleBulkDeleteUsers(session: Session, ids: string[]) {
-  const unauth = requireAuth(session)
-  if (unauth) return unauth
-  if (ids.length === 0) return adminError("At least one user id is required.", 400)
-  const result = bulkDeleteUsers(ids, session!.user.id)
+export async function handleBulkDeleteUsers(session: Session, ids: string[]) {
+  const perm = await requireAnyPermission(session, ["users.delete", "users.manage"])
+  if (perm) return perm
+  const parsedIds = parseBulkIds(ids)
+  if (!parsedIds.success) return adminError(parsedIds.message, 400)
+  const result = await bulkDeleteUsers(parsedIds.ids, session!.user.id)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 
-export function handleBulkDuplicateUsers(session: Session, ids: string[]) {
-  const unauth = requireAuth(session)
-  if (unauth) return unauth
-  if (ids.length === 0) return adminError("At least one user id is required.", 400)
-  const result = bulkDuplicateUsers(ids, session!.user.id)
+export async function handleBulkDuplicateUsers(session: Session, ids: string[]) {
+  const perm = await requireAnyPermission(session, USER_CREATE_PERMS)
+  if (perm) return perm
+  const parsedIds = parseBulkIds(ids)
+  if (!parsedIds.success) return adminError(parsedIds.message, 400)
+  const result = await bulkDuplicateUsers(parsedIds.ids, session!.user.id)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }

@@ -14,8 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@zbeaver/beaver/ui/admin/components/ui/tabs"
 import { adminApiGet } from "@zbeaver/beaver/ui/admin/shared/api-client"
 import { MediaPicker } from "@zbeaver/beaver/ui/admin/shared/media-picker"
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url"
 import { getSectionRegistry, type SectionTemplate } from "@zbeaver/beaver/app/registry/sections"
-import { createEmptyItem, type EmbeddedSection } from "./section-embedder-types"
+import { createEmptyItem, type AvailableSection, type EmbeddedSection } from "./section-embedder-types"
 import { SortableItemCard } from "./sortable-item-card"
 
 // ─── Embedded Section Card ───────────────────────────────────────────────────
@@ -23,13 +24,13 @@ import { SortableItemCard } from "./sortable-item-card"
 function resolveItemTemplate(
   itemTemplate: Record<string, unknown> | null,
   section: EmbeddedSection,
-  availableSections: any[],
+  availableSections: AvailableSection[],
 ): Record<string, unknown> | null {
   if (itemTemplate && Object.keys(itemTemplate).length > 0) return itemTemplate
   if (section.item && section.item.length > 0) return { ...section.item[0] }
 
   // Fallback: derive from the library section definition
-  const librarySection = availableSections.find((s: any) => s.id === section.id)
+  const librarySection = availableSections.find((candidate) => candidate.id === section.id)
   if (librarySection?.item) {
     try {
       const parsed = typeof librarySection.item === "string" ? JSON.parse(librarySection.item) : librarySection.item
@@ -61,7 +62,7 @@ export function EmbeddedSectionCard({
   index: number
   isExpanded: boolean
   itemTemplate: Record<string, unknown> | null
-  availableSections: any[]
+  availableSections: AvailableSection[]
   template: SectionTemplate | null
   onToggleExpanded: () => void
   onRemove: () => void
@@ -227,7 +228,7 @@ export function EmbeddedSectionCard({
                       <div className="flex items-center gap-2">
                         {section.image && (
                           <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted">
-                            <img src={section.image} alt="" className="h-full w-full object-cover" />
+                            <img src={safeAdminImageUrl(section.image) ?? undefined} alt="" className="h-full w-full object-cover" />
                           </div>
                         )}
                         <MediaPicker value={section.image ?? null} onChange={(media) => onUpdateField("image", media ? media.url : null)} accept="image/*" />
@@ -257,7 +258,7 @@ export function EmbeddedSectionCard({
                       <div className="flex items-center gap-2">
                         {section.bg_image && (
                           <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-sm border bg-muted">
-                            <img src={section.bg_image} alt="" className="h-full w-full object-cover" />
+                            <img src={safeAdminImageUrl(section.bg_image) ?? undefined} alt="" className="h-full w-full object-cover" />
                           </div>
                         )}
                         <MediaPicker value={section.bg_image ?? null} onChange={(media) => onUpdateField("bg_image", media ? media.url : null)} accept="image/*" />

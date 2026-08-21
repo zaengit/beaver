@@ -4,11 +4,13 @@ import { and, eq } from "drizzle-orm"
 import { db } from "@zbeaver/beaver/app/db"
 import { adminRefreshSessions, roles, users } from "@zbeaver/beaver/app/db/schema"
 import { getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
+import { assertSecureSeedEnvironment } from "@zbeaver/beaver/app/config/security"
 
 export function resetSuperAdminPassword() {
+  assertSecureSeedEnvironment()
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase()
   const password = process.env.ADMIN_PASSWORD
-  if (!email || !password || password.length < 12) {
+  if (!email || !password || password.length < 12 || password.length > 128) {
     throw new Error("ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters are required.")
   }
 

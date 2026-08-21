@@ -4,6 +4,8 @@
 
 /** Maximum allowed file size: 10MB */
 export const MAX_FILE_SIZE = 10 * 1024 * 1024
+export const MAX_IMAGE_PIXELS = 40_000_000
+export const MAX_IMAGE_DIMENSION = 10_000
 
 /** Allowed MIME types for media uploads */
 export const ALLOWED_MIME_TYPES = [
@@ -25,22 +27,6 @@ const MIME_TO_EXTENSION: Record<string, string> = {
   "application/pdf": "pdf",
   "video/mp4": "mp4",
   "audio/mpeg": "mp3",
-}
-
-/**
- * Validates that a file size is within the allowed limit.
- * @returns true if size <= MAX_FILE_SIZE
- */
-export function validateFileSize(size: number): boolean {
-  return size <= MAX_FILE_SIZE
-}
-
-/**
- * Validates that a MIME type is in the allowed list.
- * @returns true if mimeType is in ALLOWED_MIME_TYPES
- */
-export function validateMimeType(mimeType: string): boolean {
-  return (ALLOWED_MIME_TYPES as readonly string[]).includes(mimeType)
 }
 
 /**

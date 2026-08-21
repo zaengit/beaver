@@ -15,6 +15,7 @@ import {
   AdminPageHeader,
 } from "@zbeaver/beaver/ui/admin/layout/admin-page-shell"
 import { cn } from "@zbeaver/beaver/pkg/utils/ui"
+import { safeAdminImageUrl } from "@zbeaver/beaver/ui/admin/shared/media-url"
 
 interface MediaItem {
   id: string
@@ -229,7 +230,7 @@ export function AdminMediaPage() {
                     <div className="aspect-square">
                       {isImage && !hasError ? (
                         <img
-                          src={item.thumbnailUrl || item.url}
+                          src={safeAdminImageUrl(item.thumbnailUrl || item.url) ?? undefined}
                           alt={item.alt || item.name}
                           className="h-full w-full object-cover"
                           onError={() => setImageErrors((p) => new Set(p).add(item.id))}

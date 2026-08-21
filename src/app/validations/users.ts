@@ -6,10 +6,10 @@ export const createUserSchema = z.object({
     .string()
     .min(1, "Name is required")
     .max(100, "Name must be at most 100 characters"),
-  email: z.string().email("Invalid email address"),
+  email: z.string().max(254, "Email is too long").email("Invalid email address"),
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
+    .min(12, "Password must be at least 12 characters")
     .max(128, "Password must be at most 128 characters"),
   roleId: z
     .string()
@@ -23,10 +23,10 @@ export const updateUserSchema = z.object({
     .min(1, "Name is required")
     .max(100, "Name must be at most 100 characters")
     .optional(),
-  email: z.string().email("Invalid email address").optional(),
+  email: z.string().max(254, "Email is too long").email("Invalid email address").optional(),
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
+    .min(12, "Password must be at least 12 characters")
     .max(128, "Password must be at most 128 characters")
     .optional(),
   roleId: z

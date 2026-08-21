@@ -87,7 +87,11 @@ export function PageForm({ page, mode }: PageFormProps) {
     if (slug) input.slug = slug
     if (description.trim()) input.description = description
     if (embeddedSections.length > 0) {
-      input.sections = embeddedSections.map(({ _instanceId, ...section }) => section)
+      input.sections = embeddedSections.map((section) => {
+        const payload = { ...section }
+        Reflect.deleteProperty(payload, "_instanceId")
+        return payload
+      })
     }
 
     startTransition(async () => {

@@ -6,7 +6,7 @@
       "slug": "post",
       "icon": "FileText",
       "description": "Editorial posts and news.",
-      "archiveTemplate": "editorial-list",
+      "archiveTemplate": "post-grid",
       "detailTemplate": "post-reader",
       "position": 1
     }

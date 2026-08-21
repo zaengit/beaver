@@ -1,6 +1,6 @@
 import fallbackGroups from "../../registry/menu-groups.json"
 
-export interface MenuGroup {
+interface MenuGroup {
   type: string
   label: string
   description?: string

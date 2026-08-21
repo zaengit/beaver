@@ -1,4 +1,5 @@
 import type { MenuTree } from "@zbeaver/beaver/server"
+import { safeHref, safeTarget } from "./safe-url"
 
 interface FooterProps {
   items: MenuTree[]
@@ -16,8 +17,9 @@ function FooterColumn({ item }: { item: MenuTree }) {
           {item.children.map((child) => (
             <li key={child.id}>
               <a
-                href={child.url}
-                target={child.target ?? undefined}
+                href={safeHref(child.url)}
+                target={safeTarget(child.target)}
+                rel={child.target === "_blank" ? "noopener noreferrer" : undefined}
                 className={`inline-block text-sm font-medium text-slate-400 hover:text-white hover:translate-x-1 transition-all duration-200 ${child.cssClass ?? ""}`}
               >
                 {child.title}
@@ -56,8 +58,9 @@ export function Footer({ items, siteName = "Site" }: FooterProps) {
             {flatLinks.map((item) => (
               <a
                 key={item.id}
-                href={item.url}
-                target={item.target ?? undefined}
+                href={safeHref(item.url)}
+                target={safeTarget(item.target)}
+                rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
                 className={`rounded-full bg-slate-900 border border-slate-800 px-4 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:border-indigo-500/50 hover:bg-slate-800/90 transition-all duration-200 active:scale-95 ${item.cssClass ?? ""}`}
               >
                 {item.title}

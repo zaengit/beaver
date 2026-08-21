@@ -17,7 +17,3 @@ export function adminError(
 export function adminUnauthorized(message = "Unauthorized.") {
   return adminError(message, 401)
 }
-
-export function adminNotFound(message = "Not found.") {
-  return adminError(message, 404)
-}

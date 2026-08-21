@@ -87,31 +87,31 @@
       "metaDescription": "The calm, connected workspace for teams that ship.",
       "sections": [
         {
-          "id": "flowstack-hero", "type": "hero", "bg_color": "#0f172a", "style_id": "product", "alignment": "center",
+          "id": "flowstack-hero", "type": "hero", "bg_color": "", "style_id": "product", "alignment": "center",
           "item": [{ "caption": "The workspace for teams in motion", "title": "Make your best work feel inevitable.", "text": "Flowstack brings plans, decisions, and progress into one focused space—so your team can spend less time coordinating and more time creating.", "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=85", "alt_image": "Team planning a product launch", "links": [{ "label": "See pricing", "url": "/#pricing" }, { "label": "Talk to sales", "url": "/contact" }] }]
         },
         {
-          "id": "flowstack-features", "type": "feature-icon-grid", "caption": "One place, less noise", "title": "The system behind your team’s best week.", "text": "A thoughtful set of tools that helps your team move from idea to impact, without losing the thread.", "bg_color": "#ffffff", "style_id": "features", "alignment": "center",
+          "id": "flowstack-features", "type": "feature-icon-grid", "caption": "One place, less noise", "title": "The system behind your team’s best week.", "text": "A thoughtful set of tools that helps your team move from idea to impact, without losing the thread.", "bg_color": "", "style_id": "features", "alignment": "center",
           "item": [{ "icon": "Layers", "title": "One clear source", "text": "Turn scattered requests into a shared plan, with the context behind every decision." }, { "icon": "ChartNoAxesCombined", "title": "Momentum, visible", "text": "See what is moving, what needs attention, and where your team can unblock itself." }, { "icon": "ArrowLeftRight", "title": "Built for the handoff", "text": "Keep design, product, and engineering aligned without another status meeting." }]
         },
         {
-          "id": "flowstack-pricing", "type": "banner", "caption": "Simple, honest pricing", "title": "Start with momentum.", "text": "Choose the plan that fits today. Change it when tomorrow looks different.", "bg_color": "#f5f3ff", "style_id": "pricing", "alignment": "center",
+          "id": "flowstack-pricing", "type": "banner", "caption": "Simple, honest pricing", "title": "Start with momentum.", "text": "Choose the plan that fits today. Change it when tomorrow looks different.", "bg_color": "", "style_id": "pricing", "alignment": "center",
           "item": [{ "title": "Scale for $18 per member/month", "text": "Unlimited projects, timeline and automations, guests, and permissions. Start free and bring your team when you are ready.", "links": [{ "label": "Talk to sales", "url": "/contact" }] }]
         },
-        { "id": "flowstack-resources", "type": "post", "caption": "Resources", "title": "Ideas for calmer, more focused teamwork.", "text": "Practical guides, product updates, and stories from teams in motion.", "bg_color": "#ffffff", "style_id": "resources", "alignment": "left", "limit": 3, "sort_by": "created_at", "sort_order": "desc" },
+        { "id": "flowstack-resources", "type": "post", "caption": "Resources", "title": "Ideas for calmer, more focused teamwork.", "text": "Practical guides, product updates, and stories from teams in motion.", "bg_color": "", "style_id": "resources", "alignment": "left", "limit": 3, "sort_by": "created_at", "sort_order": "desc" },
         {
-          "id": "flowstack-faq", "type": "faq", "caption": "Questions", "title": "Frequently asked questions", "text": "Everything your team needs to know before getting started.", "bg_color": "#0f172a", "style_id": "faq", "alignment": "center",
+          "id": "flowstack-faq", "type": "faq", "caption": "Questions", "title": "Frequently asked questions", "text": "Everything your team needs to know before getting started.", "bg_color": "", "style_id": "faq", "alignment": "center",
           "item": [{ "question": "How quickly can we get started?", "answer": "Create your workspace in minutes, then invite your team when you are ready." }, { "question": "Can we change our plan later?", "answer": "Yes. You can upgrade or change your plan whenever your needs change." }, { "question": "Is Flowstack suitable for a growing team?", "answer": "Yes. The workflow works for a small focused team and scales with clear permissions and projects." }]
         },
         {
-          "id": "flowstack-contact", "type": "banner", "caption": "Ready when you are", "title": "Give your team a clearer way forward.", "text": "Tell us where your team is headed. We will show you how Flowstack can help you get there.", "bg_color": "#ede9fe", "style_id": "talk-to-sales", "alignment": "center",
+          "id": "flowstack-contact", "type": "banner", "caption": "Ready when you are", "title": "Give your team a clearer way forward.", "text": "Tell us where your team is headed. We will show you how Flowstack can help you get there.", "bg_color": "", "style_id": "talk-to-sales", "alignment": "center",
           "item": [{ "links": [{ "label": "Talk to sales", "url": "/contact" }] }]
         }
       ]
     },
     {
       "title": "Contact", "slug": "contact", "description": "", "metaTitle": "Contact Flowstack", "metaDescription": "Talk to the Flowstack team about your workspace.",
-      "sections": [{ "id": "flowstack-contact-form", "type": "contact", "caption": "Talk to sales", "title": "Let’s build a clearer way forward.", "text": "Tell us a little about your team and we’ll be in touch.", "bg_color": "#0f172a", "style_id": "talk-to-sales", "alignment": "center", "item": [{ "form_inquiry": true }] }]
+      "sections": [{ "id": "flowstack-contact-form", "type": "contact", "caption": "Talk to sales", "title": "Let’s build a clearer way forward.", "text": "Tell us a little about your team and we’ll be in touch.", "bg_color": "", "style_id": "talk-to-sales", "alignment": "center", "item": [{ "form_inquiry": true }] }]
     }
   ],
   "menus": [

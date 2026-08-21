@@ -1,6 +1,6 @@
 import { adminCreated, adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
 import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
-import { requireAuth, requirePermission, requireAnyPermission } from "@zbeaver/beaver/app/handlers/guard"
+import { requirePermission, requireAnyPermission } from "@zbeaver/beaver/app/handlers/guard"
 import { parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
 import type { Session } from "@zbeaver/beaver/app/handlers/types"
 import { can } from "@zbeaver/beaver/app/admin/permissions"
@@ -17,7 +17,10 @@ const MENU_EDIT_PERMS = ["menus.edit", "menus.manage"]
 // Handlers
 // ---------------------------------------------------------------------------
 
-export function handleListMenus() {
+export async function handleListMenus(session: Session) {
+  const perm = await requirePermission(session, "menus.view")
+  if (perm) return perm
+
   const result = listMenus()
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }

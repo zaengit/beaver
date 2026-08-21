@@ -1,14 +1,15 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro"
 import { searchPublishedPosts } from "@zbeaver/beaver/server"
+import { safeContentHref, safePathSegment } from "@/components/web/safe-url"
 
 const query = (Astro.url.searchParams.get("q") ?? "").trim().slice(0, 100)
 const result = query ? searchPublishedPosts(query, 1, 24) : null
 const posts = result?.success ? result.data.data : []
 
 function publicUrl(post: { type: string; slug: string }) {
-  if (post.type === "page") return post.slug === "home" ? "/" : `/${post.slug}`
-  return `/${post.type}/${post.slug}`
+  if (post.type === "page") return post.slug === "home" ? "/" : `/${safePathSegment(post.slug, "")}`
+  return safeContentHref(post.type, post.slug)
 }
 ---
 

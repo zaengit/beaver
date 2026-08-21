@@ -156,6 +156,29 @@ describe("AdminRouter", () => {
     })
   })
 
+  it("renders the forbidden page for authenticated users", async () => {
+    sessionState.session = {
+      user: {
+        id: "1",
+        name: "Admin",
+        email: "admin@example.com",
+        roleId: "role-1",
+        emailVerified: 1,
+        createdAt: 0,
+        updatedAt: 0,
+      },
+      permissions: ["categories.view"],
+      roleName: "Viewer",
+    }
+
+    renderAdminRouter("/admin/403")
+
+    await waitFor(() => {
+      expect(screen.getByText("403")).toBeTruthy()
+      expect(screen.getByText("Forbidden")).toBeTruthy()
+    })
+  })
+
   it("routes page management to the dedicated page modules", async () => {
     sessionState.session = {
       user: {

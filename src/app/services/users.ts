@@ -4,23 +4,25 @@ import type { CreateUserInput, UpdateUserInput } from "@zbeaver/beaver/app/valid
 import {
   findUserByIdRecord,
   findUserByEmailRecord,
+  findSafeUserByIdRecord,
   listUsersPaginatedRecord,
-  userCountByRoleRecord,
   createUserRecord,
   updateUserRecord,
   deleteUserRecord,
+  type UserListItem,
   type UserSafe,
 } from "@zbeaver/beaver/app/repositories/users"
 import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
 import { serviceSuccess, serviceNotFound, serviceConflict, serviceForbidden } from "@zbeaver/beaver/app/services/utils"
+import { canAssignRole, canManageSensitiveUserFields, hasAnyAdminPermission, loadAdminActor } from "@zbeaver/beaver/app/admin/authorization"
+import { deleteRefreshSessionsForUser } from "@zbeaver/beaver/app/admin/session-store"
 
 // ─── Get User ─────────────────────────────────────────────────────────────────
 
 export function getUser(id: string): ServiceResult<UserSafe> {
-  const user = findUserByIdRecord(id)
+  const user = findSafeUserByIdRecord(id)
   if (!user) return serviceNotFound("User")
-  const { password, ...safe } = user as ReturnType<typeof findUserByIdRecord> & { password?: string }
-  return serviceSuccess(safe as UserSafe, "OK")
+  return serviceSuccess(user, "OK")
 }
 
 // ─── Get User With Email (returns raw user for auth purposes) ─────────────────
@@ -33,18 +35,6 @@ export function getUserByEmail(email: string): ServiceResult<typeof import("@zbe
 
 // ─── List Users ──────────────────────────────────────────────────────────────
 
-export function listUsersAction(filters: {
-  page?: number
-  perPage?: number
-  search?: string
-  roleId?: string
-  sortBy?: string
-  sortOrder?: string
-} = {}): ServiceResult<UserSafe[]> {
-  const result = listUsersPaginatedRecord(filters)
-  return serviceSuccess(result.data, "OK")
-}
-
 // ─── List Users Paginated ────────────────────────────────────────────────────
 
 export function listUsersPaginated(filters: {
@@ -55,7 +45,7 @@ export function listUsersPaginated(filters: {
   sortBy?: string
   sortOrder?: string
 } = {}): ServiceResult<{
-  data: UserSafe[]
+  data: UserListItem[]
   meta: {
     currentPage: number
     perPage: number
@@ -71,7 +61,11 @@ export function listUsersPaginated(filters: {
 
 // ─── Create User ─────────────────────────────────────────────────────────────
 
-export async function createUser(data: CreateUserInput): Promise<ServiceResult<UserSafe>> {
+export async function createUser(data: CreateUserInput, actorId: string): Promise<ServiceResult<UserSafe>> {
+  const actor = await loadAdminActor(actorId)
+  if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.")
+  if (!canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.")
+
   // Check email uniqueness
   const existing = findUserByEmailRecord(data.email)
   if (existing) return serviceConflict("email", "A user with this email already exists.")
@@ -100,8 +94,19 @@ export async function updateUser(
   data: UpdateUserInput,
   currentUserId: string,
 ): Promise<ServiceResult<UserSafe>> {
+  const actor = await loadAdminActor(currentUserId)
+  if (!actor || !hasAnyAdminPermission(actor, ["users.edit", "users.manage"])) return serviceForbidden("Insufficient permissions.")
+
   const existing = findUserByIdRecord(id)
   if (!existing) return serviceNotFound("User")
+
+  const isSelf = id === currentUserId
+  const changesSensitiveFields = data.email !== undefined || data.password !== undefined || data.roleId !== undefined
+  if (!isSelf && changesSensitiveFields) {
+    if (!canManageSensitiveUserFields(actor, id) || !canAssignRole(actor, existing.roleId)) {
+      return serviceForbidden("You cannot manage this user.")
+    }
+  }
 
   // Email uniqueness check
   if (data.email !== undefined && data.email !== (existing as Record<string, unknown>).email) {
@@ -110,7 +115,10 @@ export async function updateUser(
   }
 
   // Prevent self-role-change
-  if (data.roleId !== undefined && id === currentUserId) return serviceForbidden("You cannot change your own role.")
+  if (data.roleId !== undefined) {
+    if (isSelf) return serviceForbidden("You cannot change your own role.")
+    if (!canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.")
+  }
 
   const now = getCurrentTimestamp()
   const updateData: {
@@ -129,20 +137,28 @@ export async function updateUser(
   const updated = updateUserRecord(id, updateData)
   if (!updated) return serviceNotFound("User")
 
+  if (data.email !== undefined || data.password !== undefined || data.roleId !== undefined) {
+    deleteRefreshSessionsForUser(id)
+  }
+
   return serviceSuccess(updated, "User updated.")
 }
 
 // ─── Delete User ─────────────────────────────────────────────────────────────
 
-export function deleteUser(
+export async function deleteUser(
   id: string,
   currentUserId: string,
-): ServiceResult<null> {
+): Promise<ServiceResult<null>> {
+  const actor = await loadAdminActor(currentUserId)
+  if (!actor || !hasAnyAdminPermission(actor, ["users.delete", "users.manage"])) return serviceForbidden("Insufficient permissions.")
+
   const existing = findUserByIdRecord(id)
   if (!existing) return serviceNotFound("User")
 
   // Prevent self-deletion
   if (id === currentUserId) return serviceForbidden("You cannot delete your own account.")
+  if (!canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot manage this user.")
 
   deleteUserRecord(id)
   return serviceSuccess(null, "User deleted.")
@@ -150,9 +166,13 @@ export function deleteUser(
 
 // ─── Duplicate User ──────────────────────────────────────────────────────────
 
-export function duplicateUser(id: string, currentUserId: string): ServiceResult<UserSafe> {
+export async function duplicateUser(id: string, currentUserId: string): Promise<ServiceResult<UserSafe>> {
+  const actor = await loadAdminActor(currentUserId)
+  if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.")
+
   const existing = findUserByIdRecord(id)
   if (!existing) return serviceNotFound("User")
+  if (!canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot assign this role.")
 
   const newId = generateId()
   const now = getCurrentTimestamp()
@@ -182,19 +202,19 @@ export function duplicateUser(id: string, currentUserId: string): ServiceResult<
 
 // ─── Bulk Operations ──────────────────────────────────────────────────────────
 
-export function bulkDeleteUsers(ids: string[], currentUserId: string): ServiceResult<{ id: string; success: boolean; error?: string }[]> {
+export async function bulkDeleteUsers(ids: string[], currentUserId: string): Promise<ServiceResult<{ id: string; success: boolean; error?: string }[]>> {
   const results: { id: string; success: boolean; error?: string }[] = []
   for (const id of ids) {
-    const result = deleteUser(id, currentUserId)
+    const result = await deleteUser(id, currentUserId)
     results.push({ id, success: result.success, error: !result.success ? result.error.message : undefined })
   }
   return serviceSuccess(results, "Bulk delete completed.")
 }
 
-export function bulkDuplicateUsers(ids: string[], currentUserId: string): ServiceResult<{ id: string; success: boolean; newId?: string }[]> {
+export async function bulkDuplicateUsers(ids: string[], currentUserId: string): Promise<ServiceResult<{ id: string; success: boolean; newId?: string }[]>> {
   const results: { id: string; success: boolean; newId?: string }[] = []
   for (const id of ids) {
-    const result = duplicateUser(id, currentUserId)
+    const result = await duplicateUser(id, currentUserId)
     if (result.success) {
       results.push({ id, success: true, newId: result.data.id })
     } else {

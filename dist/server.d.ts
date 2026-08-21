@@ -10,18 +10,104 @@ export interface BeaverOptions {
 declare function beaver(options?: BeaverOptions): AstroIntegration
 export default beaver
 export declare const apiApp: import("hono").Hono
-export declare const onRequest: unknown
 export declare const ADMIN_PATH: string
-export declare const getPublishedPostByType: (...args: any[]) => any
-export declare const getPublishedArchiveFilterOptions: (...args: any[]) => any
-export declare const getPublicCustomFieldFiltersFromSearchParams: (...args: any[]) => any
-export declare const listPublishedPostsByType: (...args: any[]) => any
-export declare const listPublishedPostsByTag: (...args: any[]) => any
-export declare const searchPublishedPosts: (...args: any[]) => any
-export declare const getMenuTree: (...args: any[]) => any
-export declare const getSiteSettings: (...args: any[]) => any
+type BeaverServiceResult<T> =
+  | { success: true; data: T; message: string }
+  | { success: false; error: { code: string; message: string; fieldErrors?: Record<string, string[]> } }
+interface BeaverPaginationMeta {
+  currentPage: number
+  perPage: number
+  total: number
+  lastPage: number
+  from: number
+  to: number
+}
+interface BeaverPaginatedResult<T> {
+  data: T[]
+  meta: BeaverPaginationMeta
+}
+interface BeaverPost {
+  id: string
+  title: string
+  slug: string
+  type: string
+  status: string
+  excerpt: string | null
+  description: string | null
+  tags: string | null
+  sections: string | null
+  customFieldValues: string | null
+  metaTitle: string | null
+  metaDescription: string | null
+  featuredImage: string | null
+  gallery: string | null
+  authorId: string
+  publishedAt: number | null
+  createdAt: number
+  updatedAt: number
+}
+interface BeaverPublicPost {
+  id: string
+  title: string
+  slug: string
+  type: string
+  excerpt: string | null
+  featuredImage: string | null
+  gallery: string[] | null
+  publishedAt: number | null
+  authorName: string | null
+}
+interface BeaverArchiveFilters {
+  search?: string
+  category?: string
+  tag?: string
+  customFields?: Record<string, string>
+  sortBy?: "title" | "created_at"
+  sortOrder?: "asc" | "desc"
+}
+interface BeaverArchiveFilterOptions {
+  categories: { name: string; slug: string }[]
+  tags: string[]
+  customFields: { name: string; label: string; type: "text" | "number" | "boolean" | "select" | "date"; options: string[] }[]
+}
+export declare const getPublishedPostByType: (type: string, slug: string) => BeaverServiceResult<BeaverPost & { authorName: string | null }>
+export declare const getPublishedArchiveFilterOptions: (type: string) => BeaverServiceResult<BeaverArchiveFilterOptions>
+export declare const getPublicCustomFieldFiltersFromSearchParams: (type: string, searchParams: URLSearchParams) => Record<string, string>
+export declare const listPublishedPostsByType: (type: string, page?: number, perPage?: number, filters?: BeaverArchiveFilters) => BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>
+export declare const listPublishedPostsByTag: (tag: string, page?: number, perPage?: number) => BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>
+export declare const searchPublishedPosts: (query: string, page?: number, perPage?: number) => BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>
+export declare const getMenuTree: (type?: string) => BeaverServiceResult<MenuTree[]>
+interface BeaverSocialLink { platform: string; url: string; icon?: string }
+interface BeaverOpenHours { day: string; open: string; close: string }
+interface BeaverSiteSettings {
+  title: string
+  description: string
+  meta_title: string
+  meta_description: string
+  maintenance_mode: boolean
+  timezone: string
+  logo: string
+  favicon: string
+  links: BeaverSocialLink[]
+  open_hours: BeaverOpenHours[]
+  custom_css: string
+  custom_javascript: string
+  translate_countries: string[]
+  email_notifications: string[]
+}
+export declare const getSiteSettings: () => BeaverSiteSettings
 export declare const seed: () => Promise<void>
-export type MenuTree = any
+export interface MenuTree {
+  id: string
+  title: string
+  url: string
+  position: number
+  cssClass: string | null
+  target: string | null
+  image: string | null
+  parentId: string | null
+  children: MenuTree[]
+}
 export declare const migrate: () => void
 export declare const seedTemplate: (name: string) => Promise<void>
 export declare const resetSuperAdminPassword: () => { email: string }

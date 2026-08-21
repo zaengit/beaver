@@ -1,5 +1,6 @@
 ---
 import type { PublicArchiveFilterOptions, PublicArchiveFilters } from "@/shared/types/posts"
+import { safeContentArchiveHref } from "../../safe-url"
 
 interface Props {
   contentType: { slug: string }
@@ -11,7 +12,7 @@ const { contentType, filterOptions, filters } = Astro.props
 const isFiltered = Boolean(filters.search || filters.category || filters.tag || Object.keys(filters.customFields ?? {}).length > 0)
 ---
 
-<form action={`/${contentType.slug}`} method="get" class="mt-8 grid gap-4 rounded-[28px] border border-slate-200/90 bg-slate-100/80 p-6 shadow-sm backdrop-blur-md sm:grid-cols-2 lg:grid-cols-4 items-end">
+<form action={safeContentArchiveHref(contentType.slug)} method="get" class="mt-8 grid gap-4 rounded-[28px] border border-slate-200/90 bg-slate-100/80 p-6 shadow-sm backdrop-blur-md sm:grid-cols-2 lg:grid-cols-4 items-end">
   <div>
     <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700" for="archive-search">Search</label>
     <input
@@ -68,7 +69,7 @@ const isFiltered = Boolean(filters.search || filters.category || filters.tag || 
       Apply filters
     </button>
     {isFiltered && (
-      <a href={`/${contentType.slug}`} class="rounded-full bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-300 active:scale-95">
+      <a href={safeContentArchiveHref(contentType.slug)} class="rounded-full bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-300 active:scale-95">
         Clear
       </a>
     )}

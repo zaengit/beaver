@@ -3,7 +3,8 @@ import type { AstroLikeCookies } from "@zbeaver/beaver/app/http/request-context"
 export const ADMIN_ACCESS_COOKIE = "admin_access_token"
 export const ADMIN_REFRESH_COOKIE = "admin_refresh_token"
 
-const secure = process.env.NODE_ENV === "production"
+const secure = process.env.COOKIE_SECURE === "true"
+  || (process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test")
 
 export function buildAdminAccessCookieOptions() {
   return {

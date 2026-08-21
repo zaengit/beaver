@@ -1,10 +1,12 @@
-import { and, asc, count, desc, eq, inArray, like, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, count, desc, eq, like, or, sql, type SQL } from "drizzle-orm"
 
 import { db } from "@zbeaver/beaver/app/db"
 import { categories, media, postCategories, posts, users } from "@zbeaver/beaver/app/db/schema"
 import type { PostRecord } from "@zbeaver/beaver/app/models/post"
 import type { PaginatedResult } from "@zbeaver/beaver/pkg/types"
-import type { Post, PostFilters, PostWithRelations, PublicArchiveFilterOptions, PublicArchiveFilters, PublicPost, PublicSearchResult } from "@zbeaver/beaver/pkg/types/posts"
+import type { Post, PostFilters, PostWithRelations, PublicArchiveFilterOptions, PublicArchiveFilters, PublicPost } from "@zbeaver/beaver/pkg/types/posts"
+import { generateId } from "@zbeaver/beaver/pkg/utils/id"
+import { clampPage, clampPagination, clampPerPage } from "@zbeaver/beaver/pkg/utils/pagination"
 
 type UserAuthor = { id: string; name: string; email: string }
 type CategoryRef = { id: string; name: string; slug: string }
@@ -18,12 +20,7 @@ export type DashboardStats = {
   totalCategories: number
 }
 
-function clampPagination(filters: { page?: number; perPage?: number }) {
-  const page = Math.max(1, filters.page ?? 1)
-  const perPage = Math.min(100, Math.max(1, filters.perPage ?? 20))
-  const offset = (page - 1) * perPage
-  return { page, perPage, offset }
-}
+const MAX_FILTER_TEXT_LENGTH = 100
 
 function buildPaginationMeta(
   page: number,
@@ -35,15 +32,6 @@ function buildPaginationMeta(
   const from = total > 0 ? offset + 1 : 0
   const to = Math.min(offset + perPage, total)
   return { currentPage: page, perPage, total, lastPage, from, to }
-}
-
-function generateUlid() {
-  const ts = Date.now().toString(32).padStart(10, "0").toUpperCase()
-  const rand = Array.from(
-    { length: 16 },
-    () => "0123456789ABCDEFGHJKMNPQRSTVWXYZ"[Math.floor(Math.random() * 32)],
-  ).join("")
-  return ts + rand
 }
 
 export function findPostByIdRecord(id: string) {
@@ -72,35 +60,6 @@ export function findPostByIdRecord(id: string) {
 
 export function findPostBySlugRecord(slug: string) {
   return db.select().from(posts).where(eq(posts.slug, slug)).get() as PostRecord | undefined
-}
-
-export function findPublishedBySlugRecord(slug: string) {
-  return db
-    .select({
-      id: posts.id,
-      title: posts.title,
-      slug: posts.slug,
-      type: posts.type,
-      status: posts.status,
-      excerpt: posts.excerpt,
-      description: posts.description,
-      tags: posts.tags,
-      sections: posts.sections,
-      customFieldValues: posts.customFieldValues,
-      metaTitle: posts.metaTitle,
-      metaDescription: posts.metaDescription,
-      featuredImage: posts.featuredImage,
-      gallery: posts.gallery,
-      authorId: posts.authorId,
-      publishedAt: posts.publishedAt,
-      createdAt: posts.createdAt,
-      updatedAt: posts.updatedAt,
-      authorName: users.name,
-    })
-    .from(posts)
-    .leftJoin(users, eq(posts.authorId, users.id))
-    .where(and(eq(posts.slug, slug), eq(posts.status, "published")))
-    .get() as (Post & { authorName: string | null }) | undefined
 }
 
 export function findPublishedByTypeAndSlugRecord(type: string, slug: string) {
@@ -135,32 +94,30 @@ export function findPublishedByTypeAndSlugRecord(type: string, slug: string) {
 export function listPostRecords(filters: PostFilters = {}) {
   const { page, perPage, offset } = clampPagination(filters)
   const conditions: SQL<unknown>[] = []
+  const search = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH)
+  const type = filters.type?.slice(0, 64)
+  const status = filters.status?.slice(0, 32)
+  const authorId = filters.authorId?.slice(0, 128)
+  const categoryId = filters.categoryId?.slice(0, 128)
 
-  if (filters.search) {
-    conditions.push(like(posts.title, `%${filters.search}%`))
+  if (search) {
+    conditions.push(like(posts.title, `%${search}%`))
   }
-  if (filters.type) {
-    conditions.push(eq(posts.type, filters.type))
+  if (type) {
+    conditions.push(eq(posts.type, type))
   }
-  if (filters.status) {
-    conditions.push(eq(posts.status, filters.status))
+  if (status) {
+    conditions.push(eq(posts.status, status))
   }
-  if (filters.authorId) {
-    conditions.push(eq(posts.authorId, filters.authorId))
+  if (authorId) {
+    conditions.push(eq(posts.authorId, authorId))
   }
-  if (filters.categoryId) {
-    const matchingPostIds = db
-      .select({ postId: postCategories.postId })
-      .from(postCategories)
-      .where(eq(postCategories.categoryId, filters.categoryId))
-      .all()
-      .map((row) => row.postId)
-
-    if (matchingPostIds.length === 0) {
-      return { data: [], meta: buildPaginationMeta(page, perPage, 0, offset) }
-    }
-
-    conditions.push(inArray(posts.id, matchingPostIds))
+  if (categoryId) {
+    conditions.push(sql`exists (
+      select 1 from ${postCategories}
+      where ${postCategories.postId} = ${posts.id}
+        and ${postCategories.categoryId} = ${categoryId}
+    )`)
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -212,62 +169,25 @@ export function listPostRecords(filters: PostFilters = {}) {
   }
 }
 
-export function listPublishedPostRecords(page = 1, perPage = 12) {
-  const clampedPage = Math.max(1, page)
-  const clampedPerPage = Math.min(100, Math.max(1, perPage))
-  const offset = (clampedPage - 1) * clampedPerPage
-
-  const data = db
-    .select({
-      id: posts.id,
-      title: posts.title,
-      slug: posts.slug,
-      type: posts.type,
-      excerpt: posts.excerpt,
-      featuredImage: posts.featuredImage,
-      gallery: posts.gallery,
-      publishedAt: posts.publishedAt,
-      authorName: users.name,
-    })
-    .from(posts)
-    .leftJoin(users, eq(posts.authorId, users.id))
-    .where(eq(posts.status, "published"))
-    .orderBy(desc(posts.publishedAt))
-    .limit(clampedPerPage)
-    .offset(offset)
-    .all() as PublicPost[]
-
-  const total =
-    (
-      db
-        .select({ value: count() })
-        .from(posts)
-        .where(eq(posts.status, "published"))
-        .all() as { value: number }[]
-    )[0]?.value ?? 0
-
-  return {
-    data,
-    meta: buildPaginationMeta(clampedPage, clampedPerPage, total, offset),
-  }
-}
-
 export function listPublishedPostRecordsByType(type: string, page = 1, perPage = 12, filters: PublicArchiveFilters = {}) {
-  const clampedPage = Math.max(1, page)
-  const clampedPerPage = Math.min(100, Math.max(1, perPage))
+  const clampedPage = clampPage(page)
+  const clampedPerPage = clampPerPage(perPage, 12)
   const offset = (clampedPage - 1) * clampedPerPage
   const conditions: SQL<unknown>[] = [eq(posts.type, type), eq(posts.status, "published")]
 
-  if (filters.search) {
-    const pattern = `%${filters.search}%`
+  const search = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH)
+  if (search) {
+    const pattern = `%${search}%`
     conditions.push(or(like(posts.title, pattern), like(posts.excerpt, pattern), like(posts.description, pattern))!)
   }
   if (filters.category) {
     const category = db.select({ id: categories.id }).from(categories).where(and(or(eq(categories.slug, filters.category), eq(categories.id, filters.category))!, eq(categories.status, "published"))).get()
     if (!category) return { data: [], meta: buildPaginationMeta(clampedPage, clampedPerPage, 0, offset) }
-    const matchingPostIds = db.select({ postId: postCategories.postId }).from(postCategories).where(eq(postCategories.categoryId, category.id)).all().map((row) => row.postId)
-    if (matchingPostIds.length === 0) return { data: [], meta: buildPaginationMeta(clampedPage, clampedPerPage, 0, offset) }
-    conditions.push(inArray(posts.id, matchingPostIds))
+    conditions.push(sql`exists (
+      select 1 from ${postCategories}
+      where ${postCategories.postId} = ${posts.id}
+        and ${postCategories.categoryId} = ${category.id}
+    )`)
   }
   if (filters.tag) {
     conditions.push(sql`json_valid(${posts.tags})`)
@@ -317,29 +237,33 @@ export function listPublishedArchiveFilterOptionsByType(type: string): PublicArc
     .innerJoin(posts, eq(postCategories.postId, posts.id))
     .where(and(eq(posts.type, type), eq(posts.status, "published"), eq(categories.status, "published")))
     .orderBy(asc(categories.name))
+    .limit(5_000)
     .all()
 
   const tagRows = db
     .select({ tags: posts.tags })
     .from(posts)
     .where(and(eq(posts.type, type), eq(posts.status, "published")))
+    .limit(5_000)
     .all()
   const tags = [...new Set(tagRows.flatMap(({ tags }) => {
     try {
       const value = tags ? JSON.parse(tags) : []
-      return Array.isArray(value) ? value.filter((tag): tag is string => typeof tag === "string").map((tag) => tag.trim()).filter(Boolean) : []
+      return Array.isArray(value)
+        ? value.filter((tag): tag is string => typeof tag === "string").map((tag) => tag.trim().slice(0, 100)).filter(Boolean)
+        : []
     } catch {
       return []
     }
-  }))].sort((a, b) => a.localeCompare(b))
+  }))].sort((a, b) => a.localeCompare(b)).slice(0, 5_000)
 
   return { categories: categoryOptions, tags, customFields: [] }
 }
 
 /** Search only content which is safe to expose on the public website. */
 export function searchPublishedPostRecords(query: string, page = 1, perPage = 12) {
-  const clampedPage = Math.max(1, page)
-  const clampedPerPage = Math.min(100, Math.max(1, perPage))
+  const clampedPage = clampPage(page)
+  const clampedPerPage = clampPerPage(perPage, 12)
   const offset = (clampedPage - 1) * clampedPerPage
   const pattern = `%${query}%`
   const condition = and(
@@ -369,7 +293,7 @@ export function searchPublishedPostRecords(query: string, page = 1, perPage = 12
     .orderBy(desc(posts.publishedAt))
     .limit(clampedPerPage)
     .offset(offset)
-    .all() as PublicSearchResult[]
+    .all() as PublicPost[]
 
   const total = (db.select({ value: count() }).from(posts).where(condition).all() as { value: number }[])[0]?.value ?? 0
 
@@ -381,8 +305,8 @@ export function searchPublishedPostRecords(query: string, page = 1, perPage = 12
 
 /** List published items whose JSON tag list contains the requested tag. */
 export function listPublishedPostRecordsByTag(tag: string, page = 1, perPage = 12) {
-  const clampedPage = Math.max(1, page)
-  const clampedPerPage = Math.min(100, Math.max(1, perPage))
+  const clampedPage = clampPage(page)
+  const clampedPerPage = clampPerPage(perPage, 12)
   const offset = (clampedPage - 1) * clampedPerPage
   const condition = and(
     eq(posts.status, "published"),
@@ -430,31 +354,6 @@ export function getDashboardStatsRecord(): DashboardStats {
     totalCategories:
       (db.select({ value: count() }).from(categories).all() as { value: number }[])[0]?.value ?? 0,
   }
-}
-
-export function listRecentPostRecords(limit = 5) {
-  return db
-    .select({
-      id: posts.id,
-      title: posts.title,
-      status: posts.status,
-      createdAt: posts.createdAt,
-      authorName: users.name,
-    })
-    .from(posts)
-    .leftJoin(users, eq(posts.authorId, users.id))
-    .orderBy(desc(posts.createdAt))
-    .limit(limit)
-    .all() as { id: string; title: string; status: string; createdAt: number; authorName: string | null }[]
-}
-
-export function listCategoriesForPostRecord(postId: string) {
-  return db
-    .select({ id: categories.id, name: categories.name, slug: categories.slug })
-    .from(postCategories)
-    .innerJoin(categories, eq(postCategories.categoryId, categories.id))
-    .where(eq(postCategories.postId, postId))
-    .all() as CategoryRef[]
 }
 
 export function createPostRecord(input: {
@@ -515,7 +414,7 @@ export function syncPostCategoriesRecord(postId: string, categoryIds: string[], 
   for (const categoryId of categoryIds) {
     db.insert(postCategories)
       .values({
-        id: generateUlid(),
+        id: generateId(),
         postId,
         categoryId,
         createdAt: now,

@@ -3,6 +3,7 @@ import "@/styles/public.css"
 import { Footer } from "@/components/web/footer.tsx"
 import { Navbar } from "@/components/web/navbar.tsx"
 import { getMenuTree, getSiteSettings } from "@zbeaver/beaver/server"
+import { safeImageSrc } from "@/components/web/safe-url"
 
 interface Props {
   title?: string
@@ -24,7 +25,7 @@ const footerItems = footerResult.success ? footerResult.data : []
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     {(description || settings.meta_description) && <meta name="description" content={description || settings.meta_description} />}
-    {settings.favicon && <link rel="icon" href={settings.favicon} />}
+    {safeImageSrc(settings.favicon) && <link rel="icon" href={safeImageSrc(settings.favicon) || undefined} />}
   </head>
   <body class="min-h-screen bg-background text-foreground">
     <div class="flex min-h-screen flex-col">

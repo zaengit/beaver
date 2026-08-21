@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, like, or, type SQL } from "drizzle-orm"
+import { and, asc, count, desc, eq, inArray, like, or, type SQL } from "drizzle-orm"
 
 import { db } from "@zbeaver/beaver/app/db"
 import { permissions as permissionsTable, rolePermissions, roles, users } from "@zbeaver/beaver/app/db/schema"
@@ -7,7 +7,8 @@ import { sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
 import { generateId } from "@zbeaver/beaver/pkg/utils/index"
 
 export type RoleRow = RoleRecord
-export type PermissionRow = typeof permissionsTable.$inferSelect
+type PermissionRow = typeof permissionsTable.$inferSelect
+const MAX_ROLE_ROWS = 1_000
 
 export function findRoleByIdRecord(id: string) {
   return db.select().from(roles).where(eq(roles.id, id)).get() as RoleRow | undefined
@@ -17,16 +18,13 @@ export function findRoleBySlugRecord(slug: string) {
   return db.select().from(roles).where(eq(roles.slug, slug)).get() as RoleRow | undefined
 }
 
-export function listRoleRecords() {
-  return db.select().from(roles).all() as RoleRow[]
-}
-
 export function listRolesWithUserCountRecords(filters?: { search?: string; sortBy?: string; sortOrder?: string }) {
   const conditions: SQL<unknown>[] = []
-  if (filters?.search) {
+  const search = filters?.search?.slice(0, 100)
+  if (search) {
     conditions.push(or(
-      like(roles.name, `%${filters.search}%`),
-      like(roles.slug, `%${filters.search}%`),
+      like(roles.name, `%${search}%`),
+      like(roles.slug, `%${search}%`),
     ) as SQL<unknown>)
   }
 
@@ -44,8 +42,8 @@ export function listRolesWithUserCountRecords(filters?: { search?: string; sortB
 
   const baseQuery = db.select().from(roles).orderBy(orderColumn)
   const roleRows = conditions.length > 0
-    ? (baseQuery.where(and(...conditions)).all() as RoleRow[])
-    : (baseQuery.all() as RoleRow[])
+    ? (baseQuery.where(and(...conditions)).limit(MAX_ROLE_ROWS).all() as RoleRow[])
+    : (baseQuery.limit(MAX_ROLE_ROWS).all() as RoleRow[])
 
   return roleRows.map((role) => {
     const countResult = db
@@ -64,16 +62,6 @@ export function getRoleNameRecord(roleId: string) {
 
 export function listAllPermissionRecords() {
   return db.select().from(permissionsTable).all() as PermissionRow[]
-}
-
-export function listPermissionGroupsRecord() {
-  const grouped: Record<string, PermissionRow[]> = {}
-  for (const permission of listAllPermissionRecords()) {
-    const group = permission.group ?? "general"
-    if (!grouped[group]) grouped[group] = []
-    grouped[group].push(permission)
-  }
-  return grouped
 }
 
 export function createRoleRecord(input: {
@@ -149,4 +137,23 @@ export function getRolePermissionIdsRecord(roleId: string) {
       .where(eq(rolePermissions.roleId, roleId))
       .all() as { permissionId: string }[]
   ).map((row) => row.permissionId)
+}
+
+export function getRolePermissionSlugsRecord(roleId: string) {
+  return db
+    .select({ slug: permissionsTable.slug })
+    .from(rolePermissions)
+    .innerJoin(permissionsTable, eq(rolePermissions.permissionId, permissionsTable.id))
+    .where(eq(rolePermissions.roleId, roleId))
+    .all()
+    .map((row) => row.slug)
+}
+
+export function getPermissionSlugsRecord(permissionIds: string[]) {
+  if (permissionIds.length === 0) return []
+  return db
+    .select({ id: permissionsTable.id, slug: permissionsTable.slug })
+    .from(permissionsTable)
+    .where(inArray(permissionsTable.id, [...new Set(permissionIds)]))
+    .all()
 }

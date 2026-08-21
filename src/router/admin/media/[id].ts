@@ -2,8 +2,8 @@ import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
 import { handleDeleteMedia, handleGetMedia, handleUpdateMedia } from "@zbeaver/beaver/app/handlers"
 
-export const GET: AdminRoute = async ({ params }) => {
-  return handleGetMedia(params.id!)
+export const GET: AdminRoute = async ({ params, locals }) => {
+  return handleGetMedia(locals.session as { user: { id: string } } | null, params.id!)
 }
 
 export const PUT: AdminRoute = async ({ params, request, locals }) => {

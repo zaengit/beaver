@@ -61,9 +61,7 @@ describe("AdminSidebar", () => {
     render(
       <MemoryRouter>
         <AdminSidebar
-          user={{ id: "user-1", name: "Admin", email: "admin@example.com", roleId: "role-1" }}
           permissions={["posts.view"]}
-          roleName="Administrator"
           pathname="/admin"
         />
       </MemoryRouter>
@@ -81,9 +79,7 @@ describe("AdminSidebar", () => {
     render(
       <MemoryRouter>
         <AdminSidebar
-          user={{ id: "user-1", name: "Admin", email: "admin@example.com", roleId: "role-1" }}
           permissions={["content.page.view", "category.page.view"]}
-          roleName="Administrator"
           pathname="/admin/posts/page"
         />
       </MemoryRouter>
@@ -97,14 +93,12 @@ describe("AdminSidebar", () => {
     render(
       <MemoryRouter>
         <AdminSidebar
-          user={{ id: "user-1", name: "Admin", email: "admin@example.com", roleId: "role-1" }}
           permissions={["posts.view"]}
-          roleName="Administrator"
           pathname="/admin"
         />
       </MemoryRouter>
     )
 
-    expect(screen.getByText("Beaver v0.1.6")).toBeInTheDocument()
+    expect(screen.getByText(/^Beaver v\d+\.\d+\.\d+$/)).toBeInTheDocument()
   })
 })

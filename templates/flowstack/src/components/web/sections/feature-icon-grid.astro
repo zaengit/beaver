@@ -1,5 +1,5 @@
 ---
-import { getSectionStyle, type Section } from "./shared/types"
+import { getSectionStyle, safeHref, type Section } from "./shared/types"
 import SectionHeading from "./shared/section-heading.astro"
 
 interface Props { section: Section }
@@ -30,10 +30,10 @@ const gridClass = "grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
               {item.title && <h3 class="text-lg font-bold text-white transition-colors group-hover:text-indigo-300">{item.title}</h3>}
               {item.text && <p class="mt-2 text-sm leading-relaxed text-slate-300">{item.text}</p>}
             </div>
-            {item.links?.[0]?.label && item.links[0]?.url && (
+            {item.links?.[0]?.label && safeHref(item.links[0]?.url) !== "#" && (
               <div class="mt-6">
                 <a
-                  href={item.links[0].url}
+                  href={safeHref(item.links[0].url)}
                   class="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 px-4 py-1.5 text-xs font-bold text-indigo-300 transition-all hover:bg-indigo-500 hover:text-white group-hover:translate-x-1"
                 >
                   <span>{item.links[0].label}</span>

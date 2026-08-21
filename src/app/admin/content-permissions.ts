@@ -2,11 +2,6 @@ import { getServerContentTypeRegistry } from "@zbeaver/beaver/app/registry/serve
 
 const builtInContentTypes = ["post", "page"]
 
-export const contentTypes = [
-  ...builtInContentTypes,
-  ...getServerContentTypeRegistry().contentTypes.map((contentType) => contentType.slug),
-]
-
 export type ContentAction = "view" | "create" | "edit" | "edit-own" | "delete" | "publish" | "unpublish"
 export type CategoryAction = "view" | "manage" | "publish" | "unpublish"
 
