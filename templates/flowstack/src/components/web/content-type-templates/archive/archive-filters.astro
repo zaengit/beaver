@@ -10,66 +10,70 @@ interface Props {
 
 const { contentType, filterOptions, filters } = Astro.props
 const isFiltered = Boolean(filters.search || filters.category || filters.tag || Object.keys(filters.customFields ?? {}).length > 0)
+const fieldClass = "w-full border border-[var(--line-strong)] bg-[var(--paper)] px-3 py-2.5 text-[13px] font-medium text-[var(--ink)] outline-none focus:bg-[var(--bg)]"
+const labelClass = "mb-1.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink)]"
 ---
 
-<form action={safeContentArchiveHref(contentType.slug)} method="get" class="mt-8 grid gap-4 rounded-[28px] border border-slate-200/90 bg-slate-100/80 p-6 shadow-sm backdrop-blur-md sm:grid-cols-2 lg:grid-cols-4 items-end">
-  <div>
-    <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700" for="archive-search">Search</label>
-    <input
-      id="archive-search"
-      name="search"
-      value={filters.search ?? ""}
-      type="search"
-      placeholder="Search..."
-      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-950 outline-none transition-all duration-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/15 shadow-xs"
-    />
-  </div>
-  {filterOptions.customFields.map((field) => (
+<form action={safeContentArchiveHref(contentType.slug)} method="get" class="mt-6 border border-[var(--line-strong)] bg-[var(--paper)] p-4 sm:p-6">
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <div>
-      <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700" for={`field-${field.name}`}>{field.label}</label>
-      {field.type === "select" ? (
-        <select id={`field-${field.name}`} name={`field_${field.name}`} class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-950 outline-none transition-all duration-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/15 shadow-xs">
-          <option value="">All {field.label}</option>
-          {field.options.map((option) => <option value={option} selected={filters.customFields?.[field.name] === option}>{option}</option>)}
-        </select>
-      ) : field.type === "boolean" ? (
-        <select id={`field-${field.name}`} name={`field_${field.name}`} class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-950 outline-none transition-all duration-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/15 shadow-xs">
-          <option value="">All {field.label}</option>
-          <option value="true" selected={filters.customFields?.[field.name] === "true"}>Yes</option>
-          <option value="false" selected={filters.customFields?.[field.name] === "false"}>No</option>
-        </select>
-      ) : (
-        <input
-          id={`field-${field.name}`}
-          name={`field_${field.name}`}
-          value={filters.customFields?.[field.name] ?? ""}
-          type={field.type === "date" ? "date" : field.type === "number" ? "number" : "search"}
-          placeholder={`Filter by ${field.label}`}
-          class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-950 outline-none transition-all duration-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/15 shadow-xs"
-        />
-      )}
+      <label class={labelClass} for="archive-search">Search</label>
+      <input
+        id="archive-search"
+        name="search"
+        value={filters.search ?? ""}
+        type="search"
+        placeholder="Search..."
+        class={fieldClass}
+      />
     </div>
-  ))}
-  <div>
-    <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700" for="archive-category">Category</label>
-    <select id="archive-category" name="category" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-950 outline-none transition-all duration-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/15 shadow-xs">
-      <option value="">All categories</option>
-      {filterOptions.categories.map((category) => <option value={category.slug} selected={filters.category === category.slug}>{category.name}</option>)}
-    </select>
+    {filterOptions.customFields.map((field) => (
+      <div>
+        <label class={labelClass} for={`field-${field.name}`}>{field.label}</label>
+        {field.type === "select" ? (
+          <select id={`field-${field.name}`} name={`field_${field.name}`} class={fieldClass}>
+            <option value="">All {field.label}</option>
+            {field.options.map((option) => <option value={option} selected={filters.customFields?.[field.name] === option}>{option}</option>)}
+          </select>
+        ) : field.type === "boolean" ? (
+          <select id={`field-${field.name}`} name={`field_${field.name}`} class={fieldClass}>
+            <option value="">All {field.label}</option>
+            <option value="true" selected={filters.customFields?.[field.name] === "true"}>Yes</option>
+            <option value="false" selected={filters.customFields?.[field.name] === "false"}>No</option>
+          </select>
+        ) : (
+          <input
+            id={`field-${field.name}`}
+            name={`field_${field.name}`}
+            value={filters.customFields?.[field.name] ?? ""}
+            type={field.type === "date" ? "date" : field.type === "number" ? "number" : "search"}
+            placeholder={`Filter by ${field.label}`}
+            class={fieldClass}
+          />
+        )}
+      </div>
+    ))}
+    <div>
+      <label class={labelClass} for="archive-category">Category</label>
+      <select id="archive-category" name="category" class={fieldClass}>
+        <option value="">All categories</option>
+        {filterOptions.categories.map((category) => <option value={category.slug} selected={filters.category === category.slug}>{category.name}</option>)}
+      </select>
+    </div>
+    <div>
+      <label class={labelClass} for="archive-tag">Tag</label>
+      <select id="archive-tag" name="tag" class={fieldClass}>
+        <option value="">All tags</option>
+        {filterOptions.tags.map((tag) => <option value={tag} selected={filters.tag?.toLowerCase() === tag.toLowerCase()}>{tag}</option>)}
+      </select>
+    </div>
   </div>
-  <div>
-    <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700" for="archive-tag">Tag</label>
-    <select id="archive-tag" name="tag" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-950 outline-none transition-all duration-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/15 shadow-xs">
-      <option value="">All tags</option>
-      {filterOptions.tags.map((tag) => <option value={tag} selected={filters.tag?.toLowerCase() === tag.toLowerCase()}>{tag}</option>)}
-    </select>
-  </div>
-  <div class="flex items-center gap-3">
-    <button class="rounded-full bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg active:scale-95">
+  <div class="mt-5 flex items-center gap-3 border-t border-[var(--line)] pt-4">
+    <button class="border border-[var(--line-strong)] bg-[var(--ink)] px-6 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:bg-black">
       Apply filters
     </button>
     {isFiltered && (
-      <a href={safeContentArchiveHref(contentType.slug)} class="rounded-full bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-300 active:scale-95">
+      <a href={safeContentArchiveHref(contentType.slug)} class="border border-[var(--line-strong)] bg-[var(--paper)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink)] hover:bg-[var(--bg)]">
         Clear
       </a>
     )}

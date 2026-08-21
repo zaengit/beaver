@@ -20,13 +20,13 @@ try {
 ---
 
 {parsedTags.length > 0 && (
-  <nav class="mt-6 flex flex-wrap gap-2.5" aria-label="Tags">
+  <nav class="mt-6 flex flex-wrap gap-2" aria-label="Tags">
     {parsedTags.map((tag) => (
       <a
         href={`/tag/${encodeURIComponent(tag)}`}
-        class="inline-flex items-center gap-1 rounded-full bg-indigo-50 border border-indigo-200/90 px-4 py-1.5 text-xs font-bold text-indigo-700 shadow-2xs transition-all duration-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 active:scale-95"
+        class="inline-flex items-center border border-[var(--line-strong)] bg-[var(--paper)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-white"
       >
-        <span>#{tag}</span>
+        #{tag}
       </a>
     ))}
   </nav>

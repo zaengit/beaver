@@ -13,12 +13,12 @@ const mapUrl = coordinate
   : null
 ---
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 my-6">
-  <section id={section.style_id || undefined} class:list={["rounded-[32px] sm:rounded-[40px] border border-slate-200/90 bg-white p-8 sm:p-12 shadow-xl", section.style_css]}>
-    <div class="mx-auto max-w-7xl">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+  <section id={section.style_id || undefined} class:list={["border border-[var(--line-strong)] bg-[var(--paper)] px-6 py-8 sm:px-10 sm:py-10", section.style_css]}>
+    <div class="flex flex-col gap-8">
       <SectionHeading content={section} theme="light" />
       {mapUrl && (
-        <div class="mt-10 h-[28rem] w-full overflow-hidden rounded-[24px] border border-slate-200 shadow-md">
+        <div class="h-[28rem] overflow-hidden border border-[var(--line-strong)]">
           <iframe class="h-full w-full border-0" src={mapUrl} title={section.title || "Map"} loading="lazy" />
         </div>
       )}

@@ -6,30 +6,29 @@ interface Props { section: Section }
 const { section } = Astro.props
 ---
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 my-6">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
   <section
     id={section.style_id || undefined}
     class:list={[
-      "rounded-[32px] sm:rounded-[40px] border border-slate-800/80 bg-slate-950 p-8 sm:p-16 text-white shadow-2xl",
+      "border border-[var(--line-strong)] bg-[var(--paper)] px-6 py-10 sm:px-10 sm:py-12",
       section.style_css
     ]}
     style={getSectionStyle(section)}
   >
     <div class="mx-auto max-w-4xl">
-      <SectionHeading content={section} theme="dark" />
-      <div class="mt-12 space-y-4">
+      <SectionHeading content={section} theme="light" />
+      <div class="mt-8 divide-y divide-[var(--line-strong)] border-y border-[var(--line-strong)]">
         {(section.item ?? []).map((item) => (
-          <details class="group rounded-2xl border border-slate-800/90 bg-slate-900/70 p-5 sm:p-6 transition-all duration-300 hover:border-indigo-500/40 hover:bg-slate-900/95 shadow-sm">
-            <summary class="flex cursor-pointer list-none items-center justify-between gap-6 font-bold text-base sm:text-lg text-white group-hover:text-indigo-300 transition-colors">
+          <details class="group py-5">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-6 text-[15px] font-bold leading-tight text-[var(--ink)]">
               <span>{item.question}</span>
-              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800/80 text-indigo-400 font-extrabold transition-all duration-300 group-open:rotate-180 group-open:bg-indigo-600 group-open:text-white group-open:border-indigo-500">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-                </svg>
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center border border-[var(--line-strong)] text-[14px] font-black leading-none group-open:bg-[var(--ink)] group-open:text-white">
+                <span class="group-open:hidden">+</span>
+                <span class="hidden group-open:inline">—</span>
               </span>
             </summary>
             {item.answer && (
-              <p class="mt-4 max-w-3xl whitespace-pre-line text-sm sm:text-base leading-relaxed text-slate-300 border-t border-slate-800/80 pt-4">
+              <p class="mt-3 max-w-3xl whitespace-pre-line border-l-2 border-[var(--line-strong)] pl-4 text-[14px] leading-6 text-[var(--muted)]">
                 {item.answer}
               </p>
             )}

@@ -6,19 +6,21 @@ interface Props { section: Section; videoEmbedUrl: string | null }
 const { section, videoEmbedUrl } = Astro.props
 ---
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 my-6">
-  <section id={section.style_id || undefined} class:list={["rounded-[32px] sm:rounded-[40px] border border-slate-200/90 bg-white p-8 sm:p-12 shadow-xl", section.style_css]}>
-    <div class="mx-auto max-w-7xl">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+  <section id={section.style_id || undefined} class:list={["border border-[var(--line-strong)] bg-[var(--paper)] px-6 py-8 sm:px-10 sm:py-10", section.style_css]}>
+    <div class="flex flex-col gap-8">
       <SectionHeading content={section} theme="light" />
       {videoEmbedUrl && (
-        <div class="mt-10 aspect-video max-w-5xl mx-auto overflow-hidden rounded-[24px] bg-slate-950 shadow-2xl border border-slate-800">
-          <iframe
-            class="h-full w-full border-0"
-            src={videoEmbedUrl}
-            title={section.title || "Video"}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-          />
+        <div class="overflow-hidden border border-[var(--line-strong)] bg-black">
+          <div class="aspect-video">
+            <iframe
+              class="h-full w-full border-0"
+              src={videoEmbedUrl}
+              title={section.title || "Video"}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            />
+          </div>
         </div>
       )}
     </div>

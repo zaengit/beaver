@@ -1,3 +1,9 @@
 :root {
   color-scheme: light;
+  --bg: #fdfcf9;
+  --paper: #ffffff;
+  --ink: #0f0f0f;
+  --muted: #6b6b6b;
+  --line: #e7e5e4;
+  --line-strong: #0f0f0f;
 }

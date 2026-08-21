@@ -7,55 +7,57 @@ interface Props { section: Section }
 const { section } = Astro.props
 ---
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 my-6">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
   <section
     id={section.style_id || undefined}
     class:list={[
-      "overflow-x-auto rounded-[32px] sm:rounded-[40px] border border-slate-800/80 bg-slate-950 shadow-2xl scrollbar-none",
+      "overflow-x-auto border border-[var(--line-strong)] bg-[var(--paper)]",
       section.style_css
     ]}
     aria-label="Slides"
   >
     <div class="flex snap-x snap-mandatory">
-      {(section.item ?? []).map((item) => (
+      {(section.item ?? []).map((item, idx) => (
         <article
-          class="relative isolate min-h-[32rem] min-w-full snap-start overflow-hidden p-8 sm:p-16 lg:p-20 text-white sm:min-h-[40rem] flex flex-col justify-center"
+          class="relative flex min-h-[30rem] min-w-full snap-start flex-col justify-between sm:min-h-[34rem]"
           style={getSectionStyle({ ...section, bg_color: item.bg_color || section.bg_color, bg_image: item.bg_image || section.bg_image })}
         >
           {item.image && (
             <ResponsiveImage
               src={item.image}
               alt={item.alt_image || item.title || ""}
-              class="absolute inset-0 -z-20 h-full w-full object-cover opacity-40 transition-transform duration-700 hover:scale-105"
+              class="absolute inset-0 h-full w-full object-cover"
             />
           )}
-          <div class="absolute inset-0 -z-10 bg-slate-950/60 backdrop-blur-3xs" />
-          
-          <div class:list={[
-            "relative z-10 max-w-4xl",
-            section.alignment === "center" && "mx-auto text-center",
-            section.alignment === "right" && "ml-auto text-right"
-          ]}>
-            <SectionHeading content={item} theme="dark" />
-            {item.links?.length ? (
-              <div class:list={[
-                "mt-8 flex flex-wrap gap-3",
-                section.alignment === "center" && "justify-center",
-                section.alignment === "right" && "justify-end"
-              ]}>
-                {item.links.filter((link) => link.label && safeHref(link.url) !== "#").map((link) => (
-                  <a
-                    href={safeHref(link.url)}
-                    class="rounded-full bg-white px-7 py-3.5 text-sm font-bold text-slate-950 shadow-lg transition-all duration-200 hover:bg-indigo-50 hover:scale-105 active:scale-95 inline-flex items-center gap-2"
-                  >
-                    <span>{link.label}</span>
-                    <svg class="h-4 w-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                    </svg>
-                  </a>
-                ))}
-              </div>
-            ) : null}
+          <div class="absolute inset-0 bg-white/88"></div>
+          <div class="relative flex h-full flex-col justify-between p-6 sm:p-10 lg:p-12">
+            <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
+              <span>Slide {String(idx + 1).padStart(2, "0")} — {(section.item ?? []).length.toString().padStart(2, "0")}</span>
+              <span class="hidden h-px w-16 bg-[var(--line)] sm:block"></span>
+            </div>
+            <div class:list={[
+              "mt-8 max-w-3xl",
+              section.alignment === "center" && "mx-auto text-center",
+              section.alignment === "right" && "ml-auto text-right"
+            ]}>
+              <SectionHeading content={item} theme="light" />
+              {item.links?.length ? (
+                <div class:list={[
+                  "mt-6 flex flex-wrap gap-3",
+                  section.alignment === "center" && "justify-center",
+                  section.alignment === "right" && "justify-end"
+                ]}>
+                  {item.links.filter((link) => link.label && safeHref(link.url) !== "#").map((link) => (
+                    <a
+                      href={safeHref(link.url)}
+                      class="inline-flex items-center justify-center border border-[var(--line-strong)] bg-[var(--ink)] px-6 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:bg-black"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
         </article>
       ))}

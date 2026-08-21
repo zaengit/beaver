@@ -8,62 +8,65 @@ const { section } = Astro.props
 const items = section.item ?? []
 ---
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 my-6 sm:my-10">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
   {items.map((item) => (
     <section
       id={section.style_id || undefined}
       class:list={[
-        "relative isolate overflow-hidden rounded-[32px] sm:rounded-[40px] border border-slate-800/80 bg-gradient-to-br from-slate-950 via-indigo-950/90 to-slate-900 p-8 sm:p-16 lg:p-20 shadow-2xl transition-all duration-300",
+        "overflow-hidden border border-[var(--line-strong)] bg-[var(--paper)]",
         section.style_css
       ]}
       style={getSectionStyle({ ...section, bg_color: item.bg_color || section.bg_color, bg_image: item.bg_image || section.bg_image })}
     >
-      {item.image && (
-        <ResponsiveImage
-          src={item.image}
-          alt={item.alt_image || item.title || ""}
-          class="absolute inset-0 -z-20 h-full w-full object-cover opacity-40 transition-transform duration-700 hover:scale-105"
-        />
-      )}
-      <div class="absolute inset-0 -z-10 bg-slate-950/60 backdrop-blur-3xs" />
-      
-      {/* Decorative M3 Expressive ambient glow bubble */}
-      <div class="absolute -top-24 -right-24 -z-10 h-96 w-96 rounded-full bg-indigo-500/20 blur-3xl" />
-      <div class="absolute -bottom-24 -left-24 -z-10 h-96 w-96 rounded-full bg-purple-500/20 blur-3xl" />
-
-      <div class:list={[
-        "relative z-10 max-w-4xl",
-        section.alignment === "center" && "mx-auto text-center",
-        section.alignment === "right" && "ml-auto text-right"
-      ]}>
-        <SectionHeading content={item} theme="dark" />
-        
-        {item.links?.length ? (
-          <div class:list={[
-            "mt-8 flex flex-wrap gap-4",
-            section.alignment === "center" && "justify-center",
-            section.alignment === "right" && "justify-end"
-          ]}>
-            {item.links.filter((link) => link.label && safeHref(link.url) !== "#").map((link, idx) => (
-              <a
-                href={safeHref(link.url)}
-                class:list={[
-                  "rounded-full px-7 py-3.5 text-sm font-bold transition-all duration-200 active:scale-95 inline-flex items-center gap-2",
-                  idx === 0
-                    ? "bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/40 hover:scale-[1.02]"
-                    : "bg-white/10 text-white border border-white/20 backdrop-blur-xl hover:bg-white/20 hover:border-white/40"
-                ]}
-              >
-                <span>{link.label}</span>
-                {idx === 0 && (
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                  </svg>
-                )}
-              </a>
-            ))}
+      <div class="grid lg:grid-cols-[1.05fr_0.95fr]">
+        <div class:list={[
+          "px-6 py-10 sm:px-10 sm:py-14 lg:px-12 lg:py-16",
+          section.alignment === "center" && "text-center",
+          section.alignment === "right" && "text-right"
+        ]}>
+          <SectionHeading content={item} theme="light" />
+          {item.links?.length ? (
+            <div class:list={[
+              "mt-8 flex flex-wrap gap-3",
+              section.alignment === "center" && "justify-center",
+              section.alignment === "right" && "justify-end"
+            ]}>
+              {item.links.filter((link) => link.label && safeHref(link.url) !== "#").map((link, idx) => (
+                <a
+                  href={safeHref(link.url)}
+                  class:list={[
+                    "inline-flex items-center justify-center border px-6 py-3 text-[11px] font-bold uppercase tracking-[0.14em]",
+                    idx === 0
+                      ? "border-[var(--line-strong)] bg-[var(--ink)] text-white hover:bg-black"
+                      : "border-[var(--line-strong)] bg-[var(--paper)] text-[var(--ink)] hover:bg-[var(--bg)]"
+                  ]}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          ) : null}
+          <div class="mt-8 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+            <span class="h-px w-10 bg-[var(--line-strong)]"></span>
+            <span>Flowstack Editorial</span>
           </div>
-        ) : null}
+        </div>
+        <div class="relative min-h-[280px] border-t border-[var(--line-strong)] bg-[var(--bg)] lg:min-h-[420px] lg:border-l lg:border-t-0">
+          {item.image ? (
+            <ResponsiveImage
+              src={item.image}
+              alt={item.alt_image || item.title || ""}
+              class="h-full w-full object-cover"
+            />
+          ) : (
+            <div class="flex h-full min-h-[280px] items-center justify-center p-8 text-center lg:min-h-[420px]">
+              <div class="max-w-sm border border-dashed border-[var(--line)] bg-[var(--paper)] px-6 py-8">
+                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--ink)]">No cover image</p>
+                <p class="mt-2 text-sm leading-6 text-[var(--muted)]">Add an image to this hero item to complete the editorial layout.</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   ))}

@@ -7,11 +7,22 @@ html {
 
 body {
   margin: 0;
-  background: #fafaf9;
-  color: #0f172a;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-system, system-ui, -apple-system, "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: #0f172a;
-  color: #fff;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }

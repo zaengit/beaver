@@ -4,42 +4,36 @@ import SectionHeading from "./shared/section-heading.astro"
 
 interface Props { section: Section }
 const { section } = Astro.props
-const gridClass = "grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
 ---
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 my-6">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
   <section
     id={section.style_id || undefined}
     class:list={[
-      "rounded-[32px] sm:rounded-[40px] border border-slate-800/80 bg-slate-950 p-8 sm:p-16 text-white shadow-2xl",
+      "border border-[var(--line-strong)] bg-[var(--ink)] px-6 py-10 text-white sm:px-10 sm:py-12",
       section.style_css
     ]}
     style={getSectionStyle(section)}
   >
-    <div class:list={["mx-auto max-w-6xl", section.alignment === "center" && "text-center", section.alignment === "right" && "text-right"]}>
+    <div class:list={["max-w-6xl", section.alignment === "center" && "text-center", section.alignment === "right" && "text-right"]}>
       <SectionHeading content={section} theme="dark" />
-      <div class:list={["mt-12 text-left", gridClass]}>
+      <div class="mt-10 grid gap-0 divide-y divide-white/15 border-t border-white/15 sm:grid-cols-2 sm:divide-y-0 sm:divide-x lg:grid-cols-3">
         {(section.item ?? []).map((item) => (
-          <article class="rounded-[24px] border border-slate-800/80 bg-slate-900/70 p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1.5 hover:border-indigo-500/40 hover:bg-slate-900/95 hover:shadow-xl hover:shadow-indigo-500/10 group flex flex-col justify-between">
-            <div>
-              {item.icon && (
-                <div class="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-500/30 bg-indigo-500/15 text-xl font-extrabold text-indigo-400 shadow-md transition-all duration-300 group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white">
-                  {item.icon}
-                </div>
-              )}
-              {item.title && <h3 class="text-lg font-bold text-white transition-colors group-hover:text-indigo-300">{item.title}</h3>}
-              {item.text && <p class="mt-2 text-sm leading-relaxed text-slate-300">{item.text}</p>}
-            </div>
+          <article class="p-6 sm:p-7">
+            {item.icon && (
+              <div class="mb-4 inline-flex border border-white/20 bg-white/5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
+                {item.icon}
+              </div>
+            )}
+            {item.title && <h3 class="text-[17px] font-bold leading-tight tracking-[-0.02em] text-white">{item.title}</h3>}
+            {item.text && <p class="mt-2 text-[14px] leading-6 text-white/70">{item.text}</p>}
             {item.links?.[0]?.label && safeHref(item.links[0]?.url) !== "#" && (
-              <div class="mt-6">
+              <div class="mt-4">
                 <a
                   href={safeHref(item.links[0].url)}
-                  class="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 px-4 py-1.5 text-xs font-bold text-indigo-300 transition-all hover:bg-indigo-500 hover:text-white group-hover:translate-x-1"
+                  class="inline-flex items-center gap-2 border-b border-white/30 pb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:border-white"
                 >
-                  <span>{item.links[0].label}</span>
-                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                  </svg>
+                  {item.links[0].label} <span aria-hidden="true">→</span>
                 </a>
               </div>
             )}

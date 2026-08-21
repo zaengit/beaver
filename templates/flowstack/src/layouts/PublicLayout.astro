@@ -27,7 +27,7 @@ const footerItems = footerResult.success ? footerResult.data : []
     {(description || settings.meta_description) && <meta name="description" content={description || settings.meta_description} />}
     {safeImageSrc(settings.favicon) && <link rel="icon" href={safeImageSrc(settings.favicon) || undefined} />}
   </head>
-  <body class="min-h-screen bg-background text-foreground">
+  <body class="min-h-screen bg-[var(--bg)] text-[var(--ink)]">
     <div class="flex min-h-screen flex-col">
       <Navbar items={navbarItems as never[]} siteName={settings.title} logo={settings.logo} client:load />
       <div class="flex-1"><slot /></div>
