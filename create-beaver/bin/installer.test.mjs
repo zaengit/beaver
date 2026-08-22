@@ -6,6 +6,7 @@ import test from "node:test"
 
 import {
   detectPackageManager,
+  listTemplates,
   parseArgs,
   sanitizePackageName,
   validateAnswers,
@@ -42,6 +43,14 @@ test("detectPackageManager prefers an existing lockfile", () => {
   const directory = mkdtempSync(resolve(tmpdir(), "create-beaver-pm-"))
   writeFileSync(resolve(directory, "pnpm-lock.yaml"), "")
   assert.equal(detectPackageManager(directory), "pnpm")
+})
+
+test("listTemplates excludes the internal config directory", () => {
+  const directory = mkdtempSync(resolve(tmpdir(), "create-beaver-templates-"))
+  mkdirSync(resolve(directory, "config"))
+  mkdirSync(resolve(directory, "flowstack"))
+
+  assert.deepEqual(listTemplates(directory), ["flowstack"])
 })
 
 test("sanitizePackageName creates a valid package name", () => {

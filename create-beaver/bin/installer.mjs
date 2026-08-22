@@ -149,7 +149,7 @@ export function validateAnswers(answers, templateNames = [DEFAULT_TEMPLATE]) {
 export function listTemplates(templatesDirectory) {
   if (!existsSync(templatesDirectory)) throw new Error("Beaver templates were not found. Ensure @zbeaver/beaver is built correctly.")
   return readdirSync(templatesDirectory, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && /^[a-z0-9-]+$/.test(entry.name))
+    .filter((entry) => entry.isDirectory() && entry.name !== "config" && /^[a-z0-9-]+$/.test(entry.name))
     .map((entry) => entry.name)
     .sort()
 }
