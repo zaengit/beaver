@@ -37,10 +37,6 @@ jobs:
       - name: Verify publishable package contents
         run: npm pack --dry-run --ignore-scripts
 
-      - name: Install initializer dependencies
-        working-directory: create-beaver
-        run: npm install
-
       - name: Test initializer
         working-directory: create-beaver
         run: npm test
