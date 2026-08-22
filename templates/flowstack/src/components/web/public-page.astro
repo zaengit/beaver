@@ -1,13 +1,11 @@
 ---
 import type { Post } from "@/shared/types/posts"
 import PageSections from "@/components/web/page-sections.astro"
-import { sanitizeHtml } from "@zbeaver/beaver/server"
 
-interface Props { page: Post & { authorName: string | null } }
+interface Props { page: Pick<Post, "sections"> }
 const { page } = Astro.props
 ---
 
 <main>
-  {page.description && <div class="prose prose-slate mx-auto max-w-3xl px-6 py-12 sm:py-16" set:html={sanitizeHtml(page.description)} />}
   <PageSections sections={page.sections} />
 </main>

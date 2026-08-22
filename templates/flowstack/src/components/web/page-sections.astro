@@ -1,9 +1,10 @@
 ---
 import { toVideoEmbedUrl, type Section } from "./sections/shared/types"
 import ContactSection from "./sections/contact"
-import type { AstroComponentFactory } from "astro/runtime/server/index.js"
 import sectionTemplates from "@section-registry"
 import { listPublishedPostsByType } from "@zbeaver/beaver/server"
+import { isRecord, parseJsonArray } from "./parse-json"
+import { createComponentMap } from "./component-map"
 
 interface Props { sections: string | null }
 
@@ -11,10 +12,6 @@ const { sections } = Astro.props
 const MAX_SECTIONS = 50
 const MAX_SECTION_ITEMS = 100
 const MAX_SECTIONS_JSON_LENGTH = 1_000_000
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-}
 
 function normalizeSection(value: unknown): Section | null {
   if (!isRecord(value) || typeof value.type !== "string") return null
@@ -30,20 +27,15 @@ function normalizeSection(value: unknown): Section | null {
   } as Section
 }
 
-const sectionComponents = Object.fromEntries(
-  Object.entries(import.meta.glob("./sections/*.astro", { eager: true })).map(([path, module]) => [
-    path.replace("./sections/", "").replace(/\.astro$/, ""),
-    (module as { default: AstroComponentFactory }).default,
-  ]),
-) as Record<string, AstroComponentFactory>
+const sectionComponents = createComponentMap(
+  import.meta.glob("./sections/*.astro", { eager: true }),
+  "./sections/",
+)
 
-let parsedSections: Section[] = []
-try {
-  const parsed = sections && sections.length <= MAX_SECTIONS_JSON_LENGTH ? JSON.parse(sections) : []
-  parsedSections = Array.isArray(parsed)
-    ? parsed.slice(0, MAX_SECTIONS).map(normalizeSection).filter((section): section is Section => section !== null)
-    : []
-} catch { /* Invalid stored JSON is rendered as no sections. */ }
+const parsedSections = parseJsonArray(sections, MAX_SECTIONS_JSON_LENGTH)
+  .slice(0, MAX_SECTIONS)
+  .map(normalizeSection)
+  .filter((section): section is Section => section !== null)
 
 const renderedSections = parsedSections.flatMap((section) => {
   const template = sectionTemplates.find((candidate) => candidate.type === section.type)
@@ -67,7 +59,7 @@ const renderedSections = parsedSections.flatMap((section) => {
 
 {renderedSections.map(({ section, template, contentItems, videoEmbedUrl, mapCoordinate, hasInquiryForm }) => {
   if (section.type === "contact") {
-    return <ContactSection client:visible {section} {contentItems} {videoEmbedUrl} {mapCoordinate} {hasInquiryForm} />
+    return <ContactSection client:visible {section} {hasInquiryForm} />
   }
 
   const SectionComponent = sectionComponents[template.type]

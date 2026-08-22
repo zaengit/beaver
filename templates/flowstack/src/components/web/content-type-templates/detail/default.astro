@@ -1,11 +1,10 @@
 ---
-import { parseGallery, type DetailProps } from "../types";
-import ResponsiveImage from "@/components/web/responsive-image.astro";
-import TagLinks from "@/components/web/tag-links.astro";
-import { sanitizeHtml } from "@zbeaver/beaver/server";
-import { safeContentArchiveHref } from "../../safe-url";
-const { contentType, post } = Astro.props as DetailProps;
-const gallery = parseGallery(post.gallery);
+import { parseGallery, type DetailProps } from "../types"
+import PostContent from "./post-content.astro"
+import TagLinks from "@/components/web/tag-links.astro"
+import { safeContentArchiveHref } from "../../safe-url"
+const { contentType, post } = Astro.props as DetailProps
+const gallery = parseGallery(post.gallery)
 ---
 
 <main class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
@@ -29,38 +28,6 @@ const gallery = parseGallery(post.gallery);
 
     <TagLinks tags={post.tags} />
 
-    {post.featuredImage && (
-      <div class="mt-8 overflow-hidden border border-[var(--line-strong)] bg-[var(--paper)]">
-        <ResponsiveImage
-          src={post.featuredImage}
-          alt={post.title}
-          class="max-h-[32rem] w-full object-cover"
-          priority
-        />
-      </div>
-    )}
-
-    {post.description && (
-      <div
-        id="details"
-        class="prose prose-slate mt-8 max-w-none border border-[var(--line)] bg-[var(--paper)] p-6 prose-headings:font-black prose-a:text-[var(--ink)] prose-a:underline sm:p-8"
-        set:html={sanitizeHtml(post.description)}
-      />
-    )}
-
-    {gallery.length > 0 && (
-      <div class="mt-8 grid gap-4 border-t border-[var(--line-strong)] pt-8 sm:grid-cols-2">
-        {gallery.map((image) => (
-          <div class="overflow-hidden border border-[var(--line-strong)] bg-[var(--paper)]">
-            <ResponsiveImage
-              src={image}
-              alt=""
-              class="w-full object-cover"
-              sizes="(min-width: 640px) 50vw, 100vw"
-            />
-          </div>
-        ))}
-      </div>
-    )}
+    <PostContent {post} {gallery} variant="default" />
   </article>
 </main>

@@ -1,0 +1,41 @@
+---
+import type { PublicPost } from "@/shared/types/posts"
+import PostCard from "@/components/web/post-card.astro"
+import { safeContentHref } from "../../safe-url"
+import type { ArchiveProps, ArchiveTemplateVariant } from "../types"
+
+interface Props {
+  contentType: ArchiveProps["contentType"]
+  posts: PublicPost[]
+  variant: ArchiveTemplateVariant
+}
+
+const { contentType, posts, variant } = Astro.props
+const listClass = variant === "default"
+  ? "mt-8 grid gap-0 divide-y divide-[var(--line-strong)] border-y border-[var(--line-strong)] sm:grid-cols-2 sm:divide-y-0 sm:divide-x lg:grid-cols-3"
+  : "mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+const emptyClass = variant === "default"
+  ? "mt-8 border border-dashed border-[var(--line)] bg-[var(--paper)] p-8 text-center"
+  : "mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center"
+const emptyMessage = variant === "default"
+  ? `No published ${contentType.label.toLowerCase()} yet.`
+  : "No published content found."
+---
+
+<div class={listClass}>
+  {posts.map((post) => (
+    <PostCard
+      post={post}
+      href={safeContentHref(contentType.slug, post.slug)}
+      variant={variant}
+    />
+  ))}
+</div>
+
+{posts.length === 0 && (
+  <div class={emptyClass}>
+    <p class={variant === "default" ? "text-sm font-semibold text-[var(--muted)]" : "text-sm font-semibold text-slate-500"}>
+      {emptyMessage}
+    </p>
+  </div>
+)}

@@ -9,7 +9,7 @@ help:
 	  '  make build            Build distribution files in dist/' \
 	  '  make test             Run the package test suite' \
 	  '  make pack             Create the npm tarball' \
-	  '  make check            Run tests, build, and inspect the tarball' \
+	  '  make check            Run tests, build, and inspect both tarballs' \
 	  '  make clean            Remove generated distribution files and tarballs' \
 	  '  make status           Show Git working-tree status' \
 	  "  make commit MSG='type: summary'  Commit all changes" \
@@ -22,13 +22,15 @@ build:
 	npm run build
 
 test:
-	npx vitest run
+	@if [ -f ../../vitest.config.ts ]; then npm --prefix ../.. test; else npx vitest run; fi
+	npm --prefix create-beaver test
 
 pack: build
 	npm pack
 
 check: test build
 	npm pack --dry-run
+	npm --prefix create-beaver pack --dry-run --ignore-scripts
 
 clean:
 	rm -rf dist *.tgz

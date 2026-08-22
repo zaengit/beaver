@@ -35,3 +35,15 @@ jobs:
 
       - name: Publish package
         run: npm publish
+
+      - name: Install initializer dependencies
+        working-directory: create-beaver
+        run: npm install
+
+      - name: Test initializer
+        working-directory: create-beaver
+        run: npm test
+
+      - name: Publish initializer
+        working-directory: create-beaver
+        run: npm publish

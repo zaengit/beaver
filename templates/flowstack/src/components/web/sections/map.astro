@@ -14,9 +14,11 @@ const mapUrl = coordinate
 ---
 
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-  <section id={section.style_id || undefined} class:list={["border border-[var(--line-strong)] bg-[var(--paper)] px-6 py-8 sm:px-10 sm:py-10", section.style_css]}>
+  <section id={section.style_id || undefined} class:list={[section.style_css]}>
     <div class="flex flex-col gap-8">
-      <SectionHeading content={section} theme="light" />
+      <div class="text-center">
+        <SectionHeading content={section} theme="light" />
+      </div>
       {mapUrl && (
         <div class="h-[28rem] overflow-hidden border border-[var(--line-strong)]">
           <iframe class="h-full w-full border-0" src={mapUrl} title={section.title || "Map"} loading="lazy" />

@@ -1,51 +1,48 @@
 ---
-import type { PublicArchiveFilters } from "@/shared/types/posts";
+import type { PublicArchiveFilters } from "@/shared/types/posts"
+import { serializeArchiveSort } from "./archive-sort"
 
 const { filters, pagination } = Astro.props as {
-  filters: PublicArchiveFilters;
-  pagination: { currentPage: number; lastPage: number };
-};
+  filters: PublicArchiveFilters
+  pagination: { currentPage: number; lastPage: number }
+}
 
 function pageUrl(page: number) {
-  const query = new URLSearchParams();
-  if (page > 1) query.set("page", String(page));
-  if (filters.search) query.set("search", filters.search);
-  if (filters.category) query.set("category", filters.category);
-  if (filters.tag) query.set("tag", filters.tag);
-  for (const [name, value] of Object.entries(filters.customFields ?? {})) {
-    query.set(`field_${name}`, value);
-  }
-  const search = query.toString();
-  return search ? `?${search}` : "?";
+  const query = new URLSearchParams()
+  if (page > 1) query.set("page", String(page))
+  if (filters.search) query.set("search", filters.search)
+  if (filters.category) query.set("category", filters.category)
+  const sort = serializeArchiveSort(filters)
+  if (sort) query.set("sort", sort)
+  const search = query.toString()
+  return search ? `?${search}` : "?"
 }
 ---
 
-{
-  pagination.lastPage > 1 && (
-    <nav class="mt-8 flex items-center justify-between border-t border-[var(--line-strong)] pt-6" aria-label="Archive pagination">
-      <div>
-        {pagination.currentPage > 1 && (
-          <a
-            href={pageUrl(pagination.currentPage - 1)}
-            class="inline-flex items-center gap-2 border border-[var(--line-strong)] bg-[var(--paper)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink)] hover:bg-[var(--bg)]"
-          >
-            ← Previous
-          </a>
-        )}
-      </div>
-      <span class="border border-[var(--line)] bg-[var(--paper)] px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
-        Page {pagination.currentPage} of {pagination.lastPage}
-      </span>
-      <div>
-        {pagination.currentPage < pagination.lastPage && (
-          <a
-            href={pageUrl(pagination.currentPage + 1)}
-            class="inline-flex items-center gap-2 border border-[var(--line-strong)] bg-[var(--ink)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:bg-black"
-          >
-            Next →
-          </a>
-        )}
-      </div>
-    </nav>
-  )
-}
+{pagination.lastPage > 1 && (
+  <nav class="mt-8 flex items-center justify-between gap-4 border-t border-slate-200 pt-6" aria-label="Archive pagination">
+    <div>
+      {pagination.currentPage > 1 && (
+        <a
+          href={pageUrl(pagination.currentPage - 1)}
+          class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:border-indigo-200 hover:text-indigo-700"
+        >
+          ← Previous
+        </a>
+      )}
+    </div>
+    <span class="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-500">
+      {pagination.currentPage} / {pagination.lastPage}
+    </span>
+    <div>
+      {pagination.currentPage < pagination.lastPage && (
+        <a
+          href={pageUrl(pagination.currentPage + 1)}
+          class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-indigo-700"
+        >
+          Next →
+        </a>
+      )}
+    </div>
+  </nav>
+)}

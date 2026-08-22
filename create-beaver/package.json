@@ -1,0 +1,36 @@
+{
+  "name": "@zbeaver/create-beaver",
+  "version": "0.1.8",
+  "description": "Interactive project initializer for Beaver CMS",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zaengit/beaver.git"
+  },
+  "homepage": "https://github.com/zaengit/beaver#readme",
+  "bugs": {
+    "url": "https://github.com/zaengit/beaver/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "create-beaver": "bin/create-beaver.mjs"
+  },
+  "files": [
+    "bin/create-beaver.mjs",
+    "bin/installer.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@zbeaver/beaver": "^0.1.8"
+  },
+  "scripts": {
+    "test": "node --test bin/installer.test.mjs"
+  }
+}

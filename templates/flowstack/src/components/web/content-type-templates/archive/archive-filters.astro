@@ -1,6 +1,7 @@
 ---
 import type { PublicArchiveFilterOptions, PublicArchiveFilters } from "@/shared/types/posts"
 import { safeContentArchiveHref } from "../../safe-url"
+import { getArchiveSortValue } from "./archive-sort"
 
 interface Props {
   contentType: { slug: string }
@@ -9,13 +10,14 @@ interface Props {
 }
 
 const { contentType, filterOptions, filters } = Astro.props
-const isFiltered = Boolean(filters.search || filters.category || filters.tag || Object.keys(filters.customFields ?? {}).length > 0)
-const fieldClass = "w-full border border-[var(--line-strong)] bg-[var(--paper)] px-3 py-2.5 text-[13px] font-medium text-[var(--ink)] outline-none focus:bg-[var(--bg)]"
-const labelClass = "mb-1.5 block text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink)]"
+const sortValue = getArchiveSortValue(filters)
+const isFiltered = Boolean(filters.search || filters.category || sortValue !== "newest")
+const fieldClass = "w-full rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
+const labelClass = "mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500"
 ---
 
-<form action={safeContentArchiveHref(contentType.slug)} method="get" class="mt-6 border border-[var(--line-strong)] bg-[var(--paper)] p-4 sm:p-6">
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+<form action={safeContentArchiveHref(contentType.slug)} method="get" class="mt-8 border-y border-slate-200 py-5 sm:py-6">
+  <div class="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)]">
     <div>
       <label class={labelClass} for="archive-search">Search</label>
       <input
@@ -27,32 +29,6 @@ const labelClass = "mb-1.5 block text-[11px] font-bold uppercase tracking-[0.14e
         class={fieldClass}
       />
     </div>
-    {filterOptions.customFields.map((field) => (
-      <div>
-        <label class={labelClass} for={`field-${field.name}`}>{field.label}</label>
-        {field.type === "select" ? (
-          <select id={`field-${field.name}`} name={`field_${field.name}`} class={fieldClass}>
-            <option value="">All {field.label}</option>
-            {field.options.map((option) => <option value={option} selected={filters.customFields?.[field.name] === option}>{option}</option>)}
-          </select>
-        ) : field.type === "boolean" ? (
-          <select id={`field-${field.name}`} name={`field_${field.name}`} class={fieldClass}>
-            <option value="">All {field.label}</option>
-            <option value="true" selected={filters.customFields?.[field.name] === "true"}>Yes</option>
-            <option value="false" selected={filters.customFields?.[field.name] === "false"}>No</option>
-          </select>
-        ) : (
-          <input
-            id={`field-${field.name}`}
-            name={`field_${field.name}`}
-            value={filters.customFields?.[field.name] ?? ""}
-            type={field.type === "date" ? "date" : field.type === "number" ? "number" : "search"}
-            placeholder={`Filter by ${field.label}`}
-            class={fieldClass}
-          />
-        )}
-      </div>
-    ))}
     <div>
       <label class={labelClass} for="archive-category">Category</label>
       <select id="archive-category" name="category" class={fieldClass}>
@@ -61,19 +37,21 @@ const labelClass = "mb-1.5 block text-[11px] font-bold uppercase tracking-[0.14e
       </select>
     </div>
     <div>
-      <label class={labelClass} for="archive-tag">Tag</label>
-      <select id="archive-tag" name="tag" class={fieldClass}>
-        <option value="">All tags</option>
-        {filterOptions.tags.map((tag) => <option value={tag} selected={filters.tag?.toLowerCase() === tag.toLowerCase()}>{tag}</option>)}
+      <label class={labelClass} for="archive-sort">Sort</label>
+      <select id="archive-sort" name="sort" class={fieldClass}>
+        <option value="newest" selected={sortValue === "newest"}>Newest first</option>
+        <option value="oldest" selected={sortValue === "oldest"}>Oldest first</option>
+        <option value="title-asc" selected={sortValue === "title-asc"}>Title A–Z</option>
+        <option value="title-desc" selected={sortValue === "title-desc"}>Title Z–A</option>
       </select>
     </div>
   </div>
-  <div class="mt-5 flex items-center gap-3 border-t border-[var(--line)] pt-4">
-    <button class="border border-[var(--line-strong)] bg-[var(--ink)] px-6 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:bg-black">
-      Apply filters
+  <div class="mt-5 flex flex-wrap items-center gap-3">
+    <button class="group inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:-translate-y-0.5 hover:bg-indigo-700">
+      Apply filters <span class="transition-transform group-hover:translate-x-0.5" aria-hidden="true">→</span>
     </button>
     {isFiltered && (
-      <a href={safeContentArchiveHref(contentType.slug)} class="border border-[var(--line-strong)] bg-[var(--paper)] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink)] hover:bg-[var(--bg)]">
+      <a href={safeContentArchiveHref(contentType.slug)} class="rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-700 transition hover:border-indigo-200 hover:text-indigo-700">
         Clear
       </a>
     )}

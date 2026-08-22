@@ -13,18 +13,17 @@ const isLight = theme === "light"
 {content.caption && (
   <div class="mb-4">
     <span class:list={[
-      "inline-flex items-center gap-2 border-b-2 pb-1 text-[11px] font-bold uppercase tracking-[0.16em]",
-      isLight ? "border-[var(--line-strong)] text-[var(--ink)]" : "border-white text-white"
+      "text-xs font-semibold uppercase tracking-[0.14em]",
+      isLight ? "text-[#1769f5]" : "text-white"
     ]}>
-      <span class:list={["h-1 w-1", isLight ? "bg-[var(--ink)]" : "bg-white"]} aria-hidden="true"></span>
       {content.caption}
     </span>
   </div>
 )}
 {content.title && (
   <h2 class:list={[
-    "mx-auto max-w-4xl text-[30px] font-black leading-[0.95] tracking-[-0.04em] sm:text-[44px]",
-    isLight ? "text-[var(--ink)]" : "text-white"
+    "mx-auto max-w-4xl text-3xl font-bold leading-[1.08] tracking-[-0.04em] sm:text-4xl",
+    isLight ? "text-slate-950" : "text-white"
   ]}>
     {content.title}
   </h2>
@@ -32,7 +31,7 @@ const isLight = theme === "light"
 {content.text && (
   <p class:list={[
     "mx-auto mt-4 max-w-2xl text-[15px] leading-7",
-    isLight ? "text-[var(--muted)]" : "text-white/75"
+    isLight ? "text-slate-600" : "text-indigo-100/75"
   ]}>
     {content.text}
   </p>

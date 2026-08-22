@@ -25,8 +25,6 @@ const sectionItemSchema = z.object({
   alt_image: sectionShortText,
   video: z.string().max(2048).nullable().optional(),
   map: z.string().max(256).nullable().optional(),
-  question: sectionShortText,
-  answer: sectionText,
   icon: sectionShortText,
   form_inquiry: z.boolean().nullable().optional(),
   embed: z.string().max(4_000).nullable().optional(),

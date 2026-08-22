@@ -1,32 +1,29 @@
-import type { AstroComponentFactory } from "astro/runtime/server/index.js";
-import registry from "@content-type-registry";
+import type { AstroComponentFactory } from "astro/runtime/server/index.js"
+import registry from "@content-type-registry"
+import { createComponentMap } from "@/components/web/component-map"
 
-type TemplateComponent = AstroComponentFactory;
+type TemplateKind = "archive" | "detail"
+type TemplateComponent = AstroComponentFactory
 
-const archiveComponents = Object.fromEntries(
-  Object.entries(import.meta.glob("./archive/*.astro", { eager: true })).map(
-    ([path, module]) => [
-      path.replace("./archive/", "").replace(".astro", ""),
-      (module as { default: TemplateComponent }).default,
-    ],
-  ),
-) as Record<string, TemplateComponent>;
+const archiveComponents = createComponentMap(
+  import.meta.glob("./archive/*.astro", { eager: true }),
+  "./archive/",
+)
+const detailComponents = createComponentMap(
+  import.meta.glob("./detail/*.astro", { eager: true }),
+  "./detail/",
+)
 
-const detailComponents = Object.fromEntries(
-  Object.entries(import.meta.glob("./detail/*.astro", { eager: true })).map(
-    ([path, module]) => [
-      path.replace("./detail/", "").replace(".astro", ""),
-      (module as { default: TemplateComponent }).default,
-    ],
-  ),
-) as Record<string, TemplateComponent>;
+export function getTemplate(id: string, kind: TemplateKind) {
+  return registry.templates.find((candidate) => candidate.id === id && candidate.kind === kind)
+}
 
 export function getArchiveTemplateComponent(id: string): TemplateComponent {
-  const template = registry.templates.find((candidate) => candidate.id === id && candidate.kind === "archive");
-  return archiveComponents[template?.id ?? "default"] ?? archiveComponents.default;
+  const template = getTemplate(id, "archive")
+  return archiveComponents[template?.id ?? "default"] ?? archiveComponents.default
 }
 
 export function getDetailTemplateComponent(id: string): TemplateComponent {
-  const template = registry.templates.find((candidate) => candidate.id === id && candidate.kind === "detail");
-  return detailComponents[template?.id ?? "default"] ?? detailComponents.default;
+  const template = getTemplate(id, "detail")
+  return detailComponents[template?.id ?? "default"] ?? detailComponents.default
 }

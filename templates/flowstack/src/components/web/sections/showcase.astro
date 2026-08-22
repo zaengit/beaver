@@ -1,0 +1,42 @@
+---
+import { getSafeLinks } from "../safe-url"
+import { getSectionStyle, type Section } from "./shared/types"
+import ResponsiveImage from "@/components/web/responsive-image.astro"
+
+interface Props { section: Section }
+const { section } = Astro.props
+---
+
+<div class="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-24">
+  <div class="space-y-20 sm:space-y-28">
+    {(section.item ?? []).map((item, idx) => {
+      const links = getSafeLinks(item.links)
+
+      return (
+      <section id={idx === 0 ? section.style_id || undefined : undefined} class:list={["grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-16", section.style_css]} style={getSectionStyle({ ...section, bg_color: item.bg_color || section.bg_color, bg_image: item.bg_image || section.bg_image })}>
+        {item.image && (
+          <div class:list={["rounded-2xl bg-[#edf7ff] p-4 sm:p-6", idx % 2 === 1 && "lg:order-2"]}>
+            <div class="overflow-hidden rounded-xl border border-[#dcecf9] bg-white shadow-[0_20px_50px_-35px_rgba(23,105,245,0.35)]">
+              <ResponsiveImage src={item.image} alt={item.alt_image || item.title || ""} class="aspect-[4/3] w-full object-cover" loading="lazy" />
+            </div>
+          </div>
+        )}
+        <div class:list={["max-w-xl", idx % 2 === 1 && "lg:order-1"]}>
+          {item.caption && <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#1769f5]">{item.caption}</p>}
+          {item.title && <h2 class="mt-5 text-3xl font-semibold leading-[1.08] tracking-[-0.045em] text-[#111827] sm:text-4xl">{item.title}</h2>}
+          {item.text && <p class="mt-5 whitespace-pre-line text-base leading-7 text-slate-500">{item.text}</p>}
+          {links.length > 0 ? (
+            <div class="mt-7 flex flex-wrap gap-2">
+              {links.map((link, linkIdx) => (
+                <a href={link.href} class:list={["inline-flex items-center rounded-md px-5 py-3 text-sm font-semibold", linkIdx === 0 ? "bg-[#1769f5] text-white hover:bg-[#0e58d8]" : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"]}>
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </section>
+      )
+    })}
+  </div>
+</div>

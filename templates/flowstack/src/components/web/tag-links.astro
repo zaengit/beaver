@@ -1,22 +1,15 @@
 ---
+import { parseJsonArray } from "./parse-json"
+
 interface Props {
   tags: string | null
 }
 
 const { tags } = Astro.props
-let parsedTags: string[] = []
-
-try {
-  const value = tags && tags.length <= 100_000 ? JSON.parse(tags) : []
-  if (Array.isArray(value)) {
-    parsedTags = [...new Set(value
-      .filter((tag): tag is string => typeof tag === "string")
-      .map((tag) => tag.trim().slice(0, 100))
-      .filter(Boolean))].slice(0, 100)
-  }
-} catch {
-  // A malformed legacy value should not prevent a public page from rendering.
-}
+const parsedTags = [...new Set(parseJsonArray(tags)
+  .filter((tag): tag is string => typeof tag === "string")
+  .map((tag) => tag.trim().slice(0, 100))
+  .filter(Boolean))].slice(0, 100)
 ---
 
 {parsedTags.length > 0 && (
@@ -24,7 +17,7 @@ try {
     {parsedTags.map((tag) => (
       <a
         href={`/tag/${encodeURIComponent(tag)}`}
-        class="inline-flex items-center border border-[var(--line-strong)] bg-[var(--paper)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink)] hover:bg-[var(--ink)] hover:text-white"
+        class="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
       >
         #{tag}
       </a>

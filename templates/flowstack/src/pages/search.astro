@@ -1,16 +1,11 @@
 ---
 import PublicLayout from "@/layouts/PublicLayout.astro"
+import PublicPostList from "@/components/web/public-post-list.astro"
 import { searchPublishedPosts } from "@zbeaver/beaver/server"
-import { safeContentHref, safePathSegment } from "@/components/web/safe-url"
 
 const query = (Astro.url.searchParams.get("q") ?? "").trim().slice(0, 100)
 const result = query ? searchPublishedPosts(query, 1, 24) : null
 const posts = result?.success ? result.data.data : []
-
-function publicUrl(post: { type: string; slug: string }) {
-  if (post.type === "page") return post.slug === "home" ? "/" : `/${safePathSegment(post.slug, "")}`
-  return safeContentHref(post.type, post.slug)
-}
 ---
 
 <PublicLayout title={query ? `Search: ${query}` : "Search"}>
@@ -35,19 +30,10 @@ function publicUrl(post: { type: string; slug: string }) {
       <p class="mt-8 text-slate-600">Enter a term to search published content.</p>
     )}
 
-    {posts.length > 0 && (
-      <div class="mt-8 divide-y divide-slate-200 border-y border-slate-200">
-        {posts.map((post) => (
-          <article class="py-6">
-            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{post.type}</p>
-            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-              <a href={publicUrl(post)} class="hover:underline">{post.title}</a>
-            </h2>
-            {post.excerpt && <p class="mt-2 leading-7 text-slate-600">{post.excerpt}</p>}
-            <a href={publicUrl(post)} class="mt-3 inline-flex text-sm font-semibold text-slate-950 underline-offset-4 hover:underline">View details</a>
-          </article>
-        ))}
-      </div>
-    )}
+    <PublicPostList
+      posts={posts}
+      listClass="mt-8 divide-y divide-slate-200 border-y border-slate-200"
+      showDetails
+    />
   </main>
 </PublicLayout>

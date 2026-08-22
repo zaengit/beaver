@@ -1,32 +1,57 @@
 ---
-import { getSectionStyle, safeHref, type Section } from "./shared/types"
+import { getSafeLinks } from "../safe-url"
+import { getSectionStyle, type Section } from "./shared/types"
 import SectionHeading from "./shared/section-heading.astro"
 
 interface Props { section: Section }
 const { section } = Astro.props
+const items = section.item ?? []
+const cardItems = items.filter((item) => item.caption || item.title || item.text || item.icon || item.image)
+const actionLinks = getSafeLinks(items.flatMap((item) => item.links ?? []))
 ---
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
-  <section id={section.style_id || undefined} class:list={["space-y-4", section.style_css]}>
-    {(section.item ?? []).map((item) => (
-      <article
-        class="border border-[var(--line-strong)] bg-[var(--paper)] px-6 py-8 sm:px-10 sm:py-10"
-        style={getSectionStyle({ ...section, bg_color: item.bg_color || section.bg_color, bg_image: item.bg_image || section.bg_image })}
-      >
-        <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div class="max-w-3xl">
-            <SectionHeading content={item} theme="light" />
-          </div>
-          {item.links?.[0]?.label && safeHref(item.links[0]?.url) !== "#" && (
-            <a
-              href={safeHref(item.links[0].url)}
-              class="inline-flex h-11 shrink-0 items-center justify-center border border-[var(--line-strong)] bg-[var(--ink)] px-6 text-[11px] font-bold uppercase tracking-[0.14em] text-white hover:bg-black"
-            >
-              {item.links[0].label} →
-            </a>
-          )}
+<div class="py-16 sm:py-24">
+  <section
+    id={section.style_id || undefined}
+    class:list={[
+      "relative isolate overflow-hidden bg-[#2166f3] px-5 py-20 text-white sm:px-8 sm:py-24",
+      section.style_css
+    ]}
+    style={getSectionStyle(section)}
+  >
+    <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+      <div class="absolute -left-24 -top-28 h-72 w-72 rounded-full bg-white/10 blur-3xl"></div>
+      <div class="absolute -bottom-32 -right-24 h-80 w-80 rounded-full bg-indigo-950/20 blur-3xl"></div>
+      <div class="absolute inset-x-0 top-0 h-px bg-white/20"></div>
+    </div>
+    <div class="relative mx-auto max-w-6xl text-center">
+      <SectionHeading content={section} theme="dark" />
+      {cardItems.length > 0 ? (
+        <div class="mt-10 grid gap-4 text-left md:grid-cols-3">
+          {cardItems.map((item) => {
+            const link = getSafeLinks(item.links)[0]
+
+            return (
+            <article class="flex flex-col rounded-2xl bg-[#eef3ff] p-7 text-slate-800 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)]">
+              {item.icon && <div class="mb-6 text-sm font-bold text-[#1769f5]">{item.icon}</div>}
+              {item.caption && <p class="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#1769f5]">{item.caption}</p>}
+              {item.title && <h3 class="text-lg font-bold leading-6">{item.title}</h3>}
+              {item.text && <p class="mt-2 text-sm leading-6 text-slate-500">{item.text}</p>}
+              {link && <a href={link.href} class="mt-auto pt-4 inline-flex text-sm font-semibold text-[#1769f5] hover:underline">{link.label} ↗</a>}
+            </article>
+            )
+          })}
         </div>
-      </article>
-    ))}
+      ) : actionLinks.length > 0 ? (
+        <div class="mt-9 flex flex-wrap justify-center gap-3">
+          {actionLinks.map((link) => (
+            <a href={link.href} class="group inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#1769f5] shadow-[0_16px_30px_-14px_rgba(15,23,42,0.65)] transition hover:-translate-y-0.5 hover:bg-[#eef3ff]">
+              {link.label}
+              <span class="transition-transform group-hover:translate-x-0.5" aria-hidden="true">↗</span>
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
   </section>
 </div>

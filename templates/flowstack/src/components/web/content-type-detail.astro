@@ -2,8 +2,8 @@
 import type { Post } from "@/shared/types/posts"
 import PageSections from "@/components/web/page-sections.astro"
 import ContentTypeCustomFields from "@/components/web/content-type-custom-fields.astro"
-import registry from "@content-type-registry"
-import { getDetailTemplateComponent } from "@/components/web/content-type-templates/component-resolver"
+import { parseJsonObject } from "@/components/web/parse-json"
+import { getDetailTemplateComponent, getTemplate } from "@/components/web/content-type-templates/component-resolver"
 
 interface Props {
   contentType: { label: string; slug: string; detailTemplate: string }
@@ -12,14 +12,9 @@ interface Props {
 
 const { contentType, post } = Astro.props
 const Template = getDetailTemplateComponent(contentType.detailTemplate)
-let customFieldValues: Record<string, unknown> = {}
+const customFieldValues = parseJsonObject(post.customFieldValues)
 
-try {
-  const parsed = post.customFieldValues && post.customFieldValues.length <= 1_000_000 ? JSON.parse(post.customFieldValues) : {}
-  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) customFieldValues = parsed
-} catch { /* Invalid stored values are rendered as no custom fields. */ }
-
-const detailTemplate = registry.templates.find((template) => template.id === contentType.detailTemplate && template.kind === "detail")
+const detailTemplate = getTemplate(contentType.detailTemplate, "detail")
 const renderedCustomFields = (detailTemplate?.fieldSlots ?? []).slice(0, 50).flatMap((field) => {
   const value = customFieldValues[field.key]
   return value !== undefined && value !== null && value !== "" ? [{ label: field.label, type: field.type, value: typeof value === "string" ? value.slice(0, 10_000) : value }] : []

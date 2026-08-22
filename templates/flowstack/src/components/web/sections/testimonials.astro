@@ -1,0 +1,28 @@
+---
+import { getSectionStyle, type Section } from "./shared/types"
+import { safeImageSrc } from "../safe-url"
+import SectionHeading from "./shared/section-heading.astro"
+
+interface Props { section: Section }
+const { section } = Astro.props
+---
+
+<div class="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-24">
+  <section id={section.style_id || undefined} class:list={["text-center", section.style_css]} style={getSectionStyle(section)}>
+    <SectionHeading content={section} theme="light" />
+    <div class="mt-10 grid gap-4 text-left md:grid-cols-3">
+      {(section.item ?? []).map((item) => {
+        const imageSrc = safeImageSrc(item.image)
+
+        return (
+          <article class="rounded-xl border border-slate-100 bg-slate-50/70 p-6 sm:p-7">
+            {imageSrc && <img src={imageSrc} alt={item.alt_image || ""} class="h-10 w-10 rounded-full object-cover" loading="lazy" />}
+            {item.title && <blockquote class="mt-6 text-base font-medium leading-7 text-slate-700">“{item.title}”</blockquote>}
+            {item.text && <p class="mt-5 text-sm font-semibold text-slate-500">{item.text}</p>}
+            {item.caption && <p class="mt-1 text-xs text-slate-400">{item.caption}</p>}
+          </article>
+        )
+      })}
+    </div>
+  </section>
+</div>

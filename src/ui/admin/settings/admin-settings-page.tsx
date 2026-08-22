@@ -53,6 +53,7 @@ const SOCIAL_PLATFORMS = [
 ] as const
 
 const DAYS = [
+  "Monday - Friday",
   "Monday",
   "Tuesday",
   "Wednesday",

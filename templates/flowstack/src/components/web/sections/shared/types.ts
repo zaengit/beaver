@@ -1,8 +1,6 @@
-import { safeCssColor, safeCssImageSrc, safeHref, safeImageSrc } from "../../safe-url"
+import { safeCssColor, safeCssImageSrc } from "../../safe-url"
 
-export interface Section {
-  id: string
-  type: string
+interface SectionContent {
   caption?: string | null
   title?: string | null
   text?: string | null
@@ -10,6 +8,12 @@ export interface Section {
   alt_image?: string | null
   bg_color?: string | null
   bg_image?: string | null
+  links?: { label: string; url: string }[] | null
+}
+
+export interface Section extends SectionContent {
+  id: string
+  type: string
   style_css?: string | null
   style_css_inline?: string | null
   style_id?: string | null
@@ -18,23 +22,12 @@ export interface Section {
   sort_by?: string | null
   sort_order?: string | null
   limit?: number | null
-  links?: { label: string; url: string }[] | null
   item?: SectionItem[] | null
 }
 
-export interface SectionItem {
-  caption?: string | null
-  title?: string | null
-  text?: string | null
-  image?: string | null
-  alt_image?: string | null
-  bg_color?: string | null
-  bg_image?: string | null
-  links?: { label: string; url: string }[] | null
+export interface SectionItem extends SectionContent {
   video?: string | null
   map?: string | null
-  question?: string | null
-  answer?: string | null
   icon?: string | null
   form_inquiry?: boolean | null
   [key: string]: unknown
@@ -73,4 +66,3 @@ export function toVideoEmbedUrl(value: unknown) {
     return null
   }
 }
-export { safeHref, safeImageSrc }

@@ -1,0 +1,45 @@
+---
+import { getSafeLinks } from "../safe-url"
+import { getSectionStyle, type Section } from "./shared/types"
+import SectionHeading from "./shared/section-heading.astro"
+
+interface Props { section: Section }
+const { section } = Astro.props
+const plans = section.item ?? []
+---
+
+<div class="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-24">
+  <section id={section.style_id || undefined} class:list={["text-center", section.style_css]} style={getSectionStyle(section)}>
+    <SectionHeading content={section} theme="light" />
+    <div class="mt-10 grid gap-4 text-left lg:grid-cols-3 lg:items-stretch">
+      {plans.map((plan, idx) => {
+        const variant = idx === 1 ? "dark" : idx === 2 ? "blue" : "light"
+        const benefits = (plan.text ?? "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+        const links = getSafeLinks(plan.links)
+        return (
+          <article class:list={[
+            "flex flex-col rounded-2xl border p-7 sm:p-8",
+            variant === "light" && "border-slate-200 bg-white text-slate-900",
+            variant === "dark" && "border-[#151922] bg-[#151922] text-white",
+            variant === "blue" && "border-[#2166f3] bg-[#2166f3] text-white"
+          ]}>
+            {plan.caption && <p class:list={["text-sm", variant === "light" ? "text-slate-500" : "text-white/80"]}>{plan.caption}</p>}
+            {plan.title && <h3 class="mt-3 text-2xl font-semibold tracking-[-0.035em]">{plan.title}</h3>}
+            {benefits.length > 0 && (
+              <ul class:list={["mt-7 space-y-3 text-sm leading-6", variant === "light" ? "text-slate-500" : "text-white/85"]}>
+                {benefits.map((benefit) => <li class="flex gap-2"><span class:list={["font-bold", variant === "light" ? "text-slate-400" : "text-white"]}>✓</span><span>{benefit}</span></li>)}
+              </ul>
+            )}
+            {links.length > 0 ? (
+              <div class="mt-auto pt-8">
+                {links.map((link) => (
+                  <a href={link.href} class:list={["inline-flex w-full items-center justify-center rounded-md border px-4 py-3 text-sm font-semibold", variant === "light" ? "border-slate-200 bg-white text-slate-600 hover:border-slate-300" : "border-white/80 bg-white text-slate-700 hover:bg-slate-50"]}>{link.label}</a>
+                ))}
+              </div>
+            ) : null}
+          </article>
+        )
+      })}
+    </div>
+  </section>
+</div>

@@ -218,7 +218,7 @@
   {
     "type": "faq",
     "label": "FAQ",
-    "description": "Section heading with repeatable question and answer rows.",
+    "description": "Section heading with repeatable title and text rows.",
     "sectionFields": [
       "style_id",
       "style_css",
@@ -231,8 +231,8 @@
       "alignment"
     ],
     "itemFields": [
-      "question",
-      "answer"
+      "title",
+      "text"
     ],
     "itemMode": "repeatable",
     "demo": {
@@ -244,12 +244,12 @@
       },
       "items": [
         {
-          "question": "How quickly can I get started?",
-          "answer": "Create your first project in minutes, then invite your team when you are ready."
+          "title": "How quickly can I get started?",
+          "text": "Create your first project in minutes, then invite your team when you are ready."
         },
         {
-          "question": "Can I change my plan later?",
-          "answer": "Yes. You can upgrade or change your plan whenever your needs change."
+          "title": "Can I change my plan later?",
+          "text": "Yes. You can upgrade or change your plan whenever your needs change."
         }
       ]
     }
@@ -346,8 +346,7 @@
       "section": {
         "caption": "Contact",
         "title": "Start a conversation",
-        "text": "Tell us about your project and we will get back to you.",
-        "bg_color": "#111827"
+        "text": "Tell us about your project and we will get back to you."
       },
       "items": [
         {
@@ -355,5 +354,97 @@
         }
       ]
     }
+  },
+  {
+    "type": "pricing",
+    "label": "Pricing",
+    "description": "Repeatable SaaS pricing cards using the existing section content contract.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "caption",
+      "title",
+      "text",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "caption",
+      "title",
+      "text",
+      "links",
+      "icon"
+    ],
+    "itemMode": "repeatable"
+  },
+  {
+    "type": "showcase",
+    "label": "Feature Showcase",
+    "description": "Alternating image and copy rows for product features.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "caption",
+      "title",
+      "text",
+      "image",
+      "alt_image",
+      "links"
+    ],
+    "itemMode": "repeatable"
+  },
+  {
+    "type": "steps",
+    "label": "Steps",
+    "description": "Numbered process steps with responsive separators.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "caption",
+      "title",
+      "text",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "caption",
+      "title",
+      "text"
+    ],
+    "itemMode": "repeatable"
+  },
+  {
+    "type": "testimonials",
+    "label": "Testimonials",
+    "description": "Customer quote cards with optional avatar images.",
+    "sectionFields": [
+      "style_id",
+      "style_css",
+      "style_css_inline",
+      "caption",
+      "title",
+      "text",
+      "bg_color",
+      "bg_image",
+      "alignment"
+    ],
+    "itemFields": [
+      "caption",
+      "title",
+      "text",
+      "image",
+      "alt_image"
+    ],
+    "itemMode": "repeatable"
   }
 ]

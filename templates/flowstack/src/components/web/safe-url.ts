@@ -13,6 +13,32 @@ export function safeHref(value: unknown) {
   }
 }
 
+export function safeLinkHref(value: unknown) {
+  const href = safeHref(value)
+  return href === "#" ? null : href
+}
+
+export interface SafeLink {
+  label: string
+  url: string
+}
+
+export function getSafeLinks<T extends SafeLink>(links: readonly T[] | null | undefined): Array<T & { href: string }> {
+  return (links ?? []).flatMap((link) => {
+    const href = link.label ? safeLinkHref(link.url) : null
+    return href ? [{ ...link, href }] : []
+  })
+}
+
+export function safeLinkAttributes(url: unknown, target: unknown) {
+  const safeTargetValue = safeTarget(target)
+  return {
+    href: safeHref(url),
+    target: safeTargetValue,
+    rel: safeTargetValue === "_blank" ? "noopener noreferrer" : undefined,
+  }
+}
+
 export function safeImageSrc(value: unknown) {
   const href = safeHref(value)
   if (href.startsWith("/") || href.startsWith("http://") || href.startsWith("https://")) return href

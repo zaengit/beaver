@@ -14,7 +14,16 @@ import { createPost } from "@zbeaver/beaver/app/services/posts"
 import { getSiteSettings, updateSiteSettings } from "@zbeaver/beaver/app/services/settings"
 
 interface TemplateSeed {
-  settings?: { title: string; description: string; meta_title: string; meta_description: string; timezone?: string }
+  settings?: {
+    title: string
+    description: string
+    meta_title: string
+    meta_description: string
+    timezone?: string
+    links?: Array<{ platform: string; url: string; icon?: string }>
+    open_hours?: Array<{ day: string; open: string; close: string }>
+    translate_countries?: string[]
+  }
   categories?: Array<{ name: string; description?: string }>
   posts?: Array<Record<string, unknown> & { title: string; slug: string }>
   pages?: Array<Record<string, unknown> & { title: string; slug: string }>

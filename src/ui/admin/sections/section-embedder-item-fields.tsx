@@ -105,7 +105,7 @@ export function ItemFieldRenderer({
     );
   }
 
-  if (field === "text" || field === "embed" || field === "answer") {
+  if (field === "text" || field === "embed") {
     return (
       <div className="flex flex-col gap-1 sm:col-span-2">
         <Label className="text-xs">{label}</Label>

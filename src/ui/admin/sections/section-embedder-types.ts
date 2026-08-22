@@ -54,8 +54,6 @@ export interface AvailableSection {
 }
 
 export const ITEM_FIELD_LABELS: Record<string, string> = {
-  question: "Question",
-  answer: "Answer",
   icon: "Icon",
   caption: "Caption",
   title: "Title",

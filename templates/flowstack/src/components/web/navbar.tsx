@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import type { MenuTree } from "@zbeaver/beaver/server"
-import { safeHref, safeImageSrc, safeTarget } from "./safe-url"
+import { safeImageSrc, safeLinkAttributes } from "./safe-url"
 
 interface NavbarProps {
   items: MenuTree[]
@@ -10,66 +10,37 @@ interface NavbarProps {
   logo?: string
 }
 
-function SearchBox({ className = "" }: { className?: string }) {
-  return (
-    <form className={`relative flex items-center gap-2 border-b border-[var(--line-strong)] pb-1 ${className}`} role="search" action="/search" method="get">
-      <label className="sr-only" htmlFor="site-search">Search published content</label>
-      <svg className="h-3.5 w-3.5 shrink-0 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
-      </svg>
-      <input
-        id="site-search"
-        type="search"
-        name="q"
-        placeholder="Search"
-        className="w-full bg-transparent text-[12px] font-medium tracking-wide text-[var(--ink)] outline-none placeholder:text-[var(--muted)]"
-      />
-    </form>
-  )
-}
+type CtaKind = "link" | "secondary" | "primary"
 
-function NavDropdown({ item }: { item: MenuTree }) {
+function NavDropdown({ item, ctaKind = "link" }: { item: MenuTree; ctaKind?: CtaKind }) {
+  const ctaClass = ctaKind === "primary"
+    ? "bg-[#1769f5] text-white hover:bg-[#0e58d8]"
+    : ctaKind === "secondary"
+      ? "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950"
+      : "text-slate-700 hover:text-slate-950"
+
   return (
     <div className="relative group">
       <a
-        href={safeHref(item.url)}
-        target={safeTarget(item.target)}
-        rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
-        className={`inline-flex items-center gap-1 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink)]/75 transition-colors hover:text-[var(--ink)] ${item.cssClass ?? ""}`}
+        {...safeLinkAttributes(item.url, item.target)}
+        aria-haspopup="true"
+        className={`inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition ${ctaClass} ${item.cssClass ?? ""}`}
       >
         {item.title}
-        <svg className="h-3 w-3 text-[var(--muted)] transition-transform duration-200 group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        <svg className="h-3.5 w-3.5 text-current/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m6 9 6 6 6-6" />
         </svg>
       </a>
-      <div className="absolute left-0 top-full hidden pt-3 group-hover:block z-50">
-        <div className="min-w-56 border border-[var(--line)] bg-[var(--paper)] p-2 shadow-sm">
+      <div className="absolute left-0 top-full z-50 hidden w-60 pt-2 group-hover:block group-focus-within:block">
+        <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/10">
           {item.children.map((child) => (
-            <div key={child.id} className="py-1">
-              <a
-                href={safeHref(child.url)}
-                target={safeTarget(child.target)}
-                rel={child.target === "_blank" ? "noopener noreferrer" : undefined}
-                className={`block px-3 py-2 text-[13px] font-medium leading-none text-[var(--ink)] hover:bg-[var(--bg)] ${child.cssClass ?? ""}`}
-              >
-                {child.title}
-              </a>
-              {child.children.length > 0 && (
-                <div className="ml-3 mt-1 space-y-0.5 border-l border-[var(--line)] pl-3">
-                  {child.children.map((grandchild) => (
-                    <a
-                      key={grandchild.id}
-                      href={safeHref(grandchild.url)}
-                      target={safeTarget(grandchild.target)}
-                      rel={grandchild.target === "_blank" ? "noopener noreferrer" : undefined}
-                      className={`block py-1.5 text-[12px] font-medium text-[var(--muted)] hover:text-[var(--ink)] ${grandchild.cssClass ?? ""}`}
-                    >
-                      {grandchild.title}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
+            <a
+              key={child.id}
+              {...safeLinkAttributes(child.url, child.target)}
+              className={`block rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#1769f5] ${child.cssClass ?? ""}`}
+            >
+              {child.title}
+            </a>
           ))}
         </div>
       </div>
@@ -83,12 +54,10 @@ function MobileMenuItem({ item, depth = 0 }: { item: MenuTree; depth?: number })
 
   return (
     <div>
-      <div className="flex items-center justify-between border-b border-[var(--line)]/60 py-1">
+      <div className="flex items-center justify-between border-b border-slate-100 py-1">
         <a
-          href={safeHref(item.url)}
-          target={safeTarget(item.target)}
-          rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
-          className={`flex-1 py-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--ink)] ${item.cssClass ?? ""}`}
+          {...safeLinkAttributes(item.url, item.target)}
+          className="flex-1 py-3 text-sm font-medium text-slate-700 hover:text-[#1769f5]"
           style={{ paddingLeft: depth ? `${depth * 12}px` : undefined }}
         >
           {item.title}
@@ -96,77 +65,73 @@ function MobileMenuItem({ item, depth = 0 }: { item: MenuTree; depth?: number })
         {hasChildren && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-[var(--muted)]"
+            className="px-3 py-2 text-sm font-bold text-slate-500"
             aria-label={expanded ? "Collapse submenu" : "Expand submenu"}
           >
-            {expanded ? "—" : "+"}
+            {expanded ? "−" : "+"}
           </button>
         )}
       </div>
       {hasChildren && expanded && (
         <div className="pb-2">
-          {item.children.map((child) => (
-            <MobileMenuItem key={child.id} item={child} depth={depth + 1} />
-          ))}
+          {item.children.map((child) => <MobileMenuItem key={child.id} item={child} depth={depth + 1} />)}
         </div>
       )}
     </div>
   )
 }
 
-export function Navbar({ items, siteName = "Site", logo }: NavbarProps) {
+export function Navbar({ items, siteName, logo }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const safeLogo = safeImageSrc(logo)
+  const lastItemIndex = items.length - 1
+  const secondaryItemIndex = items.length - 2
+
+  function ctaKind(index: number): CtaKind {
+    if (index === lastItemIndex) return "primary"
+    if (index === secondaryItemIndex) return "secondary"
+    return "link"
+  }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--paper)]">
-      <div className="mx-auto flex h-[64px] max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-        <a href="/" className="flex items-center gap-3">
-          {safeLogo && <img src={safeLogo} alt="" className="h-7 w-7 object-cover" />}
-          <span className="text-[15px] font-black tracking-tight text-[var(--ink)]">{siteName}</span>
-          <span className="hidden h-4 w-px bg-[var(--line)] sm:block" aria-hidden="true" />
-          <span className="hidden text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)] sm:inline">Public</span>
+    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur">
+      <div className="mx-auto flex min-h-[74px] max-w-6xl items-center justify-between gap-6 px-5 sm:px-8">
+        <a href="/" className="flex items-center gap-3" aria-label={siteName || "Home"}>
+          {safeLogo && <img src={safeLogo} alt="" className="h-9 w-auto max-w-[180px] object-contain" />}
+          {siteName && <span className="text-base font-bold tracking-[-0.03em] text-slate-900">{siteName}</span>}
         </a>
 
-        <nav className="hidden items-center gap-7 md:flex">
-          {items.map((item) =>
-            item.children.length > 0 ? (
-              <NavDropdown key={item.id} item={item} />
-            ) : (
-              <a
-                key={item.id}
-                href={safeHref(item.url)}
-                target={safeTarget(item.target)}
-                rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
-                className={`py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--ink)]/75 hover:text-[var(--ink)] ${item.cssClass ?? ""}`}
-              >
-                {item.title}
-              </a>
-            )
-          )}
+        <nav className="hidden items-center gap-5 md:flex" aria-label="Primary navigation">
+          {items.map((item, index) => {
+            const kind = ctaKind(index)
+            return item.children.length > 0
+              ? <NavDropdown key={item.id} item={item} ctaKind={kind} />
+              : (
+                <a
+                  key={item.id}
+                  {...safeLinkAttributes(item.url, item.target)}
+                  className={`inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition ${kind === "primary" ? "bg-[#1769f5] text-white hover:bg-[#0e58d8]" : kind === "secondary" ? "border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950" : "text-slate-700 hover:text-slate-950"} ${item.cssClass ?? ""}`}
+                >
+                  {item.title}
+                </a>
+              )
+          })}
         </nav>
-
-        <div className="hidden items-center gap-6 lg:flex">
-          <SearchBox className="w-44" />
-        </div>
 
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="inline-flex h-9 w-9 items-center justify-center border border-[var(--line)] text-[var(--ink)] md:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 md:hidden"
           aria-expanded={mobileMenuOpen}
           aria-label="Toggle navigation menu"
         >
-          <span className="text-[11px] font-black uppercase tracking-widest">{mobileMenuOpen ? "✕" : "≡"}</span>
+          <span className="text-lg font-semibold leading-none">{mobileMenuOpen ? "×" : "≡"}</span>
         </button>
       </div>
 
       {mobileMenuOpen && (
-        <div className="border-t border-[var(--line)] bg-[var(--paper)] px-4 py-4 md:hidden">
-          <SearchBox className="mb-4" />
-          <nav>
-            {items.map((item) => (
-              <MobileMenuItem key={item.id} item={item} />
-            ))}
+        <div className="border-t border-slate-100 bg-white px-5 py-4 md:hidden">
+          <nav aria-label="Mobile navigation">
+            {items.map((item) => <MobileMenuItem key={item.id} item={item} />)}
           </nav>
         </div>
       )}

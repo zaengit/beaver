@@ -12,7 +12,7 @@ const packageName = JSON.parse(readFileSync(resolve(__dirname, "..", "package.js
 const command = process.argv[2]
 const target = process.argv[3]
 
-const usage = `Usage: beaver <install|migrate|seed|reset superadmin|config|example> [template]`
+const usage = `Usage: beaver <migrate|seed|reset superadmin|config|example> [template]`
 
 const installDepsList = ["astro", "@astrojs/react", "@astrojs/node", "react", "react-dom", "@tailwindcss/vite"]
 
@@ -175,35 +175,11 @@ function copyExample(templateName) {
   copyDir(resolve(exampleSrc, "skills"), resolve(cwd, "skills"))
 }
 
-function validateSeedEnvironment() {
-  const email = process.env.ADMIN_EMAIL?.trim()
-  const password = process.env.ADMIN_PASSWORD
-  const name = process.env.ADMIN_NAME?.trim()
-  const placeholders = new Set(["admin@example.com", "password123", "change-this-password", "Super Admin"])
-
-  if (!email || !password || !name || password.length < 12 || password.length > 128 || placeholders.has(email) || placeholders.has(password)) {
-    throw new Error("Set ADMIN_EMAIL, ADMIN_NAME, and a non-placeholder ADMIN_PASSWORD of at least 12 characters in .env before running install.")
-  }
-}
-
-
 try {
   loadDotEnv()
   const { migrate, seed, seedTemplate, resetSuperAdminPassword } = await import("../dist/server.js")
 
-  if (command === "install") {
-    const templateName = target || "flowstack"
-    templateSource(templateName)
-    generateConfig()
-    copyExample(templateName)
-    installDeps()
-    loadDotEnv()
-    migrate()
-    validateSeedEnvironment()
-    await seed()
-    await seedTemplate(templateName)
-    console.log("CMS installation complete.")
-  } else if (command === "migrate") {
+  if (command === "migrate") {
     migrate()
     console.log("CMS database migrations complete.")
   } else if (command === "seed") {

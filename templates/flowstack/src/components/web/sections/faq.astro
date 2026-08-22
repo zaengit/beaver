@@ -6,30 +6,29 @@ interface Props { section: Section }
 const { section } = Astro.props
 ---
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 sm:py-12">
   <section
     id={section.style_id || undefined}
-    class:list={[
-      "border border-[var(--line-strong)] bg-[var(--paper)] px-6 py-10 sm:px-10 sm:py-12",
-      section.style_css
-    ]}
+    class:list={[section.style_css]}
     style={getSectionStyle(section)}
   >
     <div class="mx-auto max-w-4xl">
-      <SectionHeading content={section} theme="light" />
-      <div class="mt-8 divide-y divide-[var(--line-strong)] border-y border-[var(--line-strong)]">
+      <div class="text-center">
+        <SectionHeading content={section} theme="light" />
+      </div>
+      <div class="mt-8 divide-y divide-slate-200 border-y border-slate-200">
         {(section.item ?? []).map((item) => (
           <details class="group py-5">
-            <summary class="flex cursor-pointer list-none items-center justify-between gap-6 text-[15px] font-bold leading-tight text-[var(--ink)]">
-              <span>{item.question}</span>
-              <span class="flex h-8 w-8 shrink-0 items-center justify-center border border-[var(--line-strong)] text-[14px] font-black leading-none group-open:bg-[var(--ink)] group-open:text-white">
+            <summary class="flex cursor-pointer list-none items-center justify-between gap-6 text-[15px] font-bold leading-tight text-slate-950 marker:hidden">
+              <span>{item.title}</span>
+              <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[14px] font-black leading-none text-slate-700 transition group-open:border-indigo-600 group-open:bg-indigo-600 group-open:text-white">
                 <span class="group-open:hidden">+</span>
                 <span class="hidden group-open:inline">—</span>
               </span>
             </summary>
-            {item.answer && (
-              <p class="mt-3 max-w-3xl whitespace-pre-line border-l-2 border-[var(--line-strong)] pl-4 text-[14px] leading-6 text-[var(--muted)]">
-                {item.answer}
+            {item.text && (
+              <p class="mt-4 max-w-3xl whitespace-pre-line border-l-2 border-indigo-200 pl-4 text-[14px] leading-6 text-slate-600">
+                {item.text}
               </p>
             )}
           </details>

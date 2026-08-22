@@ -9,7 +9,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: ui-sans-system, system-ui, -apple-system, "Inter", sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -25,4 +25,46 @@ textarea:focus-visible,
 select:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+
+.google-translate-widget {
+  min-height: 38px;
+}
+
+.google-translate-widget .goog-te-gadget {
+  color: rgb(255 255 255 / 45%);
+  font-family: inherit;
+  font-size: 0;
+}
+
+.google-translate-widget .goog-te-gadget > span,
+.google-translate-widget .goog-te-gadget .goog-logo-link {
+  display: none !important;
+}
+
+.google-translate-widget .goog-te-gadget select {
+  min-width: 180px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 10%);
+  color: rgb(255 255 255 / 88%);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.625rem 0.875rem;
+}
+
+.google-translate-widget .goog-te-gadget select option {
+  background: #ffffff;
+  color: #0e1630;
+}
+
+iframe.VIpgJd-ZVi9od-ORHb-OEVmcd,
+iframe.goog-te-banner-frame {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+body {
+  top: 0 !important;
 }
