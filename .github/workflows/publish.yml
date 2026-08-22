@@ -36,6 +36,20 @@ jobs:
       - name: Publish package
         run: npm publish
 
+      - name: Wait for package availability
+        run: |
+          BEAVER_VERSION=$(node -p "require('./package.json').version")
+          for attempt in $(seq 1 30); do
+            if npm view "@zbeaver/beaver@${BEAVER_VERSION}" version >/dev/null 2>&1; then
+              echo "@zbeaver/beaver@${BEAVER_VERSION} is available"
+              exit 0
+            fi
+            echo "Waiting for @zbeaver/beaver@${BEAVER_VERSION} (${attempt}/30)"
+            sleep 10
+          done
+          echo "@zbeaver/beaver@${BEAVER_VERSION} was not available after 5 minutes" >&2
+          exit 1
+
       - name: Install initializer dependencies
         working-directory: create-beaver
         run: npm install
