@@ -24,6 +24,11 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
+      - name: Verify release versions
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: make verify-tag TAG="$RELEASE_TAG"
+
       - name: Install dependencies
         run: npm install
 
