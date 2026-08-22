@@ -75,7 +75,8 @@ release:
 	$(MAKE) sync-version VERSION="$(RELEASE_VERSION)"
 	$(MAKE) verify-version VERSION="$(RELEASE_VERSION)"
 	$(MAKE) check
-	git add package.json create-beaver/package.json dist/ui.js
+	git add package.json create-beaver/package.json
+	git add -f dist/ui.js
 	git commit -m "chore(release): bump Beaver version"
 	git tag -a "$(TAG)" -m "Release $(TAG)"
 
