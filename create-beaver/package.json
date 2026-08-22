@@ -28,7 +28,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@zbeaver/beaver": "^0.1.13"
+    "@zbeaver/beaver": "^0.1.14"
   },
   "scripts": {
     "test": "node --test bin/installer.test.mjs"

@@ -1,7 +1,16 @@
 {
   "name": "@zbeaver/beaver",
-  "version": "0.1.13",
+  "version": "0.1.14",
+  "description": "CMS admin panel, API, and middleware for Astro SSR projects.",
   "license": "MIT",
+  "keywords": [
+    "astro-integration",
+    "withastro",
+    "cms",
+    "content-management",
+    "admin-panel",
+    "astro-ssr"
+  ],
   "type": "module",
   "repository": {
     "type": "git",
