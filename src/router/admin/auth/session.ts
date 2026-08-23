@@ -16,7 +16,7 @@ export const GET: AdminRoute = async ({ cookies }) => {
     return Response.json({ success: false, message: "Unauthorized." }, { status: 401 })
   }
 
-  const roleName = session.user.roleId ? getRoleNameRecord(session.user.roleId) : null
+  const roleName = session.user.roleId ? await getRoleNameRecord(session.user.roleId) : null
 
   return Response.json({
     success: true,

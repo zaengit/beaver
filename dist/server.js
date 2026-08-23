@@ -1295,7 +1295,7 @@ async function refreshAdminSession(cookies) {
     const user = await findSafeUserByIdRecord(payload.sub);
     if (!user) return null;
     const permissions2 = await getUserPermissions(user.id);
-    const nextSessionId = crypto.randomUUID();
+    const nextSessionId = generateId();
     const nextAccess = await signAccessToken({
       sub: user.id,
       sessionId: nextSessionId,
@@ -5284,7 +5284,7 @@ const POST$s = async ({ request, cookies }) => {
     return Response.json({ success: false, message: result.message }, { status: result.status });
   }
   const permissions2 = await getUserPermissions(result.user.id);
-  const sessionId = crypto.randomUUID();
+  const sessionId = generateId();
   const accessToken = await signAccessToken({
     sub: result.user.id,
     sessionId,
@@ -5296,7 +5296,7 @@ const POST$s = async ({ request, cookies }) => {
     sub: result.user.id,
     sessionId
   });
-  saveRefreshSession(sessionId, result.user.id, getRefreshSessionExpiry());
+  await saveRefreshSession(sessionId, result.user.id, getRefreshSessionExpiry());
   cookies.set(ADMIN_ACCESS_COOKIE, accessToken, buildAdminAccessCookieOptions());
   cookies.set(ADMIN_REFRESH_COOKIE, refreshToken, buildAdminRefreshCookieOptions());
   return Response.json({
@@ -5317,7 +5317,7 @@ const POST$r = async ({ cookies }) => {
   if (refresh2) {
     try {
       const payload = await verifyRefreshToken(refresh2);
-      deleteRefreshSession(payload.sessionId);
+      await deleteRefreshSession(payload.sessionId);
     } catch {
     }
   }
@@ -5356,7 +5356,7 @@ const GET$g = async ({ cookies }) => {
   if (!session2) {
     return Response.json({ success: false, message: "Unauthorized." }, { status: 401 });
   }
-  const roleName = session2.user.roleId ? getRoleNameRecord(session2.user.roleId) : null;
+  const roleName = session2.user.roleId ? await getRoleNameRecord(session2.user.roleId) : null;
   return Response.json({
     success: true,
     data: {
@@ -5452,7 +5452,7 @@ const index$5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
 const GET$d = async ({ locals }) => {
   const permission = await requirePermission(locals.session, "dashboard.view");
   if (permission) return permission;
-  const stats = getDashboardStatsRecord();
+  const stats = await getDashboardStatsRecord();
   return adminSuccess(stats);
 };
 const dashboard = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({

@@ -10,6 +10,7 @@ import {
   ADMIN_REFRESH_COOKIE,
 } from "@zbeaver/beaver/app/admin/auth-cookies"
 import { getRefreshSessionExpiry, saveRefreshSession } from "@zbeaver/beaver/app/admin/session-store"
+import { generateId } from "@zbeaver/beaver/pkg/utils/id"
 
 export const POST: AdminRoute = async ({ request, cookies }) => {
   const body = await request.json()
@@ -19,7 +20,7 @@ export const POST: AdminRoute = async ({ request, cookies }) => {
   }
 
   const permissions = await getUserPermissions(result.user.id)
-  const sessionId = crypto.randomUUID()
+  const sessionId = generateId()
   const accessToken = await signAccessToken({
     sub: result.user.id,
     sessionId,
@@ -32,7 +33,7 @@ export const POST: AdminRoute = async ({ request, cookies }) => {
     sessionId,
   })
 
-  saveRefreshSession(sessionId, result.user.id, getRefreshSessionExpiry())
+  await saveRefreshSession(sessionId, result.user.id, getRefreshSessionExpiry())
   cookies.set(ADMIN_ACCESS_COOKIE, accessToken, buildAdminAccessCookieOptions())
   cookies.set(ADMIN_REFRESH_COOKIE, refreshToken, buildAdminRefreshCookieOptions())
 

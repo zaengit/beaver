@@ -8,6 +8,6 @@ export const GET: AdminRoute = async ({ locals }) => {
   const permission = await requirePermission(locals.session as { user: { id: string } } | null, "dashboard.view")
   if (permission) return permission
 
-  const stats = getDashboardStatsRecord()
+  const stats = await getDashboardStatsRecord()
   return adminSuccess(stats)
 }

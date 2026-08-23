@@ -16,6 +16,7 @@ import {
   verifyRefreshToken,
 } from "@zbeaver/beaver/app/admin/jwt"
 import { consumeRefreshSession, findActiveRefreshSession, getRefreshSessionExpiry, saveRefreshSession } from "@zbeaver/beaver/app/admin/session-store"
+import { generateId } from "@zbeaver/beaver/pkg/utils/id"
 
 export async function getAdminSession(cookies: AstroLikeCookies) {
   const access = readAdminAccessToken(cookies)
@@ -47,7 +48,7 @@ export async function refreshAdminSession(cookies: AstroLikeCookies) {
     if (!user) return null
 
     const permissions = await getUserPermissions(user.id)
-    const nextSessionId = crypto.randomUUID()
+    const nextSessionId = generateId()
     const nextAccess = await signAccessToken({
       sub: user.id,
       sessionId: nextSessionId,

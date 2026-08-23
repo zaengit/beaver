@@ -15,7 +15,7 @@ export const POST: AdminRoute = async ({ cookies }) => {
   if (refresh) {
     try {
       const payload = await verifyRefreshToken(refresh)
-      deleteRefreshSession(payload.sessionId)
+      await deleteRefreshSession(payload.sessionId)
     } catch {}
   }
 
