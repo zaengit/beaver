@@ -60,9 +60,9 @@ function parseStringArraySetting(record: SettingRow | undefined, fallback: strin
 
 // ─── Get All Settings (typed) ────────────────────────────────────────────────
 
-export function getSiteSettings(): SiteSettings {
-  return getCachedPublicData("site-settings", () => {
-    const records = getAllSettingsRecords()
+export async function getSiteSettings(): Promise<SiteSettings> {
+  return await getCachedPublicData("site-settings", async () => {
+    const records = await getAllSettingsRecords()
     const map = new Map(records.map((r) => [r.key, r] as const))
 
     return {
@@ -86,9 +86,9 @@ export function getSiteSettings(): SiteSettings {
 
 // ─── Update Settings ─────────────────────────────────────────────────────────
 
-export function updateSiteSettings(
+export async function updateSiteSettings(
   data: UpdateSettingsInput,
-): ServiceResult<SiteSettings> {
+): Promise<ServiceResult<SiteSettings>> {
   const upserts: Array<{ key: string; value: string }> = []
 
   if (data.title !== undefined) {
@@ -145,13 +145,13 @@ export function updateSiteSettings(
   }
 
   if (upserts.length === 0) {
-    return serviceSuccess(getSiteSettings(), "No settings to update.")
+    return serviceSuccess(await getSiteSettings(), "No settings to update.")
   }
 
   for (const { key, value } of upserts) {
-    upsertSettingRecord(key, value)
+    await upsertSettingRecord(key, value)
   }
 
   invalidatePublicDataCache()
-  return serviceSuccess(getSiteSettings(), "Settings updated successfully.")
+  return serviceSuccess(await getSiteSettings(), "Settings updated successfully.")
 }

@@ -13,23 +13,23 @@ export interface SyncPermissionsResult {
   total: number
 }
 
-export function syncPermissionRecords(definitions: PermissionDefinition[]): SyncPermissionsResult {
+export async function syncPermissionRecords(definitions: PermissionDefinition[]): Promise<SyncPermissionsResult> {
   const now = getCurrentTimestamp()
 
-  return db.transaction((tx) => {
-    const existing = tx
+  return await db.transaction(async (tx) => {
+    const existing = await tx
       .select({ id: permissions.id, slug: permissions.slug })
       .from(permissions)
-      .all()
-    const existingBySlug = new Map(existing.map((permission) => [permission.slug, permission]))
+      .execute()
+    const existingBySlug = new Map<string, { id: string; slug: string }>(existing.map((permission: { id: string; slug: string }) => [permission.slug, permission]))
     const desiredSlugs = new Set(definitions.map((permission) => permission.slug))
-    const obsolete = existing.filter((permission) => (
+    const obsolete = (existing as Array<{ id: string; slug: string }>).filter((permission) => (
       isContentPermissionSlug(permission.slug) && !desiredSlugs.has(permission.slug)
     ))
 
     for (const permission of obsolete) {
-      tx.delete(rolePermissions).where(eq(rolePermissions.permissionId, permission.id)).run()
-      tx.delete(permissions).where(eq(permissions.id, permission.id)).run()
+      await tx.delete(rolePermissions).where(eq(rolePermissions.permissionId, permission.id)).execute()
+      await tx.delete(permissions).where(eq(permissions.id, permission.id)).execute()
     }
 
     let added = 0
@@ -37,7 +37,7 @@ export function syncPermissionRecords(definitions: PermissionDefinition[]): Sync
     for (const definition of definitions) {
       const current = existingBySlug.get(definition.slug)
       if (current) {
-        tx.update(permissions)
+        await tx.update(permissions)
           .set({
             name: definition.name,
             group: definition.group,
@@ -45,12 +45,12 @@ export function syncPermissionRecords(definitions: PermissionDefinition[]): Sync
             updatedAt: now,
           })
           .where(eq(permissions.id, current.id))
-          .run()
+          .execute()
         updated++
         continue
       }
 
-      tx.insert(permissions).values({
+      await tx.insert(permissions).values({
         id: generateId(),
         name: definition.name,
         slug: definition.slug,
@@ -58,7 +58,7 @@ export function syncPermissionRecords(definitions: PermissionDefinition[]): Sync
         description: definition.name,
         createdAt: now,
         updatedAt: now,
-      }).run()
+      }).execute()
       added++
     }
 

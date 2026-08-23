@@ -38,7 +38,8 @@ The registry defaults are:
   `demo`.
 - `demo` contains example values for the Admin editor preview only. It must
   never be used as a public rendering fallback. Visitor demo data belongs in
-  an idempotent seed outside `src/` and requires explicit authorization.
+  an idempotent seed outside `src/` and requires explicit authorization. Use
+  the seed data contract below when that authorization is present.
 - The section `type` and `sections/<type>.astro` filename must match exactly.
   React sections require an explicit static import and browser hydration only
   when interaction is necessary.
@@ -62,6 +63,33 @@ The registry defaults are:
   title, text, image, alt text, and links belong to items. The parent section
   carries presentation settings unless its registry explicitly supports
   section content.
+
+## Seed data contract
+
+Seed data is an import input for authorized demo or initial content. It must
+not be used as a fallback by public Astro code.
+
+- The canonical example is
+  `packages/beaver/templates/flowstack/data/seed.json`. Custom projects may
+  keep an authorized import file at `data/seed.json`.
+- Supported top-level keys are `settings`, `categories`, `posts`, `pages`, and
+  `menus`. Unknown keys should be rejected rather than silently ignored.
+- Category identity is its `slug` (or the slug derived from `name`). Content
+  identity is its `slug`. `posts[].categorySlugs` resolves to category records
+  by slug and may also reference categories already in Beaver.
+- Menu identity is the pair `type` and `url`. `menus[].parentUrl` resolves a
+  nested menu item within the same menu type; do not place database IDs in a
+  portable seed file.
+- Page `sections` and post content fields must use keys supported by the
+  current validation schema, registry, and renderer. Keep section item data in
+  the stored `item` shape used by the public section renderer.
+- Import packaged data with
+  `npx @zbeaver/beaver migrate:data --template flowstack` or custom data with
+  `npx @zbeaver/beaver migrate:data --file ./data/seed.json`.
+- Use `--dry-run` to validate without writes. Imports run transactionally;
+  existing matching records are skipped by default and `--overwrite` updates
+  them. `migrate:data:fresh ... --force` resets the Beaver schema and is only
+  appropriate for an isolated or intentionally reset database.
 
 ## Content-type template contract
 

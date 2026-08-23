@@ -32,7 +32,7 @@ export async function handlePasswordLogin(body: unknown) {
     }
   }
 
-  const userResult = getUserByEmail(email)
+  const userResult = await getUserByEmail(email)
   const isValid = await verifyPassword(password, userResult.success ? userResult.data.password : DUMMY_PASSWORD_HASH)
   if (!userResult.success || !isValid) {
     return {

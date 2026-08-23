@@ -55,8 +55,8 @@ function pruneCacheDirectory(requiredBytes = 0) {
  * Read public data from a local JSON cache file, falling back to the supplied
  * loader when the entry is missing, expired, or unreadable.
  */
-export function getCachedPublicData<T>(key: string, loader: () => T, ttlMs = defaultTtlMs): T {
-  if (!Number.isFinite(ttlMs) || ttlMs <= 0) return loader()
+export async function getCachedPublicData<T>(key: string, loader: () => T | Promise<T>, ttlMs = defaultTtlMs): Promise<T> {
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0) return await loader()
   const generationAtStart = cacheGeneration
   const path = cachePath(key)
 
@@ -69,7 +69,7 @@ export function getCachedPublicData<T>(key: string, loader: () => T, ttlMs = def
     // A cache failure must never prevent the public site from rendering.
   }
 
-  const value = loader()
+  const value = await loader()
 
   if (value === null || value === undefined) return value
   if (generationAtStart !== cacheGeneration) return value

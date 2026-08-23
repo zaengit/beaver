@@ -70,13 +70,13 @@ interface BeaverArchiveFilterOptions {
   tags: string[]
   customFields: { name: string; label: string; type: "text" | "number" | "boolean" | "select" | "date"; options: string[] }[]
 }
-export declare const getPublishedPostByType: (type: string, slug: string) => BeaverServiceResult<BeaverPost & { authorName: string | null }>
-export declare const getPublishedArchiveFilterOptions: (type: string) => BeaverServiceResult<BeaverArchiveFilterOptions>
+export declare const getPublishedPostByType: (type: string, slug: string) => Promise<BeaverServiceResult<BeaverPost & { authorName: string | null }>>
+export declare const getPublishedArchiveFilterOptions: (type: string) => Promise<BeaverServiceResult<BeaverArchiveFilterOptions>>
 export declare const getPublicCustomFieldFiltersFromSearchParams: (type: string, searchParams: URLSearchParams) => Record<string, string>
-export declare const listPublishedPostsByType: (type: string, page?: number, perPage?: number, filters?: BeaverArchiveFilters) => BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>
-export declare const listPublishedPostsByTag: (tag: string, page?: number, perPage?: number) => BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>
-export declare const searchPublishedPosts: (query: string, page?: number, perPage?: number) => BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>
-export declare const getMenuTree: (type?: string) => BeaverServiceResult<MenuTree[]>
+export declare const listPublishedPostsByType: (type: string, page?: number, perPage?: number, filters?: BeaverArchiveFilters) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>
+export declare const listPublishedPostsByTag: (tag: string, page?: number, perPage?: number) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>
+export declare const searchPublishedPosts: (query: string, page?: number, perPage?: number) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>
+export declare const getMenuTree: (type?: string) => Promise<BeaverServiceResult<MenuTree[]>>
 interface BeaverSocialLink { platform: string; url: string; icon?: string }
 interface BeaverOpenHours { day: string; open: string; close: string }
 interface BeaverSiteSettings {
@@ -95,8 +95,30 @@ interface BeaverSiteSettings {
   translate_countries: string[]
   email_notifications: string[]
 }
-export declare const getSiteSettings: () => BeaverSiteSettings
+export declare const getSiteSettings: () => Promise<BeaverSiteSettings>
 export declare const seed: () => Promise<void>
+export interface SeedDataOptions { filePath?: string; template?: string; dryRun?: boolean; overwrite?: boolean }
+export interface SeedEntitySummary { created: number; updated: number; skipped: number }
+export interface SeedDataSummary {
+  source: string
+  dryRun: boolean
+  settings: SeedEntitySummary
+  categories: SeedEntitySummary
+  posts: SeedEntitySummary
+  pages: SeedEntitySummary
+  menus: SeedEntitySummary
+}
+export declare const migrateData: (options: SeedDataOptions) => Promise<SeedDataSummary>
+export declare const formatSeedDataSummary: (result: SeedDataSummary) => string
+export declare const parseSeedData: (input: unknown, source?: string) => unknown
+export declare const closeDatabase: () => Promise<void>
+export declare const resetDatabase: () => Promise<void>
+export declare const getStorageDir: () => string
+export declare const getStorageType: () => "local" | "s3"
+export declare const writeStorageFile: (filePath: string, data: Uint8Array | string) => Promise<void>
+export declare const readStorageFile: (filePath: string) => Promise<Uint8Array | null>
+export declare const deleteStorageFile: (filePath: string) => Promise<boolean>
+export type StorageType = "local" | "s3"
 export interface MenuTree {
   id: string
   title: string
@@ -108,6 +130,6 @@ export interface MenuTree {
   parentId: string | null
   children: MenuTree[]
 }
-export declare const migrate: () => void
+export declare const migrate: () => Promise<void>
 export declare const seedTemplate: (name: string) => Promise<void>
-export declare const resetSuperAdminPassword: () => { email: string }
+export declare const resetSuperAdminPassword: () => Promise<{ email: string }>

@@ -9,17 +9,23 @@ type UserRole = {
 }
 
 async function getUserRole(userId: string): Promise<UserRole | null> {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-    columns: { roleId: true },
-  })
+  const userRows = await db
+    .select({ roleId: users.roleId })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+    .execute()
+  const user = userRows[0]
 
   if (!user?.roleId) return null
 
-  const role = await db.query.roles.findFirst({
-    where: eq(roles.id, user.roleId),
-    columns: { isSystem: true },
-  })
+  const roleRows = await db
+    .select({ isSystem: roles.isSystem })
+    .from(roles)
+    .where(eq(roles.id, user.roleId))
+    .limit(1)
+    .execute()
+  const role = roleRows[0]
 
   if (!role) return null
   return { roleId: user.roleId, isSystem: role.isSystem === 1 }
@@ -33,19 +39,21 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
   // A system role is the explicit full-access role. Returning every stored
   // permission also keeps the admin UI in sync with the API for that role.
   if (userRole.isSystem) {
-    const allPermissions = db
+    const allPermissions = await db
       .select({ slug: permissions.slug })
       .from(permissions)
-      .all()
-    return allPermissions.map((permission) => permission.slug)
+      .execute()
+    return allPermissions.map((permission: { slug: string }) => permission.slug)
   }
 
-  const rolePerms = await db.query.rolePermissions.findMany({
-    where: eq(rolePermissions.roleId, userRole.roleId),
-    with: { permission: true },
-  })
+  const rolePerms = await db
+    .select({ slug: permissions.slug })
+    .from(rolePermissions)
+    .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
+    .where(eq(rolePermissions.roleId, userRole.roleId))
+    .execute()
 
-  return rolePerms.map((rolePermission) => rolePermission.permission.slug)
+  return rolePerms.map((rolePermission: { slug: string }) => rolePermission.slug)
 }
 
 export async function can(userId: string, permission: string): Promise<boolean> {

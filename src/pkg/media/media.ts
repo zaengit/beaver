@@ -62,8 +62,8 @@ export function getExtensionFromMimeType(mimeType: string): string {
 }
 
 /**
- * Returns the public filesystem root from UPLOAD_DIR, or "./public". Generated
- * files always live below its fixed storage path.
+ * Returns the legacy public filesystem root from UPLOAD_DIR, or "./public".
+ * New projects should configure STORAGE_PATH for the actual media directory.
  */
 export function getUploadDir(): string {
   return process.env.UPLOAD_DIR || "./public"

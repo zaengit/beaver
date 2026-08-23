@@ -5,6 +5,7 @@ import { roles, users } from "@zbeaver/beaver/app/db/schema"
 import { sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
 import type { UserRecord } from "@zbeaver/beaver/app/models/user"
 import { clampPagination } from "@zbeaver/beaver/pkg/utils/pagination"
+import { affectedRows } from "@zbeaver/beaver/app/db/query"
 
 export type UserSafe = Omit<UserRecord, "password">
 export type UserListItem = UserSafe & { roleName: string | null }
@@ -16,19 +17,22 @@ function toSafe(user: UserRecord): UserSafe {
   return safe as UserSafe
 }
 
-export function findUserByIdRecord(id: string) {
-  return db.select().from(users).where(eq(users.id, id)).get() as UserRecord | undefined
+export async function findUserByIdRecord(id: string) {
+  const rows = await db.select().from(users).where(eq(users.id, id)).limit(1).execute()
+  return rows[0] as UserRecord | undefined
 }
 
-export function findUserByEmailRecord(email: string) {
-  return db
+export async function findUserByEmailRecord(email: string) {
+  const rows = await db
     .select()
     .from(users)
     .where(eq(users.email, email.toLowerCase().trim()))
-    .get() as UserRecord | undefined
+    .limit(1)
+    .execute()
+  return rows[0] as UserRecord | undefined
 }
 
-export function listUsersPaginatedRecord(filters: {
+export async function listUsersPaginatedRecord(filters: {
   page?: number
   perPage?: number
   search?: string
@@ -55,8 +59,8 @@ export function listUsersPaginatedRecord(filters: {
   // Count total
   const totalQuery = db.select({ value: count() }).from(users)
   const totalRows = whereClause
-    ? (totalQuery.where(whereClause) as typeof totalQuery).all()
-    : totalQuery.all()
+    ? await (totalQuery.where(whereClause) as typeof totalQuery).execute()
+    : await totalQuery.execute()
   const total = totalRows[0]?.value ?? 0
   const lastPage = Math.max(1, Math.ceil(total / perPage))
 
@@ -84,11 +88,11 @@ export function listUsersPaginatedRecord(filters: {
     updatedAt: users.updatedAt,
     roleName: roles.name,
   }).from(users).leftJoin(roles, eq(users.roleId, roles.id))
-  const paged = (whereClause ? dataQuery.where(whereClause) : dataQuery)
+  const paged = await (whereClause ? dataQuery.where(whereClause) : dataQuery)
     .orderBy(orderColumn)
     .limit(perPage)
     .offset(offset)
-    .all() as UserListItem[]
+    .execute() as UserListItem[]
 
   return {
     data: paged,
@@ -103,7 +107,7 @@ export function listUsersPaginatedRecord(filters: {
   }
 }
 
-export function createUserRecord(input: {
+export async function createUserRecord(input: {
   id: string
   name: string
   email: string
@@ -112,7 +116,7 @@ export function createUserRecord(input: {
   createdAt: number
   updatedAt: number
 }) {
-  db.insert(users).values({
+  await db.insert(users).values({
     id: input.id,
     name: sanitizeText(input.name),
     email: input.email.toLowerCase().trim(),
@@ -121,12 +125,12 @@ export function createUserRecord(input: {
     emailVerified: 0,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt,
-  }).run()
+  }).execute()
 
-  return findSafeUserByIdRecord(input.id)!
+  return (await findSafeUserByIdRecord(input.id))!
 }
 
-export function updateUserRecord(id: string, input: {
+export async function updateUserRecord(id: string, input: {
   name?: string
   email?: string
   passwordHash?: string
@@ -139,15 +143,16 @@ export function updateUserRecord(id: string, input: {
   if (input.passwordHash !== undefined) updates.password = input.passwordHash
   if (input.roleId !== undefined) updates.roleId = input.roleId
 
-  db.update(users).set(updates).where(eq(users.id, id)).run()
-  return findSafeUserByIdRecord(id) ?? null
+  await db.update(users).set(updates).where(eq(users.id, id)).execute()
+  return await findSafeUserByIdRecord(id) ?? null
 }
 
-export function deleteUserRecord(id: string) {
-  return db.delete(users).where(eq(users.id, id)).run().changes > 0
+export async function deleteUserRecord(id: string) {
+  const result = await db.delete(users).where(eq(users.id, id)).execute()
+  return affectedRows(result) > 0
 }
 
-export function findSafeUserByIdRecord(id: string) {
-  const user = findUserByIdRecord(id)
+export async function findSafeUserByIdRecord(id: string) {
+  const user = await findUserByIdRecord(id)
   return user ? toSafe(user) : null
 }

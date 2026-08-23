@@ -10,10 +10,10 @@ export type AdminActor = {
 }
 
 export async function loadAdminActor(userId: string): Promise<AdminActor | null> {
-  const user = findUserByIdRecord(userId)
+  const user = await findUserByIdRecord(userId)
   if (!user) return null
 
-  const role = user.roleId ? findRoleByIdRecord(user.roleId) : undefined
+  const role = user.roleId ? await findRoleByIdRecord(user.roleId) : undefined
   return {
     id: user.id,
     roleId: user.roleId,
@@ -34,27 +34,27 @@ function permissionsWithinActor(actor: AdminActor, permissionSlugs: string[]) {
   return actor.isSystemRole || permissionSlugs.every((permission) => actor.permissions.has(permission))
 }
 
-export function canAssignRole(actor: AdminActor, roleId: string | null | undefined) {
+export async function canAssignRole(actor: AdminActor, roleId: string | null | undefined) {
   if (roleId === undefined || roleId === null) return true
 
-  const role = findRoleByIdRecord(roleId)
+  const role = await findRoleByIdRecord(roleId)
   if (!role) return false
   if (role.isSystem === 1) return actor.isSystemRole
 
-  return permissionsWithinActor(actor, getRolePermissionSlugsRecord(role.id))
+  return permissionsWithinActor(actor, await getRolePermissionSlugsRecord(role.id))
 }
 
-export function canManageExistingRole(actor: AdminActor, roleId: string) {
-  const role = findRoleByIdRecord(roleId)
+export async function canManageExistingRole(actor: AdminActor, roleId: string) {
+  const role = await findRoleByIdRecord(roleId)
   if (!role || role.isSystem === 1) return false
   if (actor.isSystemRole) return true
 
-  return permissionsWithinActor(actor, getRolePermissionSlugsRecord(role.id))
+  return permissionsWithinActor(actor, await getRolePermissionSlugsRecord(role.id))
 }
 
-export function canAssignPermissionIds(actor: AdminActor, permissionIds: string[]) {
+export async function canAssignPermissionIds(actor: AdminActor, permissionIds: string[]) {
   const uniqueIds = [...new Set(permissionIds)]
-  const rows = getPermissionSlugsRecord(uniqueIds)
+  const rows = await getPermissionSlugsRecord(uniqueIds) as Array<{ id: string; slug: string }>
   if (rows.length !== uniqueIds.length) return false
   return permissionsWithinActor(actor, rows.map((row) => row.slug))
 }

@@ -131,22 +131,22 @@ function buildUpdatePayload(data: UpdatePostInput, existing: PostRow, now: numbe
 // CREATE
 // ---------------------------------------------------------------------------
 
-export function createPost(
+export async function createPost(
   data: CreatePostInput,
   userId: string,
-): ServiceResult<Post> {
+): Promise<ServiceResult<Post>> {
   const slug = buildSlug(data.slug, data.title)
 
-  const existing = findPostBySlugRecord(slug)
+  const existing = await findPostBySlugRecord(slug)
   if (existing) return serviceConflict("slug", "A post with this slug already exists.")
 
   try {
     const payload = buildPostPayload(data, userId)
     payload.slug = slug // override with the checked slug
-    const post = createPostRecord(payload as Parameters<typeof createPostRecord>[0])
+    const post = await createPostRecord(payload as Parameters<typeof createPostRecord>[0])
 
     if (data.categoryIds?.length) {
-      syncPostCategoriesRecord(payload.id as string, data.categoryIds, payload.createdAt as number)
+      await syncPostCategoriesRecord(payload.id as string, data.categoryIds, payload.createdAt as number)
     }
 
     invalidatePublicDataCache()
@@ -160,25 +160,25 @@ export function createPost(
 // UPDATE
 // ---------------------------------------------------------------------------
 
-export function updatePost(
+export async function updatePost(
   id: string,
   data: UpdatePostInput,
-): ServiceResult<Post> {
-  const existing = findPostByIdRecord(id)
+): Promise<ServiceResult<Post>> {
+  const existing = await findPostByIdRecord(id)
   if (!existing) return serviceNotFound("Post")
 
   if (data.slug && data.slug !== existing.slug) {
-    const slugConflict = findPostBySlugRecord(data.slug)
+    const slugConflict = await findPostBySlugRecord(data.slug)
     if (slugConflict) return serviceConflict("slug", "A post with this slug already exists.")
   }
 
   try {
     const now = Date.now()
     const updateData = buildUpdatePayload(data, existing as unknown as PostRow, now)
-    const post = updatePostRecord(id, updateData)
+    const post = await updatePostRecord(id, updateData)
 
     if (data.categoryIds !== undefined) {
-      syncPostCategoriesRecord(id, data.categoryIds, now)
+      await syncPostCategoriesRecord(id, data.categoryIds, now)
     }
 
     invalidatePublicDataCache()
@@ -190,8 +190,8 @@ export function updatePost(
 
 // ─── DUPLICATE ───────────────────────────────────────────────────────────────
 
-export function duplicatePost(id: string, userId: string): ServiceResult<Post> {
-  const original = findPostByIdRecord(id)
+export async function duplicatePost(id: string, userId: string): Promise<ServiceResult<Post>> {
+  const original = await findPostByIdRecord(id)
   if (!original) return serviceNotFound("Post")
 
   const now = Date.now()
@@ -199,7 +199,7 @@ export function duplicatePost(id: string, userId: string): ServiceResult<Post> {
   let newSlug = `${original.slug}-copy`
 
   // Check slug uniqueness
-  const slugConflict = findPostBySlugRecord(newSlug)
+  const slugConflict = await findPostBySlugRecord(newSlug)
   if (slugConflict) {
     // Append a timestamp to make it unique
     const timestamp = now.toString(36).slice(-6)
@@ -207,7 +207,7 @@ export function duplicatePost(id: string, userId: string): ServiceResult<Post> {
   }
 
   try {
-    const post = createPostRecord({
+    const post = await createPostRecord({
       id: newId,
       title: original.title ? `${original.title} (Copy)` : "Untitled (Copy)",
       slug: newSlug,
@@ -230,7 +230,7 @@ export function duplicatePost(id: string, userId: string): ServiceResult<Post> {
 
     // Copy category associations
     if (original.categories?.length) {
-      syncPostCategoriesRecord(
+      await syncPostCategoriesRecord(
         newId,
         original.categories.map((c: { id: string }) => c.id),
         now,
@@ -246,16 +246,16 @@ export function duplicatePost(id: string, userId: string): ServiceResult<Post> {
 
 // ─── BULK OPERATIONS ─────────────────────────────────────────────────────────
 
-export function bulkDeletePosts(ids: string[]): ServiceResult<{ id: string; success: boolean }[]> {
+export async function bulkDeletePosts(ids: string[]): Promise<ServiceResult<{ id: string; success: boolean }[]>> {
   const results: { id: string; success: boolean }[] = []
   for (const id of ids) {
-    const existing = findPostByIdRecord(id)
+    const existing = await findPostByIdRecord(id)
     if (!existing) {
       results.push({ id, success: false })
       continue
     }
     try {
-      deletePostRecord(id)
+      await deletePostRecord(id)
       results.push({ id, success: true })
     } catch {
       results.push({ id, success: false })
@@ -265,17 +265,17 @@ export function bulkDeletePosts(ids: string[]): ServiceResult<{ id: string; succ
   return serviceSuccess(results, "Bulk delete completed.")
 }
 
-export function bulkPublishPosts(ids: string[]): ServiceResult<{ id: string; success: boolean }[]> {
+export async function bulkPublishPosts(ids: string[]): Promise<ServiceResult<{ id: string; success: boolean }[]>> {
   const now = Date.now()
   const results: { id: string; success: boolean }[] = []
   for (const id of ids) {
-    const existing = findPostByIdRecord(id)
+    const existing = await findPostByIdRecord(id)
     if (!existing) {
       results.push({ id, success: false })
       continue
     }
     try {
-      updatePostRecord(id, { status: "published", publishedAt: now, updatedAt: now })
+      await updatePostRecord(id, { status: "published", publishedAt: now, updatedAt: now })
       results.push({ id, success: true })
     } catch {
       results.push({ id, success: false })
@@ -285,17 +285,17 @@ export function bulkPublishPosts(ids: string[]): ServiceResult<{ id: string; suc
   return serviceSuccess(results, "Bulk publish completed.")
 }
 
-export function bulkUnpublishPosts(ids: string[]): ServiceResult<{ id: string; success: boolean }[]> {
+export async function bulkUnpublishPosts(ids: string[]): Promise<ServiceResult<{ id: string; success: boolean }[]>> {
   const now = Date.now()
   const results: { id: string; success: boolean }[] = []
   for (const id of ids) {
-    const existing = findPostByIdRecord(id)
+    const existing = await findPostByIdRecord(id)
     if (!existing) {
       results.push({ id, success: false })
       continue
     }
     try {
-      updatePostRecord(id, { status: "draft", publishedAt: null, updatedAt: now })
+      await updatePostRecord(id, { status: "draft", publishedAt: null, updatedAt: now })
       results.push({ id, success: true })
     } catch {
       results.push({ id, success: false })
@@ -305,10 +305,10 @@ export function bulkUnpublishPosts(ids: string[]): ServiceResult<{ id: string; s
   return serviceSuccess(results, "Bulk unpublish completed.")
 }
 
-export function bulkDuplicatePosts(ids: string[], userId: string): ServiceResult<{ id: string; success: boolean; newId?: string; error?: string }[]> {
+export async function bulkDuplicatePosts(ids: string[], userId: string): Promise<ServiceResult<{ id: string; success: boolean; newId?: string; error?: string }[]>> {
   const results: { id: string; success: boolean; newId?: string; error?: string }[] = []
   for (const originalId of ids) {
-    const result = duplicatePost(originalId, userId)
+    const result = await duplicatePost(originalId, userId)
     if (result.success) {
       results.push({ id: originalId, success: true, newId: result.data.id })
     } else {
@@ -320,12 +320,12 @@ export function bulkDuplicatePosts(ids: string[], userId: string): ServiceResult
 
 // ─── DELETE ──────────────────────────────────────────────────────────────────
 
-export function deletePost(id: string): ServiceResult<null> {
-  const existing = findPostByIdRecord(id)
+export async function deletePost(id: string): Promise<ServiceResult<null>> {
+  const existing = await findPostByIdRecord(id)
   if (!existing) return serviceNotFound("Post")
 
   try {
-    deletePostRecord(id)
+    await deletePostRecord(id)
     invalidatePublicDataCache()
     return serviceSuccess(null, "Post deleted.")
   } catch {
@@ -335,24 +335,24 @@ export function deletePost(id: string): ServiceResult<null> {
 
 // ─── READ ────────────────────────────────────────────────────────────────────
 
-export function getPost(id: string): ServiceResult<PostWithRelations> {
-  const post = findPostByIdRecord(id) as PostWithRelations | null
+export async function getPost(id: string): Promise<ServiceResult<PostWithRelations>> {
+  const post = await findPostByIdRecord(id) as PostWithRelations | null
   if (!post) return serviceNotFound("Post")
   return serviceSuccess(post, "OK")
 }
 
-export function listPosts(filters: PostFilters): ServiceResult<PaginatedResult<Post>> {
-  const result = listPostRecords(filters)
+export async function listPosts(filters: PostFilters): Promise<ServiceResult<PaginatedResult<Post>>> {
+  const result = await listPostRecords(filters)
   return serviceSuccess(result, "OK")
 }
 
 // ─── Public Queries ──────────────────────────────────────────────────────────
 
-export function getPublishedPostByType(type: string, slug: string): ServiceResult<Post & { authorName: string | null }> {
+export async function getPublishedPostByType(type: string, slug: string): Promise<ServiceResult<Post & { authorName: string | null }>> {
   if (!slugRegex.test(type) || !slugRegex.test(slug)) return serviceNotFound("Post")
 
-  const post = getCachedPublicData(`post:published:${type}:${slug}`, () => {
-    const record = findPublishedByTypeAndSlugRecord(type, slug)
+  const post = await getCachedPublicData(`post:published:${type}:${slug}`, async () => {
+    const record = await findPublishedByTypeAndSlugRecord(type, slug)
     return record
       ? { ...record, description: record.description ? sanitizeHtml(record.description) : null }
       : record
@@ -361,7 +361,7 @@ export function getPublishedPostByType(type: string, slug: string): ServiceResul
   return serviceSuccess(post, "OK")
 }
 
-export function listPublishedPostsByType(type: string, page = 1, perPage = 12, filters: PublicArchiveFilters = {}): ServiceResult<PaginatedResult<PublicPost>> {
+export async function listPublishedPostsByType(type: string, page = 1, perPage = 12, filters: PublicArchiveFilters = {}): Promise<ServiceResult<PaginatedResult<PublicPost>>> {
   const normalizedPage = clampPage(page)
   const normalizedPerPage = clampPerPage(perPage, 12)
   const availableCustomFields = getPublicCustomFieldFilters(type)
@@ -383,12 +383,12 @@ export function listPublishedPostsByType(type: string, page = 1, perPage = 12, f
   }
   const customFieldCacheKey = Object.entries(normalizedFilters.customFields ?? {}).sort(([a], [b]) => a.localeCompare(b)).map(([name, value]) => `${name}=${value}`).join(",")
   const cacheKey = [type, normalizedPage, normalizedPerPage, normalizedFilters.search?.toLowerCase() ?? "", normalizedFilters.category?.toLowerCase() ?? "", normalizedFilters.tag?.toLowerCase() ?? "", customFieldCacheKey, normalizedFilters.sortBy ?? "", normalizedFilters.sortOrder ?? ""].join(":")
-  return serviceSuccess(getCachedPublicData(`posts:published:${cacheKey}`, () => listPublishedPostRecordsByType(type, normalizedPage, normalizedPerPage, normalizedFilters)), "OK")
+  return serviceSuccess(await getCachedPublicData(`posts:published:${cacheKey}`, () => listPublishedPostRecordsByType(type, normalizedPage, normalizedPerPage, normalizedFilters)), "OK")
 }
 
-export function getPublishedArchiveFilterOptions(type: string): ServiceResult<PublicArchiveFilterOptions> {
-  return serviceSuccess(getCachedPublicData(`posts:published:archive-filter-options:${type}`, () => ({
-    ...listPublishedArchiveFilterOptionsByType(type),
+export async function getPublishedArchiveFilterOptions(type: string): Promise<ServiceResult<PublicArchiveFilterOptions>> {
+  return serviceSuccess(await getCachedPublicData(`posts:published:archive-filter-options:${type}`, async () => ({
+    ...(await listPublishedArchiveFilterOptionsByType(type)),
     customFields: getPublicCustomFieldFilters(type),
   })), "OK")
 }
@@ -426,7 +426,7 @@ function isValidCustomFieldFilterValue(field: ReturnType<typeof getPublicCustomF
   return true
 }
 
-export function searchPublishedPosts(query: string, page = 1, perPage = 12): ServiceResult<PaginatedResult<PublicPost>> {
+export async function searchPublishedPosts(query: string, page = 1, perPage = 12): Promise<ServiceResult<PaginatedResult<PublicPost>>> {
   const normalizedQuery = query.trim().slice(0, 100)
   const normalizedPage = clampPage(page)
   const normalizedPerPage = clampPerPage(perPage, 12)
@@ -434,14 +434,14 @@ export function searchPublishedPosts(query: string, page = 1, perPage = 12): Ser
     return serviceSuccess({ data: [], meta: { currentPage: 1, perPage: normalizedPerPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK")
   }
 
-  const result = getCachedPublicData(
+  const result = await getCachedPublicData(
     `posts:published:search:${normalizedQuery.toLowerCase()}:${normalizedPage}:${normalizedPerPage}`,
     () => searchPublishedPostRecords(normalizedQuery, normalizedPage, normalizedPerPage),
   )
   return serviceSuccess(result, "OK")
 }
 
-export function listPublishedPostsByTag(tag: string, page = 1, perPage = 12): ServiceResult<PaginatedResult<PublicPost>> {
+export async function listPublishedPostsByTag(tag: string, page = 1, perPage = 12): Promise<ServiceResult<PaginatedResult<PublicPost>>> {
   const normalizedTag = tag.trim().slice(0, 100)
   const normalizedPage = clampPage(page)
   const normalizedPerPage = clampPerPage(perPage, 12)
@@ -450,7 +450,7 @@ export function listPublishedPostsByTag(tag: string, page = 1, perPage = 12): Se
   }
 
   return serviceSuccess(
-    getCachedPublicData(
+    await getCachedPublicData(
       `posts:published:tag:${normalizedTag.toLowerCase()}:${normalizedPage}:${normalizedPerPage}`,
       () => listPublishedPostRecordsByTag(normalizedTag, normalizedPage, normalizedPerPage),
     ),

@@ -36,9 +36,9 @@ CMS admin panel, API, and middleware for Astro SSR projects.
 ### Setup and data
 
 - Interactive `npm create @zbeaver/beaver` wizard for project creation.
-- Automatic dependency installation, configuration generation, SQLite migration, base seed, admin creation, and template demo content.
+- Automatic dependency installation, configuration generation, database migration, base seed, admin creation, and template demo content.
 - Public server APIs for querying posts, pages, tags, filters, menus, and site settings.
-- SQLite database with Drizzle migrations.
+- SQLite, MySQL, and PostgreSQL databases with Drizzle migrations.
 
 ## Advantages
 
@@ -80,7 +80,11 @@ cache configuration. The initializer fills the admin credentials and secrets
 when the file is created.
 
 ```dotenv
-DATABASE_URL=./db/sqlite.db
+DB_CONNECTION=sqlite
+DB_DATABASE=./db/sqlite.db
+
+# For MySQL/PostgreSQL, use DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME,
+# and DB_PASSWORD in addition to DB_CONNECTION.
 
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-this-password
@@ -90,7 +94,17 @@ ADMIN_JWT_ACCESS_SECRET=generated-secret
 ADMIN_JWT_REFRESH_SECRET=generated-secret
 
 ADMIN_PATH=admin
+STORAGE_TYPE=local
+STORAGE_PATH=./public/storage
+# Legacy fallback for existing projects that do not set STORAGE_PATH.
 UPLOAD_DIR=./public
+
+# AWS S3 storage, when STORAGE_TYPE=s3.
+# S3_REGION=us-east-1
+# S3_BUCKET=my-beaver-media
+# S3_ACCESS_KEY_ID=
+# S3_SECRET_ACCESS_KEY=
+# S3_FORCE_PATH_STYLE=false
 TRUST_PROXY=false
 
 PUBLIC_TURNSTILE_SITE_KEY=
@@ -108,17 +122,55 @@ PUBLIC_CACHE_DIR=
 PUBLIC_CACHE_TTL_SECONDS=
 ```
 
-- `DATABASE_URL` sets the SQLite database location.
+- `DB_CONNECTION` selects `sqlite`, `mysql`, or `pgsql`.
+- For SQLite, `DB_DATABASE` is the database file path; no host, port, username, or password is required.
+- For MySQL and PostgreSQL, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` configure the server connection.
 - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_NAME` define the initial Super Admin account.
 - `SESSION_SECRET`, `ADMIN_JWT_ACCESS_SECRET`, and `ADMIN_JWT_REFRESH_SECRET` protect sessions and admin tokens.
 - `ADMIN_PATH` changes the admin URL segment, such as `/control-panel`.
-- `UPLOAD_DIR` sets the public media directory.
+- `STORAGE_TYPE` selects `local` or `s3`; it defaults to `local`.
+- `STORAGE_PATH` sets the filesystem directory used to save and read media files. Relative paths are resolved from the consuming project root; absolute paths are supported for persistent volumes outside `public`.
+- `UPLOAD_DIR` is the legacy fallback. When `STORAGE_PATH` is not set, media is stored under `<UPLOAD_DIR>/storage`.
+- `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, and `S3_SECRET_ACCESS_KEY` configure AWS S3. `S3_FORCE_PATH_STYLE=false` (the default) uses AWS's virtual-hosted bucket URLs.
 - `TRUST_PROXY` should only be enabled when a trusted proxy overwrites forwarded-IP headers.
 - Turnstile variables protect the public inquiry form in production-like environments.
 - `SMTP_*` variables enable optional email delivery for inquiries.
 - `PUBLIC_CACHE_*` variables enable optional filesystem caching for public data.
 
 Keep `.env` private and do not commit generated secrets to source control.
+
+### Storage backends
+
+Beaver supports two media storage backends. Both use the same public URL format,
+`/storage/<file>`, so switching the backend does not change media URLs.
+
+For local filesystem storage:
+
+```dotenv
+STORAGE_TYPE=local
+STORAGE_PATH=./public/storage
+```
+
+`STORAGE_PATH` may be an absolute path to a persistent volume. If it is not set,
+existing projects fall back to `<UPLOAD_DIR>/storage`.
+
+For AWS S3:
+
+```dotenv
+STORAGE_TYPE=s3
+S3_REGION=us-east-1
+S3_BUCKET=my-beaver-media
+S3_ACCESS_KEY_ID=your-access-key-id
+S3_SECRET_ACCESS_KEY=your-secret-access-key
+S3_FORCE_PATH_STYLE=false
+```
+
+Create the bucket before uploading media. AWS's default credential chain is also
+supported when the explicit S3 key variables are omitted.
+
+The storage route reads objects on the server, so S3 credentials are never sent
+to the browser. Changing `STORAGE_TYPE` does not migrate existing files; copy
+the existing media to the new backend before switching production traffic.
 
 ### `astro.config.mjs`
 
@@ -704,6 +756,72 @@ npx @zbeaver/beaver reset superadmin
 The command reads `ADMIN_EMAIL` and `ADMIN_PASSWORD` from the project's `.env`,
 updates the matching Super Admin account, and revokes its active sessions. The
 password must be at least 12 characters.
+
+## CLI commands
+
+Run these commands from an existing Beaver project. Fresh commands are
+destructive and require `--force`.
+
+```bash
+# Apply pending migrations
+npx @zbeaver/beaver migrate
+
+# Drop Beaver tables, recreate the schema, and run all migrations
+npx @zbeaver/beaver migrate:fresh --force
+
+# Import a custom seed.json into Beaver
+npx @zbeaver/beaver migrate:data ./data/seed.json
+
+# Import a packaged template seed file
+npx @zbeaver/beaver migrate:data --template flowstack
+
+# Validate seed data without writing to the database
+npx @zbeaver/beaver migrate:data ./data/seed.json --dry-run
+
+# Update existing records when their seed values change
+npx @zbeaver/beaver migrate:data ./data/seed.json --overwrite
+
+# Reset the Beaver schema, seed the system, then import custom data
+npx @zbeaver/beaver migrate:data:fresh ./data/seed.json --force
+
+# Seed the system roles, permissions, and Super Admin
+npx @zbeaver/beaver seed
+npx @zbeaver/beaver seed:system
+
+# Seed system data and the demo template in one command
+npx @zbeaver/beaver seed flowstack
+
+# Reset the Beaver schema and seed system data from scratch
+npx @zbeaver/beaver seed:fresh --force
+npx @zbeaver/beaver seed:system:fresh --force
+
+# Seed demo data into an already migrated and system-seeded database
+npx @zbeaver/beaver seed:template flowstack
+
+# Reset the schema, seed system data, then seed the demo template
+npx @zbeaver/beaver seed:template:fresh flowstack --force
+
+# Generate project configuration and install dependencies
+npx @zbeaver/beaver config
+
+# Copy a starter template into the current project
+npx @zbeaver/beaver example flowstack
+```
+
+`seed:system` and `seed:system:fresh` are aliases for the corresponding system
+seed commands. `seed flowstack` remains supported as a shorthand for system
+seed followed by the `flowstack` demo template seed. The Super Admin password
+can be reset with `npx @zbeaver/beaver reset superadmin`.
+
+`migrate:data` accepts the same top-level seed data shape used by the packaged
+Flowstack file: `settings`, `categories`, `posts`, `pages`, and `menus`. Content
+category relationships use `categorySlugs`. Menu relationships can use
+`parentUrl`. Existing records are skipped by default; `--overwrite` updates
+records matched by category slug, content slug, or menu type and URL. The
+command requires the base Beaver seed to have created at least one user, except
+for `migrate:data:fresh`, which performs the schema migration and system seed
+first. Data imports run in a database transaction and report created, updated,
+and skipped records.
 
 ## License
 

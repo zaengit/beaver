@@ -1,11 +1,12 @@
 import { db } from "./index";
 import { permissions, roles, rolePermissions, users } from "./schema";
-import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { generateId, getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index";
 import { getSeedAdminCredentials } from "@zbeaver/beaver/app/config/security";
 import { getPermissionDefinitions, isContentPermissionSlug, type PermissionDefinition } from "@zbeaver/beaver/app/admin/permission-catalog";
 import { syncPermissionRecords } from "@zbeaver/beaver/app/repositories/permissions";
+import { databaseConfig } from "@zbeaver/beaver/app/config/database";
 
 const DEFAULT_ROLES = [
   {
@@ -75,25 +76,25 @@ export async function seed() {
   const now = getCurrentTimestamp();
 
   console.log("  → Inserting permissions...");
-  const permissionSync = syncPermissionRecords(permissionDefinitions);
+  const permissionSync = await syncPermissionRecords(permissionDefinitions);
   console.log(`  ✓ ${permissionSync.total} permissions ready`);
 
-  db.transaction((tx) => {
+  await db.transaction(async (tx) => {
     // Fetch actual permission IDs (in case some already existed)
-    const existingPermissions = tx
+    const existingPermissions = await tx
       .select({ id: permissions.id, slug: permissions.slug })
       .from(permissions)
-      .all();
+      .execute();
 
-    const permissionSlugToId = new Map(
-      existingPermissions.map((p) => [p.slug, p.id])
+    const permissionSlugToId = new Map<string, string>(
+      existingPermissions.map((p: { slug: string; id: string }) => [p.slug, p.id])
     );
 
     // ─── Seed Roles ────────────────────────────────────────────────────────────
     console.log("  → Inserting roles...");
 
     for (const role of DEFAULT_ROLES) {
-      tx.insert(roles)
+      const insert = tx.insert(roles)
         .values({
           id: generateId(),
           name: role.name,
@@ -102,19 +103,25 @@ export async function seed() {
           isSystem: role.isSystem,
           createdAt: now,
           updatedAt: now,
-        })
-        .onConflictDoNothing({ target: roles.slug })
-        .run();
+        }) as unknown as {
+          onDuplicateKeyUpdate: (config: { set: Record<string, unknown> }) => { execute: () => Promise<unknown> }
+          onConflictDoNothing: (config: { target: unknown }) => { execute: () => Promise<unknown> }
+        }
+      if (databaseConfig.connection === "mysql") {
+        await insert.onDuplicateKeyUpdate({ set: { slug: role.slug } }).execute()
+      } else {
+        await insert.onConflictDoNothing({ target: roles.slug }).execute()
+      }
     }
 
     // Fetch actual role IDs
-    const existingRoles = tx
+    const existingRoles = await tx
       .select({ id: roles.id, slug: roles.slug })
       .from(roles)
-      .all();
+      .execute();
 
-    const roleSlugToId = new Map(
-      existingRoles.map((r) => [r.slug, r.id])
+    const roleSlugToId = new Map<string, string>(
+      existingRoles.map((r: { slug: string; id: string }) => [r.slug, r.id])
     );
 
     console.log(`  ✓ ${existingRoles.length} roles ready`);
@@ -126,9 +133,9 @@ export async function seed() {
     for (const role of DEFAULT_ROLES) {
       const roleId = roleSlugToId.get(role.slug);
       if (roleId) {
-        tx.delete(rolePermissions)
-          .where(sql`${rolePermissions.roleId} = ${roleId}`)
-          .run();
+        await tx.delete(rolePermissions)
+          .where(eq(rolePermissions.roleId, roleId))
+          .execute();
       }
     }
 
@@ -148,14 +155,14 @@ export async function seed() {
           continue;
         }
 
-        tx.insert(rolePermissions)
+        await tx.insert(rolePermissions)
           .values({
             id: generateId(),
             roleId,
             permissionId,
             createdAt: now,
           })
-          .run();
+          .execute();
 
         assignmentCount++;
       }
@@ -177,7 +184,7 @@ export async function seed() {
     if (!superAdminRoleId) {
       console.warn("  ⚠ Super Admin role not found, skipping user creation");
     } else {
-      tx.insert(users)
+      const insert = tx.insert(users)
         .values({
           id: generateId(),
           name: resolvedAdminName,
@@ -187,9 +194,15 @@ export async function seed() {
           emailVerified: 1,
           createdAt: now,
           updatedAt: now,
-        })
-        .onConflictDoNothing({ target: users.email })
-        .run();
+        }) as unknown as {
+          onDuplicateKeyUpdate: (config: { set: Record<string, unknown> }) => { execute: () => Promise<unknown> }
+          onConflictDoNothing: (config: { target: unknown }) => { execute: () => Promise<unknown> }
+        }
+      if (databaseConfig.connection === "mysql") {
+        await insert.onDuplicateKeyUpdate({ set: { email: resolvedAdminEmail } }).execute()
+      } else {
+        await insert.onConflictDoNothing({ target: users.email }).execute()
+      }
 
       console.log(`  ✓ Super-admin user ready (${resolvedAdminEmail})`);
     }

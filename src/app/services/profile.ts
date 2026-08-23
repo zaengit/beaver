@@ -16,12 +16,12 @@ export async function updateProfile(
   userId: string,
   data: UpdateProfileInput,
 ): Promise<ServiceResult<UserSafe>> {
-  const existing = findUserByIdRecord(userId)
+  const existing = await findUserByIdRecord(userId)
   if (!existing) return serviceNotFound("User")
 
   // Email uniqueness check
   if (data.email !== undefined && data.email !== (existing as Record<string, unknown>).email) {
-    const conflict = findUserByEmailRecord(data.email)
+    const conflict = await findUserByEmailRecord(data.email)
     if (conflict) return serviceConflict("email", "A user with this email already exists.")
   }
 
@@ -37,11 +37,11 @@ export async function updateProfile(
   if (data.email !== undefined) updateData.email = data.email
   if (data.password !== undefined) updateData.passwordHash = await hashPassword(data.password)
 
-  const updated = updateUserRecord(userId, updateData)
+  const updated = await updateUserRecord(userId, updateData)
   if (!updated) return serviceNotFound("User")
 
   if (data.email !== undefined || data.password !== undefined) {
-    deleteRefreshSessionsForUser(userId)
+    await deleteRefreshSessionsForUser(userId)
   }
 
   return serviceSuccess(updated, "Profile updated.")

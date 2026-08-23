@@ -19,16 +19,16 @@ import { deleteRefreshSessionsForUser } from "@zbeaver/beaver/app/admin/session-
 
 // ─── Get User ─────────────────────────────────────────────────────────────────
 
-export function getUser(id: string): ServiceResult<UserSafe> {
-  const user = findSafeUserByIdRecord(id)
+export async function getUser(id: string): Promise<ServiceResult<UserSafe>> {
+  const user = await findSafeUserByIdRecord(id)
   if (!user) return serviceNotFound("User")
   return serviceSuccess(user, "OK")
 }
 
 // ─── Get User With Email (returns raw user for auth purposes) ─────────────────
 
-export function getUserByEmail(email: string): ServiceResult<typeof import("@zbeaver/beaver/app/db/schema").users.$inferSelect> {
-  const user = findUserByEmailRecord(email)
+export async function getUserByEmail(email: string): Promise<ServiceResult<typeof import("@zbeaver/beaver/app/db/schema").users.$inferSelect>> {
+  const user = await findUserByEmailRecord(email)
   if (!user) return serviceNotFound("User")
   return serviceSuccess(user, "OK")
 }
@@ -37,14 +37,14 @@ export function getUserByEmail(email: string): ServiceResult<typeof import("@zbe
 
 // ─── List Users Paginated ────────────────────────────────────────────────────
 
-export function listUsersPaginated(filters: {
+export async function listUsersPaginated(filters: {
   page?: number
   perPage?: number
   search?: string
   roleId?: string
   sortBy?: string
   sortOrder?: string
-} = {}): ServiceResult<{
+} = {}): Promise<ServiceResult<{
   data: UserListItem[]
   meta: {
     currentPage: number
@@ -54,8 +54,8 @@ export function listUsersPaginated(filters: {
     from: number
     to: number
   }
-}> {
-  const result = listUsersPaginatedRecord(filters)
+}>> {
+  const result = await listUsersPaginatedRecord(filters)
   return serviceSuccess(result, "OK")
 }
 
@@ -64,17 +64,17 @@ export function listUsersPaginated(filters: {
 export async function createUser(data: CreateUserInput, actorId: string): Promise<ServiceResult<UserSafe>> {
   const actor = await loadAdminActor(actorId)
   if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.")
-  if (!canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.")
+  if (!await canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.")
 
   // Check email uniqueness
-  const existing = findUserByEmailRecord(data.email)
+  const existing = await findUserByEmailRecord(data.email)
   if (existing) return serviceConflict("email", "A user with this email already exists.")
 
   const id = generateId()
   const now = getCurrentTimestamp()
   const passwordHash = await hashPassword(data.password)
 
-  const created = createUserRecord({
+  const created = await createUserRecord({
     id,
     name: data.name,
     email: data.email,
@@ -97,27 +97,27 @@ export async function updateUser(
   const actor = await loadAdminActor(currentUserId)
   if (!actor || !hasAnyAdminPermission(actor, ["users.edit", "users.manage"])) return serviceForbidden("Insufficient permissions.")
 
-  const existing = findUserByIdRecord(id)
+  const existing = await findUserByIdRecord(id)
   if (!existing) return serviceNotFound("User")
 
   const isSelf = id === currentUserId
   const changesSensitiveFields = data.email !== undefined || data.password !== undefined || data.roleId !== undefined
   if (!isSelf && changesSensitiveFields) {
-    if (!canManageSensitiveUserFields(actor, id) || !canAssignRole(actor, existing.roleId)) {
+    if (!canManageSensitiveUserFields(actor, id) || !await canAssignRole(actor, existing.roleId)) {
       return serviceForbidden("You cannot manage this user.")
     }
   }
 
   // Email uniqueness check
   if (data.email !== undefined && data.email !== (existing as Record<string, unknown>).email) {
-    const conflict = findUserByEmailRecord(data.email)
+    const conflict = await findUserByEmailRecord(data.email)
     if (conflict) return serviceConflict("email", "A user with this email already exists.")
   }
 
   // Prevent self-role-change
   if (data.roleId !== undefined) {
     if (isSelf) return serviceForbidden("You cannot change your own role.")
-    if (!canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.")
+    if (!await canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.")
   }
 
   const now = getCurrentTimestamp()
@@ -134,11 +134,11 @@ export async function updateUser(
   if (data.password !== undefined) updateData.passwordHash = await hashPassword(data.password)
   if (data.roleId !== undefined) updateData.roleId = data.roleId
 
-  const updated = updateUserRecord(id, updateData)
+  const updated = await updateUserRecord(id, updateData)
   if (!updated) return serviceNotFound("User")
 
   if (data.email !== undefined || data.password !== undefined || data.roleId !== undefined) {
-    deleteRefreshSessionsForUser(id)
+    await deleteRefreshSessionsForUser(id)
   }
 
   return serviceSuccess(updated, "User updated.")
@@ -153,14 +153,14 @@ export async function deleteUser(
   const actor = await loadAdminActor(currentUserId)
   if (!actor || !hasAnyAdminPermission(actor, ["users.delete", "users.manage"])) return serviceForbidden("Insufficient permissions.")
 
-  const existing = findUserByIdRecord(id)
+  const existing = await findUserByIdRecord(id)
   if (!existing) return serviceNotFound("User")
 
   // Prevent self-deletion
   if (id === currentUserId) return serviceForbidden("You cannot delete your own account.")
-  if (!canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot manage this user.")
+  if (!await canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot manage this user.")
 
-  deleteUserRecord(id)
+  await deleteUserRecord(id)
   return serviceSuccess(null, "User deleted.")
 }
 
@@ -170,22 +170,22 @@ export async function duplicateUser(id: string, currentUserId: string): Promise<
   const actor = await loadAdminActor(currentUserId)
   if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.")
 
-  const existing = findUserByIdRecord(id)
+  const existing = await findUserByIdRecord(id)
   if (!existing) return serviceNotFound("User")
-  if (!canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot assign this role.")
+  if (!await canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot assign this role.")
 
   const newId = generateId()
   const now = getCurrentTimestamp()
 
   // Generate unique email
   let newEmail = `duplicated_${existing.email}`
-  if (findUserByEmailRecord(newEmail)) {
+  if (await findUserByEmailRecord(newEmail)) {
     const ts = now.toString(36).slice(-4)
     newEmail = `duplicated_${ts}_${existing.email}`
   }
 
   try {
-    const created = createUserRecord({
+    const created = await createUserRecord({
       id: newId,
       name: `${existing.name} (Copy)`,
       email: newEmail,

@@ -1,12 +1,9 @@
-import { unlink } from "fs/promises"
-import path from "path"
-
 import { adminError, adminSuccess } from "@zbeaver/beaver/app/admin/api-response"
 import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
 import { requirePermission } from "@zbeaver/beaver/app/handlers/guard"
 import { parseBulkIds, parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
 import type { Session } from "@zbeaver/beaver/app/handlers/types"
-import { getUploadDir } from "@zbeaver/beaver/pkg/media/media"
+import { deleteStorageFile } from "@zbeaver/beaver/pkg/storage/storage"
 import {
   deleteMedia as deleteMediaService,
   getMedia,
@@ -27,7 +24,6 @@ async function deleteFileIfExists(fileUrl: string | null) {
     const relativePath = fileUrl.replace(/^\/+/, "")
     const match = relativePath.match(/^storage\/([A-Za-z0-9_-]+?)(?:_(thumb|w640|w1280))?\.[A-Za-z0-9]+$/)
     if (!match) return
-    const uploadRoot = path.resolve(getUploadDir())
     const fileId = match[1]
     const candidates = new Set([
       relativePath,
@@ -36,13 +32,7 @@ async function deleteFileIfExists(fileUrl: string | null) {
       `storage/${fileId}_w1280.webp`,
     ])
     for (const candidate of candidates) {
-      const filePath = path.resolve(uploadRoot, candidate)
-      if (filePath === uploadRoot || !filePath.startsWith(`${uploadRoot}${path.sep}`)) continue
-      try {
-        await unlink(filePath)
-      } catch {
-        // A missing derivative is not a deletion failure.
-      }
+      await deleteStorageFile(candidate)
     }
   } catch {
     // Non-fatal cleanup failure.
@@ -63,7 +53,7 @@ export async function handleListMedia(session: Session, filters: {
   const perm = await requirePermission(session, "media.view")
   if (perm) return perm
 
-  const result = listMediaService(filters)
+  const result = await listMediaService(filters)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 
@@ -72,7 +62,7 @@ export async function handleGetMedia(session: Session, id: string) {
   if (perm) return perm
 
   if (!id) return adminError("Media id is required.", 400)
-  const result = getMedia(id)
+  const result = await getMedia(id)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 404)
 }
 
@@ -85,7 +75,7 @@ export async function handleUpdateMedia(session: Session, id: string, body: unkn
   const parsed = parseWithSchema(updateMediaSchema, body)
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors)
 
-  const result = updateMedia(id, parsed.data)
+  const result = await updateMedia(id, parsed.data)
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result)
 }
 
@@ -95,10 +85,10 @@ export async function handleDeleteMedia(session: Session, id: string) {
   const perm = await requirePermission(session, "media.delete")
   if (perm) return perm
 
-  const mediaResult = getMedia(id)
+  const mediaResult = await getMedia(id)
   if (!mediaResult.success) return adminError(mediaResult.error.message, 404)
 
-  const result = deleteMediaService(id)
+  const result = await deleteMediaService(id)
   if (!result.success) return mapServiceError(result)
 
   await deleteFileIfExists(mediaResult.data.url)
@@ -115,12 +105,12 @@ export async function handleBulkDeleteMedia(session: Session, ids: string[]) {
 
   const results: { id: string; success: boolean }[] = []
   for (const id of parsedIds.ids) {
-    const mediaResult = getMedia(id)
+    const mediaResult = await getMedia(id)
     if (!mediaResult.success) {
       results.push({ id, success: false })
       continue
     }
-    const deleteResult = deleteMediaService(id)
+    const deleteResult = await deleteMediaService(id)
     results.push({ id, success: deleteResult.success })
     if (deleteResult.success) {
       await deleteFileIfExists(mediaResult.data.url)

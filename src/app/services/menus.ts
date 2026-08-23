@@ -17,11 +17,11 @@ import { serviceSuccess, serviceNotFound, serviceValidation } from "@zbeaver/bea
 
 const MAX_MENU_PARENT_DEPTH = 20
 
-function validateParentId(parentId: string | null | undefined, type: string, currentId?: string) {
+async function validateParentId(parentId: string | null | undefined, type: string, currentId?: string) {
   if (!parentId) return null
   if (parentId === currentId) return "A menu item cannot be its own parent."
 
-  const parent = findMenuById(parentId)
+  const parent = await findMenuById(parentId)
   if (!parent || parent.type !== type) return "Parent menu item was not found in this menu."
 
   const visited = new Set<string>(currentId ? [currentId] : [])
@@ -30,7 +30,7 @@ function validateParentId(parentId: string | null | undefined, type: string, cur
     if (visited.has(cursor.id)) return "Menu hierarchy cannot contain a cycle."
     visited.add(cursor.id)
     if (!cursor.parentId) return null
-    cursor = findMenuById(cursor.parentId)
+    cursor = await findMenuById(cursor.parentId)
     if (cursor && cursor.type !== type) return "Parent menu item was not found in this menu."
   }
 
@@ -39,36 +39,36 @@ function validateParentId(parentId: string | null | undefined, type: string, cur
 
 // ─── Get Menu Tree ─────────────────────────────────────────────────────────
 
-export function getMenuTree(type?: string): ServiceResult<MenuTree[]> {
-  const tree = getCachedPublicData(`menu-tree:${type ?? "all"}`, () => getMenuTreeRecords(undefined, type))
+export async function getMenuTree(type?: string): Promise<ServiceResult<MenuTree[]>> {
+  const tree = await getCachedPublicData(`menu-tree:${type ?? "all"}`, () => getMenuTreeRecords(undefined, type))
   return serviceSuccess(tree, "OK")
 }
 
 // ─── List All Menus ────────────────────────────────────────────────────────
 
-export function listMenus(): ServiceResult<MenuRow[]> {
-  const items = listMenuRecords()
+export async function listMenus(): Promise<ServiceResult<MenuRow[]>> {
+  const items = await listMenuRecords()
   return serviceSuccess(items, "OK")
 }
 
 // ─── Get Single Menu ───────────────────────────────────────────────────────
 
-export function getMenu(id: string): ServiceResult<MenuRow> {
-  const item = findMenuById(id)
+export async function getMenu(id: string): Promise<ServiceResult<MenuRow>> {
+  const item = await findMenuById(id)
   if (!item) return serviceNotFound("Menu")
   return serviceSuccess(item, "OK")
 }
 
 // ─── Create Menu ───────────────────────────────────────────────────────────
 
-export function createMenu(data: CreateMenuInput): ServiceResult<MenuRow> {
-  const parentError = validateParentId(data.parentId, data.type)
+export async function createMenu(data: CreateMenuInput): Promise<ServiceResult<MenuRow>> {
+  const parentError = await validateParentId(data.parentId, data.type)
   if (parentError) return serviceValidation(parentError)
 
   const id = generateId()
   const now = getCurrentTimestamp()
 
-  const record = createMenuRecord({
+  const record = await createMenuRecord({
     id,
     title: data.title,
     url: data.url,
@@ -89,13 +89,13 @@ export function createMenu(data: CreateMenuInput): ServiceResult<MenuRow> {
 
 // ─── Update Menu ───────────────────────────────────────────────────────────
 
-export function updateMenu(id: string, data: UpdateMenuInput): ServiceResult<MenuRow> {
-  const existing = findMenuById(id)
+export async function updateMenu(id: string, data: UpdateMenuInput): Promise<ServiceResult<MenuRow>> {
+  const existing = await findMenuById(id)
   if (!existing) return serviceNotFound("Menu")
 
   const nextType = data.type ?? existing.type
   const nextParentId = data.parentId !== undefined ? data.parentId : existing.parentId
-  const parentError = validateParentId(nextParentId, nextType, id)
+  const parentError = await validateParentId(nextParentId, nextType, id)
   if (parentError) return serviceValidation(parentError)
 
   const now = getCurrentTimestamp()
@@ -123,7 +123,7 @@ export function updateMenu(id: string, data: UpdateMenuInput): ServiceResult<Men
   if (data.parentId !== undefined) updateData.parentId = data.parentId
   if (data.status !== undefined) updateData.status = data.status
 
-  const updated = updateMenuRecord(id, updateData)
+  const updated = await updateMenuRecord(id, updateData)
   if (!updated) return serviceNotFound("Menu")
 
   invalidatePublicDataCache()
@@ -145,9 +145,9 @@ function flattenTree(
   return result
 }
 
-export function reorderMenus(data: ReorderMenusInput): ServiceResult<null> {
+export async function reorderMenus(data: ReorderMenusInput): Promise<ServiceResult<null>> {
   const items = flattenTree(data.tree)
-  const existing = listMenuRecords(data.type)
+  const existing = await listMenuRecords(data.type)
   const existingById = new Map(existing.map((item) => [item.id, item]))
   const proposedParents = new Map(existing.map((item) => [item.id, item.parentId]))
   const seen = new Set<string>()
@@ -173,18 +173,18 @@ export function reorderMenus(data: ReorderMenusInput): ServiceResult<null> {
     if (cursor) return serviceValidation("Menu hierarchy is too deep or contains a cycle.")
   }
 
-  reorderMenuTree(items)
+  await reorderMenuTree(items)
   invalidatePublicDataCache()
   return serviceSuccess(null, "Menus reordered.")
 }
 
 // ─── Delete Menu ───────────────────────────────────────────────────────────
 
-export function deleteMenu(id: string): ServiceResult<null> {
-  const existing = findMenuById(id)
+export async function deleteMenu(id: string): Promise<ServiceResult<null>> {
+  const existing = await findMenuById(id)
   if (!existing) return serviceNotFound("Menu")
 
-  deleteMenuRecord(id)
+  await deleteMenuRecord(id)
   invalidatePublicDataCache()
   return serviceSuccess(null, "Menu deleted.")
 }

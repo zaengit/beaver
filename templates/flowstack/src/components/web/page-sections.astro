@@ -37,11 +37,11 @@ const parsedSections = parseJsonArray(sections, MAX_SECTIONS_JSON_LENGTH)
   .map(normalizeSection)
   .filter((section): section is Section => section !== null)
 
-const renderedSections = parsedSections.flatMap((section) => {
+const renderedSections = (await Promise.all(parsedSections.map(async (section) => {
   const template = sectionTemplates.find((candidate) => candidate.type === section.type)
   if (!template) return []
   const contentItemsResult = template.contentType
-    ? listPublishedPostsByType(template.contentType, 1, section.limit && section.limit > 0 ? section.limit : 12, { category: section.category || undefined, sortBy: section.sort_by === "title" ? "title" : "created_at", sortOrder: section.sort_order === "asc" ? "asc" : "desc" })
+    ? await listPublishedPostsByType(template.contentType, 1, section.limit && section.limit > 0 ? section.limit : 12, { category: section.category || undefined, sortBy: section.sort_by === "title" ? "title" : "created_at", sortOrder: section.sort_order === "asc" ? "asc" : "desc" })
     : null
   const firstItem = section.item?.[0]
   return [{
@@ -54,7 +54,7 @@ const renderedSections = parsedSections.flatMap((section) => {
       ? (section.item?.length ? section.item.some((item) => item.form_inquiry !== false) : true)
       : (section.item?.some((item) => item.form_inquiry === true) ?? false),
   }]
-})
+}))).flat()
 ---
 
 {renderedSections.map(({ section, template, contentItems, videoEmbedUrl, mapCoordinate, hasInquiryForm }) => {

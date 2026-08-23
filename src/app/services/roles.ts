@@ -25,21 +25,21 @@ function generateRoleSlug(name: string): string {
 
 // ─── List Roles ──────────────────────────────────────────────────────────────
 
-export function listRolesService(filters?: { search?: string; sortBy?: string; sortOrder?: string }): ServiceResult<(RoleRow & { userCount: number; permissionIds: string[] })[]> {
-  const rolesWithCount = listRolesWithUserCountRecords(filters)
-  const enriched = rolesWithCount.map((role) => ({
+export async function listRolesService(filters?: { search?: string; sortBy?: string; sortOrder?: string }): Promise<ServiceResult<(RoleRow & { userCount: number; permissionIds: string[] })[]>> {
+  const rolesWithCount = await listRolesWithUserCountRecords(filters)
+  const enriched = await Promise.all(rolesWithCount.map(async (role) => ({
     ...role,
-    permissionIds: getRolePermissionIdsRecord(role.id),
-  }))
+    permissionIds: await getRolePermissionIdsRecord(role.id),
+  })))
   return serviceSuccess(enriched, "Roles retrieved.")
 }
 
 // ─── Get Role ────────────────────────────────────────────────────────────────
 
-export function getRole(id: string): ServiceResult<RoleRow & { permissionIds: string[] }> {
-  const role = findRoleByIdRecord(id)
+export async function getRole(id: string): Promise<ServiceResult<RoleRow & { permissionIds: string[] }>> {
+  const role = await findRoleByIdRecord(id)
   if (!role) return serviceNotFound("Role")
-  return serviceSuccess({ ...role, permissionIds: getRolePermissionIdsRecord(id) }, "Role retrieved.")
+  return serviceSuccess({ ...role, permissionIds: await getRolePermissionIdsRecord(id) }, "Role retrieved.")
 }
 
 // ─── List Permissions ────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ export async function syncPermissions(actorId: string): Promise<ServiceResult<Sy
   const actor = await loadAdminActor(actorId)
   if (!actor || !hasAnyAdminPermission(actor, ["roles.manage"])) return serviceForbidden("Insufficient permissions.")
 
-  const result = syncPermissionRecords(getPermissionDefinitions())
+  const result = await syncPermissionRecords(getPermissionDefinitions())
   return serviceSuccess(result, "Permissions synced.")
 }
 
@@ -57,18 +57,18 @@ export async function syncPermissions(actorId: string): Promise<ServiceResult<Sy
 export async function createRole(data: CreateRoleInput, actorId: string): Promise<ServiceResult<RoleRow>> {
   const actor = await loadAdminActor(actorId)
   if (!actor || !hasAnyAdminPermission(actor, ["roles.create", "roles.manage"])) return serviceForbidden("Insufficient permissions.")
-  if (!canAssignPermissionIds(actor, data.permissionIds)) return serviceForbidden("You cannot assign these permissions.")
+  if (!await canAssignPermissionIds(actor, data.permissionIds)) return serviceForbidden("You cannot assign these permissions.")
 
   const slug = data.slug ?? generateRoleSlug(data.name)
 
   // Check slug uniqueness
-  const existing = findRoleBySlugRecord(slug)
+  const existing = await findRoleBySlugRecord(slug)
   if (existing) return serviceConflict("slug", "A role with this slug already exists.")
 
   const id = generateId()
   const now = getCurrentTimestamp()
 
-  const created = createRoleRecord({
+  const created = await createRoleRecord({
     id,
     name: data.name,
     slug,
@@ -87,20 +87,20 @@ export async function updateRole(id: string, data: UpdateRoleInput, actorId: str
   const actor = await loadAdminActor(actorId)
   if (!actor || !hasAnyAdminPermission(actor, ["roles.edit", "roles.manage"])) return serviceForbidden("Insufficient permissions.")
 
-  const existing = findRoleByIdRecord(id)
+  const existing = await findRoleByIdRecord(id)
   if (!existing) return serviceNotFound("Role")
 
   // Prevent modifying system roles
   if (existing.isSystem === 1) return serviceForbidden("System roles cannot be modified.")
-  if (!canManageExistingRole(actor, id)) return serviceForbidden("You cannot manage this role.")
-  if (data.permissionIds !== undefined && !canAssignPermissionIds(actor, data.permissionIds)) {
+  if (!await canManageExistingRole(actor, id)) return serviceForbidden("You cannot manage this role.")
+  if (data.permissionIds !== undefined && !await canAssignPermissionIds(actor, data.permissionIds)) {
     return serviceForbidden("You cannot assign these permissions.")
   }
 
   // Slug uniqueness check
   if (data.name !== undefined) {
     const newSlug = generateRoleSlug(data.name)
-    const conflict = findRoleBySlugRecord(newSlug)
+    const conflict = await findRoleBySlugRecord(newSlug)
     if (conflict && conflict.id !== id) return serviceConflict("slug", "A role with this slug already exists.")
   }
 
@@ -120,10 +120,10 @@ export async function updateRole(id: string, data: UpdateRoleInput, actorId: str
   if (data.description !== undefined) updateData.description = data.description
   if (data.permissionIds !== undefined) updateData.permissionIds = [...new Set(data.permissionIds)]
 
-  const updated = updateRoleRecord(id, updateData)
+  const updated = await updateRoleRecord(id, updateData)
   if (!updated) return serviceNotFound("Role")
 
-  deleteRefreshSessionsForRole(id)
+  await deleteRefreshSessionsForRole(id)
 
   return serviceSuccess(updated, "Role updated.")
 }
@@ -134,16 +134,16 @@ export async function deleteRole(id: string, actorId: string): Promise<ServiceRe
   const actor = await loadAdminActor(actorId)
   if (!actor || !hasAnyAdminPermission(actor, ["roles.delete", "roles.manage"])) return serviceForbidden("Insufficient permissions.")
 
-  const existing = findRoleByIdRecord(id)
+  const existing = await findRoleByIdRecord(id)
   if (!existing) return serviceNotFound("Role")
 
   // Prevent deleting system roles
   if (existing.isSystem === 1) return serviceForbidden("System roles cannot be deleted.")
   if (actor.roleId === id) return serviceForbidden("You cannot delete your own role.")
-  if (!canManageExistingRole(actor, id)) return serviceForbidden("You cannot manage this role.")
+  if (!await canManageExistingRole(actor, id)) return serviceForbidden("You cannot manage this role.")
 
-  deleteRefreshSessionsForRole(id)
-  deleteRoleRecord(id)
+  await deleteRefreshSessionsForRole(id)
+  await deleteRoleRecord(id)
   return serviceSuccess(null, "Role deleted.")
 }
 
@@ -153,26 +153,26 @@ export async function duplicateRole(id: string, actorId: string): Promise<Servic
   const actor = await loadAdminActor(actorId)
   if (!actor || !hasAnyAdminPermission(actor, ["roles.create", "roles.manage"])) return serviceForbidden("Insufficient permissions.")
 
-  const existing = findRoleByIdRecord(id)
+  const existing = await findRoleByIdRecord(id)
   if (!existing) return serviceNotFound("Role")
-  if (!canManageExistingRole(actor, id)) return serviceForbidden("You cannot duplicate this role.")
+  if (!await canManageExistingRole(actor, id)) return serviceForbidden("You cannot duplicate this role.")
 
   const newId = generateId()
   const now = getCurrentTimestamp()
   let newSlug = `${existing.slug}-copy`
   let counter = 1
-  while (findRoleBySlugRecord(newSlug)) {
+  while (await findRoleBySlugRecord(newSlug)) {
     newSlug = `${existing.slug}-copy-${counter}`
     counter++
   }
 
   try {
-    const created = createRoleRecord({
+    const created = await createRoleRecord({
       id: newId,
       name: `${existing.name} (Copy)`,
       slug: newSlug,
       description: existing.description ? `${existing.description} (Copy)` : null,
-      permissionIds: getRolePermissionIdsRecord(existing.id),
+      permissionIds: await getRolePermissionIdsRecord(existing.id),
       createdAt: now,
       updatedAt: now,
     })

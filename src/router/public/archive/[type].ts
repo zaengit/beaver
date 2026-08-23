@@ -3,7 +3,7 @@ import { getServerContentTypeRegistry } from "@zbeaver/beaver/app/registry/serve
 import { getPublicCustomFieldFiltersFromSearchParams, listPublishedPostsByType } from "@zbeaver/beaver/app/public/posts"
 import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-export const GET: AdminRoute = ({ params, request }) => {
+export const GET: AdminRoute = async ({ params, request }) => {
   const registry = getServerContentTypeRegistry()
   const type = params.type
   if (!type || !registry.contentTypes.some((contentType) => contentType.slug === type)) {
@@ -13,7 +13,7 @@ export const GET: AdminRoute = ({ params, request }) => {
   const url = new URL(request.url)
   const requestedPage = Number(url.searchParams.get("page") ?? 1)
   const page = Number.isInteger(requestedPage) ? Math.max(1, requestedPage) : 1
-  const result = listPublishedPostsByType(type, page, 24, {
+  const result = await listPublishedPostsByType(type, page, 24, {
     search: url.searchParams.get("search") ?? undefined,
     category: url.searchParams.get("category") ?? undefined,
     tag: url.searchParams.get("tag") ?? undefined,

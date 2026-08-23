@@ -14,7 +14,7 @@ try {
 
 if (!tag) return new Response("Tag not found", { status: 404 })
 
-const result = listPublishedPostsByTag(tag, 1, 24)
+const result = await listPublishedPostsByTag(tag, 1, 24)
 const posts = result.success ? result.data.data : []
 ---
 

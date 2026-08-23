@@ -41,8 +41,8 @@ async function guardBulkCategory(session: Session, ids: string[], action: Catego
   if (!parsedIds.success) return { perm: adminError(parsedIds.message, 400), ids }
   const allowed = await Promise.all(
     parsedIds.ids.map(async (id) => {
-      const category = findCategoryByIdRecord(id)
-      return category && canCategory(session!.user.id, category.type, action)
+      const category = await findCategoryByIdRecord(id)
+      return category && await canCategory(session!.user.id, category.type, action)
     }),
   )
   return allowed.every(Boolean) ? { ids } : { perm: adminError(INSUFFICIENT, 403), ids }
@@ -62,7 +62,7 @@ export async function handleListCategories(
   const type = filters?.type ?? "post"
   if (!(await canCategory(session!.user.id, type, "view"))) return adminError(INSUFFICIENT, 403)
 
-  const result = listCategories({ ...filters, type })
+  const result = await listCategories({ ...filters, type })
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 
@@ -84,7 +84,7 @@ export async function handleGetCategory(session: Session, id: string) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
 
-  const category = findCategoryByIdRecord(id)
+  const category = await findCategoryByIdRecord(id)
   if (!category) return adminError(CATEGORY_NOT_FOUND, 404)
   if (!(await canCategory(session!.user.id, category.type, "view"))) return adminError(INSUFFICIENT, 403)
 
@@ -95,7 +95,7 @@ export async function handleUpdateCategory(session: Session, id: string, body: u
   const parsed = parseWithSchema(updateCategorySchema, body)
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors)
 
-  const existing = findCategoryByIdRecord(id)
+  const existing = await findCategoryByIdRecord(id)
   if (!existing) return adminError(CATEGORY_NOT_FOUND, 404)
   if (parsed.data.type !== undefined && parsed.data.type !== existing.type)
     return adminError("Category type cannot be changed.", 422)
@@ -124,11 +124,11 @@ export async function handleDuplicateCategory(session: Session, id: string) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
 
-  const existing = findCategoryByIdRecord(id)
+  const existing = await findCategoryByIdRecord(id)
   if (!existing || !(await canCategory(session!.user.id, existing.type, "manage")))
     return adminError(INSUFFICIENT, 403)
 
-  const result = duplicateCategory(id)
+  const result = await duplicateCategory(id)
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result)
 }
 
@@ -136,11 +136,11 @@ export async function handleDeleteCategory(session: Session, id: string) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
 
-  const existing = findCategoryByIdRecord(id)
+  const existing = await findCategoryByIdRecord(id)
   if (!existing || !(await canCategory(session!.user.id, existing.type, "manage")))
     return adminError(INSUFFICIENT, 403)
 
-  const result = deleteCategory(id)
+  const result = await deleteCategory(id)
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result)
 }
 
@@ -151,14 +151,14 @@ export async function handleDeleteCategory(session: Session, id: string) {
 export async function handleBulkDeleteCategories(session: Session, ids: string[]) {
   const { perm } = await guardBulkCategory(session, ids, "manage")
   if (perm) return perm
-  const result = bulkDeleteCategories(ids)
+  const result = await bulkDeleteCategories(ids)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 
 export async function handleBulkDuplicateCategories(session: Session, ids: string[]) {
   const { perm } = await guardBulkCategory(session, ids, "manage")
   if (perm) return perm
-  const result = bulkDuplicateCategories(ids)
+  const result = await bulkDuplicateCategories(ids)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 
@@ -170,6 +170,6 @@ export async function handleBulkUpdateCategoryStatus(
   const action = status === "published" ? "publish" : "unpublish" as CategoryAction
   const { perm } = await guardBulkCategory(session, ids, action)
   if (perm) return perm
-  const result = bulkUpdateCategoryStatus(ids, status)
+  const result = await bulkUpdateCategoryStatus(ids, status)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }

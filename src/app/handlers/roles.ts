@@ -31,10 +31,11 @@ export async function handleListRoles(session: Session, filters?: { search?: str
   const perm = await requirePermission(session, "roles.view")
   if (perm) return perm
 
-  const rolesResult = listRolesService(filters)
+  const rolesResult = await listRolesService(filters)
+  const permissions = await listAllPermissionRecords()
   return adminSuccess({
     roles: rolesResult.success ? rolesResult.data : [],
-    permissions: listAllPermissionRecords(),
+    permissions,
   })
 }
 
@@ -61,9 +62,9 @@ export async function handleGetRole(session: Session, id: string) {
   const perm = await requirePermission(session, "roles.view")
   if (perm) return perm
 
-  const result = getRole(id)
+  const result = await getRole(id)
   if (!result.success) return adminError(result.error.message, 404)
-  return adminSuccess({ role: result.data, permissions: listAllPermissionRecords() })
+  return adminSuccess({ role: result.data, permissions: await listAllPermissionRecords() })
 }
 
 export async function handleUpdateRole(session: Session, id: string, body: unknown) {

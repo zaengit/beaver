@@ -4,15 +4,17 @@ import { db } from "@zbeaver/beaver/app/db"
 import { media } from "@zbeaver/beaver/app/db/schema"
 import type { MediaRecord } from "@zbeaver/beaver/app/models/media"
 import { clampPagination } from "@zbeaver/beaver/pkg/utils/pagination"
+import { affectedRows } from "@zbeaver/beaver/app/db/query"
 
 export type MediaRow = MediaRecord
 const MAX_FILTER_TEXT_LENGTH = 100
 
-export function findMediaByIdRecord(id: string) {
-  return db.select().from(media).where(eq(media.id, id)).get() as MediaRow | undefined
+export async function findMediaByIdRecord(id: string) {
+  const rows = await db.select().from(media).where(eq(media.id, id)).limit(1).execute()
+  return rows[0] as MediaRow | undefined
 }
 
-export function listMediaRecords(filters: {
+export async function listMediaRecords(filters: {
   page?: number
   perPage?: number
   search?: string
@@ -45,9 +47,9 @@ export function listMediaRecords(filters: {
   if (whereClause) query = query.where(whereClause) as typeof query
 
   const totalQuery = db.select({ value: count() }).from(media)
-  const totalRows = whereClause ? (totalQuery.where(whereClause) as typeof totalQuery).all() : totalQuery.all()
+  const totalRows = whereClause ? await (totalQuery.where(whereClause) as typeof totalQuery).execute() : await totalQuery.execute()
   const total = totalRows[0]?.value ?? 0
-  const data = query.orderBy(desc(media.createdAt)).limit(perPage).offset(offset).all() as MediaRow[]
+  const data = await query.orderBy(desc(media.createdAt)).limit(perPage).offset(offset).execute() as MediaRow[]
 
   return {
     data,
@@ -62,7 +64,7 @@ export function listMediaRecords(filters: {
   }
 }
 
-export function createMediaRecord(input: {
+export async function createMediaRecord(input: {
   id: string
   userId: string
   name: string
@@ -79,21 +81,22 @@ export function createMediaRecord(input: {
   createdAt: number
   updatedAt: number
 }) {
-  db.insert(media).values(input).run()
-  return findMediaByIdRecord(input.id)!
+  await db.insert(media).values(input).execute()
+  return (await findMediaByIdRecord(input.id))!
 }
 
-export function updateMediaRecord(id: string, input: {
+export async function updateMediaRecord(id: string, input: {
   name?: string
   alt?: string | null
   caption?: string | null
   folder?: string | null
   updatedAt: number
 }) {
-  db.update(media).set(input).where(eq(media.id, id)).run()
-  return findMediaByIdRecord(id) ?? null
+  await db.update(media).set(input).where(eq(media.id, id)).execute()
+  return await findMediaByIdRecord(id) ?? null
 }
 
-export function deleteMediaRecord(id: string) {
-  return db.delete(media).where(eq(media.id, id)).run().changes > 0
+export async function deleteMediaRecord(id: string) {
+  const result = await db.delete(media).where(eq(media.id, id)).execute()
+  return affectedRows(result) > 0
 }

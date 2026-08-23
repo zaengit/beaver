@@ -4,6 +4,7 @@ import { db } from "@zbeaver/beaver/app/db"
 import { categories } from "@zbeaver/beaver/app/db/schema"
 import type { CategoryRecord } from "@zbeaver/beaver/app/models/category"
 import { sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
+import { affectedRows } from "@zbeaver/beaver/app/db/query"
 
 export type CategoryRow = Pick<
   CategoryRecord,
@@ -12,8 +13,8 @@ export type CategoryRow = Pick<
 
 const MAX_CATEGORY_ROWS = 5_000
 
-export function findCategoryByIdRecord(id: string) {
-  return db
+export async function findCategoryByIdRecord(id: string) {
+  const rows = await db
     .select({
       id: categories.id,
       name: categories.name,
@@ -27,11 +28,13 @@ export function findCategoryByIdRecord(id: string) {
     })
     .from(categories)
     .where(eq(categories.id, id))
-    .get() as CategoryRow | undefined
+    .limit(1)
+    .execute()
+  return rows[0] as CategoryRow | undefined
 }
 
-export function findCategoryBySlugRecord(slug: string) {
-  return db
+export async function findCategoryBySlugRecord(slug: string) {
+  const rows = await db
     .select({
       id: categories.id,
       name: categories.name,
@@ -45,10 +48,12 @@ export function findCategoryBySlugRecord(slug: string) {
     })
     .from(categories)
     .where(eq(categories.slug, slug))
-    .get() as CategoryRow | undefined
+    .limit(1)
+    .execute()
+  return rows[0] as CategoryRow | undefined
 }
 
-export function listCategoryRecords(filters?: { type?: string; search?: string; sortBy?: string; sortOrder?: string }) {
+export async function listCategoryRecords(filters?: { type?: string; search?: string; sortBy?: string; sortOrder?: string }) {
   const conditions: SQL<unknown>[] = []
   const type = filters?.type?.slice(0, 64)
   const search = filters?.search?.slice(0, 100)
@@ -87,20 +92,21 @@ export function listCategoryRecords(filters?: { type?: string; search?: string; 
     .from(categories)
     .orderBy(orderColumn)
 
-  return (conditions.length > 0 ? query.where(and(...conditions)) : query).limit(MAX_CATEGORY_ROWS).all() as CategoryRow[]
+  return await (conditions.length > 0 ? query.where(and(...conditions)) : query).limit(MAX_CATEGORY_ROWS).execute() as CategoryRow[]
 }
 
-export function categorySlugExistsRecord(slug: string, excludeId?: string) {
-  const rows = db
+export async function categorySlugExistsRecord(slug: string, excludeId?: string) {
+  const rows = await db
     .select({ id: categories.id })
     .from(categories)
     .where(eq(categories.slug, slug))
-    .all()
+    .limit(1)
+    .execute()
 
-  return excludeId ? rows.some((row) => row.id !== excludeId) : rows.length > 0
+  return excludeId ? rows.some((row: { id: string }) => row.id !== excludeId) : rows.length > 0
 }
 
-export function createCategoryRecord(input: {
+export async function createCategoryRecord(input: {
   id: string
   name: string
   slug: string
@@ -111,11 +117,11 @@ export function createCategoryRecord(input: {
   createdAt: number
   updatedAt: number
 }) {
-  db.insert(categories).values({
+  await db.insert(categories).values({
     ...input,
     name: sanitizeText(input.name),
     description: input.description ? sanitizeText(input.description) : null,
-  }).run()
+  }).execute()
 
   return {
     id: input.id,
@@ -130,7 +136,7 @@ export function createCategoryRecord(input: {
   }
 }
 
-export function updateCategoryRecord(id: string, input: {
+export async function updateCategoryRecord(id: string, input: {
   name?: string
   slug?: string
   type?: string
@@ -147,11 +153,12 @@ export function updateCategoryRecord(id: string, input: {
   if (input.image !== undefined) updates.image = input.image
   if (input.status !== undefined) updates.status = input.status
 
-  db.update(categories).set(updates).where(eq(categories.id, id)).run()
+  await db.update(categories).set(updates).where(eq(categories.id, id)).execute()
 
-  return findCategoryByIdRecord(id) ?? null
+  return await findCategoryByIdRecord(id) ?? null
 }
 
-export function deleteCategoryRecord(id: string) {
-  return db.delete(categories).where(eq(categories.id, id)).run().changes > 0
+export async function deleteCategoryRecord(id: string) {
+  const result = await db.delete(categories).where(eq(categories.id, id)).execute()
+  return affectedRows(result) > 0
 }

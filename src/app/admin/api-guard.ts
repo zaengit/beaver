@@ -24,9 +24,9 @@ export async function getAdminSession(cookies: AstroLikeCookies) {
   try {
     const payload = await verifyAccessToken(access)
     if (typeof payload.sessionId !== "string") return null
-    const stored = findActiveRefreshSession(payload.sessionId)
+    const stored = await findActiveRefreshSession(payload.sessionId)
     if (!stored || stored.userId !== payload.sub) return null
-    const user = findSafeUserByIdRecord(payload.sub)
+    const user = await findSafeUserByIdRecord(payload.sub)
     if (!user) return null
     return { user, permissions: await getUserPermissions(user.id) }
   } catch {
@@ -40,10 +40,10 @@ export async function refreshAdminSession(cookies: AstroLikeCookies) {
 
   try {
     const payload = await verifyRefreshToken(refresh)
-    const stored = consumeRefreshSession(payload.sessionId)
+    const stored = await consumeRefreshSession(payload.sessionId)
     if (!stored || stored.userId !== payload.sub) return null
 
-    const user = findSafeUserByIdRecord(payload.sub)
+    const user = await findSafeUserByIdRecord(payload.sub)
     if (!user) return null
 
     const permissions = await getUserPermissions(user.id)
@@ -60,7 +60,7 @@ export async function refreshAdminSession(cookies: AstroLikeCookies) {
       sessionId: nextSessionId,
     })
 
-    saveRefreshSession(nextSessionId, user.id, getRefreshSessionExpiry())
+    await saveRefreshSession(nextSessionId, user.id, getRefreshSessionExpiry())
     cookies.set(ADMIN_ACCESS_COOKIE, nextAccess, buildAdminAccessCookieOptions())
     cookies.set(ADMIN_REFRESH_COOKIE, nextRefresh, buildAdminRefreshCookieOptions())
 

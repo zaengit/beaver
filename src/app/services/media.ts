@@ -19,11 +19,9 @@ import {
   generateMediaPath,
   generateThumbnailPath,
   getExtensionFromMimeType,
-  getUploadDir,
 } from "@zbeaver/beaver/pkg/media/media"
 import sharp from "sharp"
-import path from "path"
-import fs from "fs"
+import { writeStorageFile } from "@zbeaver/beaver/pkg/storage/storage"
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -67,21 +65,21 @@ async function validateFileContents(buffer: Buffer, mimeType: string): Promise<{
 
 // ─── List Media ─────────────────────────────────────────────────────────────
 
-export function listMediaService(filters: {
+export async function listMediaService(filters: {
   page?: number
   perPage?: number
   search?: string
   folder?: string | null
   mimeType?: string
-} = {}): ServiceResult<unknown> {
-  const result = listMediaRecords(filters)
+} = {}): Promise<ServiceResult<unknown>> {
+  const result = await listMediaRecords(filters)
   return serviceSuccess(result, "OK")
 }
 
 // ─── Get Media ──────────────────────────────────────────────────────────────
 
-export function getMedia(id: string): ServiceResult<MediaRow> {
-  const item = findMediaByIdRecord(id)
+export async function getMedia(id: string): Promise<ServiceResult<MediaRow>> {
+  const item = await findMediaByIdRecord(id)
   if (!item) return serviceNotFound("Media")
   return serviceSuccess(item, "OK")
 }
@@ -118,7 +116,7 @@ export async function uploadMediaForUser(
     file.type,
   )
 
-  return createMediaRecord({
+  return await createMediaRecord({
     id: fileResult.id,
     userId,
     name: metadata.name ?? file.name,
@@ -137,7 +135,7 @@ export async function uploadMediaForUser(
 
 // ─── Create Media Record (after file is saved to disk) ──────────────────────
 
-function createMediaRecord(params: {
+async function createMediaRecord(params: {
   userId: string
   name: string
   fileName: string
@@ -151,11 +149,11 @@ function createMediaRecord(params: {
   height?: number | null
   folder?: string | null
   id?: string
-}): ServiceResult<MediaRow> {
+}): Promise<ServiceResult<MediaRow>> {
   const id = params.id ?? generateId()
   const now = getCurrentTimestamp()
 
-  const record = repoCreateMedia({
+  const record = await repoCreateMedia({
     id,
     userId: params.userId,
     name: params.name || params.fileName,
@@ -178,8 +176,8 @@ function createMediaRecord(params: {
 
 // ─── Update Media ───────────────────────────────────────────────────────────
 
-export function updateMedia(id: string, data: UpdateMediaInput): ServiceResult<MediaRow> {
-  const existing = findMediaByIdRecord(id)
+export async function updateMedia(id: string, data: UpdateMediaInput): Promise<ServiceResult<MediaRow>> {
+  const existing = await findMediaByIdRecord(id)
   if (!existing) return serviceNotFound("Media")
   const now = getCurrentTimestamp()
 
@@ -196,7 +194,7 @@ export function updateMedia(id: string, data: UpdateMediaInput): ServiceResult<M
   if (data.caption !== undefined) updateData.caption = data.caption
   if (data.folder !== undefined) updateData.folder = data.folder
 
-  const updated = updateMediaRecord(id, updateData)
+  const updated = await updateMediaRecord(id, updateData)
   if (!updated) return serviceNotFound("Media")
 
   return serviceSuccess(updated, "Media updated.")
@@ -204,11 +202,11 @@ export function updateMedia(id: string, data: UpdateMediaInput): ServiceResult<M
 
 // ─── Delete Media ───────────────────────────────────────────────────────────
 
-export function deleteMedia(id: string): ServiceResult<null> {
-  const existing = findMediaByIdRecord(id)
+export async function deleteMedia(id: string): Promise<ServiceResult<null>> {
+  const existing = await findMediaByIdRecord(id)
   if (!existing) return serviceNotFound("Media")
 
-  deleteMediaRecord(id)
+  await deleteMediaRecord(id)
   return serviceSuccess(null, "Media deleted.")
 }
 
@@ -232,13 +230,7 @@ async function processUploadedFile(
   const fileId = id ?? generateId()
   const extension = getExtensionFromMimeType(mimeType)
   const relativePath = generateMediaPath(fileId, extension)
-  const uploadDir = getUploadDir()
-  const absolutePath = path.resolve(uploadDir, relativePath)
-
-  const dir = path.dirname(absolutePath)
-  fs.mkdirSync(dir, { recursive: true })
-
-  fs.writeFileSync(absolutePath, buffer)
+  await writeStorageFile(relativePath, buffer)
 
   let width: number | null = null
   let height: number | null = null
@@ -251,21 +243,23 @@ async function processUploadedFile(
       height = metadata.height ?? null
 
       const thumbRelativePath = generateThumbnailPath(fileId)
-      const thumbAbsolutePath = path.resolve(uploadDir, thumbRelativePath)
-
-      await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS })
+      const thumbnail = await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS })
         .resize(300, 300, { fit: "cover" })
         .webp({ quality: 80 })
-        .toFile(thumbAbsolutePath)
+        .toBuffer()
+      await writeStorageFile(thumbRelativePath, thumbnail)
 
       if (mimeType !== "image/gif") {
         await Promise.all(
           [640, 1280]
             .filter((responsiveWidth) => width !== null && width > responsiveWidth)
-            .map((responsiveWidth) => sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS })
-              .resize({ width: responsiveWidth, withoutEnlargement: true })
-              .webp({ quality: 82 })
-              .toFile(path.resolve(uploadDir, relativePath.replace(/\.[^.]+$/, `_w${responsiveWidth}.webp`)))),
+            .map(async (responsiveWidth) => {
+              const variant = await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS })
+                .resize({ width: responsiveWidth, withoutEnlargement: true })
+                .webp({ quality: 82 })
+                .toBuffer()
+              await writeStorageFile(relativePath.replace(/\.[^.]+$/, `_w${responsiveWidth}.webp`), variant)
+            }),
         )
       }
 

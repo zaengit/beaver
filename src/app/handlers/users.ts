@@ -35,7 +35,7 @@ export async function handleListUsers(session: Session, filters?: {
   const perm = await requirePermission(session, "users.view")
   if (perm) return perm
 
-  const result = listUsersPaginated(filters ?? {})
+  const result = await listUsersPaginated(filters ?? {})
   return result.success ? adminSuccess(result.data) : adminError(result.error.message, 500)
 }
 
@@ -54,7 +54,7 @@ export async function handleGetUser(session: Session, id: string) {
   const perm = await requirePermission(session, "users.view")
   if (perm) return perm
 
-  const result = getUser(id)
+  const result = await getUser(id)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 404)
 }
 

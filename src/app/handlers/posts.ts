@@ -35,7 +35,7 @@ async function canPost(userId: string, type: string, action: ContentAction) {
 }
 
 async function canEditPost(userId: string, id: string) {
-  const result = getPost(id)
+  const result = await getPost(id)
   if (!result.success) return false
   if (await canPost(userId, result.data.type, "edit")) return true
   return (await canPost(userId, result.data.type, "edit-own")) && result.data.authorId === userId
@@ -57,7 +57,7 @@ async function guardBulkPost(session: Session, ids: string[], action: ContentAct
   if (!parsedIds.success) return adminError(parsedIds.message, 400)
   const allowed = await Promise.all(
     parsedIds.ids.map(async (id) => {
-      const post = getPost(id)
+      const post = await getPost(id)
       return post.success && canPost(session!.user.id, post.data.type, action)
     }),
   )
@@ -75,7 +75,7 @@ export async function handleListPosts(session: Session, filters: PostFilters) {
   const type = filters.type ?? "post"
   if (!(await canPost(session!.user.id, type, "view"))) return adminError(INSUFFICIENT, 403)
 
-  const result = listPosts({ ...filters, type })
+  const result = await listPosts({ ...filters, type })
   return result.success ? adminSuccess(result.data) : mapServiceError(result)
 }
 
@@ -86,7 +86,7 @@ export async function handleCreatePost(session: Session, body: unknown) {
   const perm = await guardPost(session, parsed.data.type, "create")
   if (perm) return perm
 
-  const result = createPost(parsed.data, session!.user.id)
+  const result = await createPost(parsed.data, session!.user.id)
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result)
 }
 
@@ -94,7 +94,7 @@ export async function handleGetPost(session: Session, id: string) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
 
-  const result = getPost(id)
+  const result = await getPost(id)
   if (!result.success) return adminError(result.error.message, 404)
 
   if (!(await canPost(session!.user.id, result.data.type, "view"))) return adminError(INSUFFICIENT, 403)
@@ -108,7 +108,7 @@ export async function handleUpdatePost(session: Session, id: string, body: unkno
   const parsed = parseWithSchema(updatePostSchema, body)
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors)
 
-  const existing = getPost(id)
+  const existing = await getPost(id)
   if (!existing.success) return adminError(existing.error.message, 404)
   if (parsed.data.type !== undefined && parsed.data.type !== existing.data.type)
     return adminError("Content type cannot be changed.", 422)
@@ -125,7 +125,7 @@ export async function handleUpdatePost(session: Session, id: string, body: unkno
   )
     return adminError(INSUFFICIENT, 403)
 
-  const result = updatePost(id, parsed.data)
+  const result = await updatePost(id, parsed.data)
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result)
 }
 
@@ -133,7 +133,7 @@ export async function handleDuplicatePost(session: Session, id: string) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
 
-  const existing = getPost(id)
+  const existing = await getPost(id)
   if (
     !existing.success ||
     !(await canPost(session!.user.id, existing.data.type, "create")) ||
@@ -142,7 +142,7 @@ export async function handleDuplicatePost(session: Session, id: string) {
     return adminError(INSUFFICIENT, 403)
   }
 
-  const result = duplicatePost(id, session!.user.id)
+  const result = await duplicatePost(id, session!.user.id)
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result)
 }
 
@@ -150,11 +150,11 @@ export async function handleDeletePost(session: Session, id: string) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
 
-  const existing = getPost(id)
+  const existing = await getPost(id)
   if (!existing.success) return adminError(existing.error.message, 404)
   if (!(await canPost(session!.user.id, existing.data.type, "delete"))) return adminError(INSUFFICIENT, 403)
 
-  const result = deletePost(id)
+  const result = await deletePost(id)
   return result.success ? adminSuccess(null, result.message) : mapServiceError(result)
 }
 
@@ -165,21 +165,21 @@ export async function handleDeletePost(session: Session, id: string) {
 export async function handleBulkDeletePosts(session: Session, ids: string[]) {
   const perm = await guardBulkPost(session, ids, "delete")
   if (perm) return perm
-  const result = bulkDeletePosts(ids)
+  const result = await bulkDeletePosts(ids)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 
 export async function handleBulkPublishPosts(session: Session, ids: string[]) {
   const perm = await guardBulkPost(session, ids, "publish")
   if (perm) return perm
-  const result = bulkPublishPosts(ids)
+  const result = await bulkPublishPosts(ids)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 
 export async function handleBulkUnpublishPosts(session: Session, ids: string[]) {
   const perm = await guardBulkPost(session, ids, "unpublish")
   if (perm) return perm
-  const result = bulkUnpublishPosts(ids)
+  const result = await bulkUnpublishPosts(ids)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 
@@ -191,7 +191,7 @@ export async function handleBulkDuplicatePosts(session: Session, ids: string[]) 
 
   const allowed = await Promise.all(
     parsedIds.ids.map(async (id) => {
-      const post = getPost(id)
+      const post = await getPost(id)
       return (
         post.success &&
         (await canPost(session!.user.id, post.data.type, "create")) &&
@@ -201,6 +201,6 @@ export async function handleBulkDuplicatePosts(session: Session, ids: string[]) 
   )
   if (!allowed.every(Boolean)) return adminError(INSUFFICIENT, 403)
 
-  const result = bulkDuplicatePosts(parsedIds.ids, session!.user.id)
+  const result = await bulkDuplicatePosts(parsedIds.ids, session!.user.id)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }

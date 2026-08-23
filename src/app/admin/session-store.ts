@@ -1,5 +1,6 @@
 import { eq, and, gt, inArray, lt, or } from "drizzle-orm"
 import { db } from "@zbeaver/beaver/app/db"
+import { databaseConfig } from "@zbeaver/beaver/app/config/database"
 import { adminRefreshSessions, users } from "@zbeaver/beaver/app/db/schema"
 import { getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
 
@@ -24,59 +25,79 @@ export function getRefreshSessionExpiry() {
   return getCurrentTimestamp() + REFRESH_SESSION_TTL_SECONDS
 }
 
-export function saveRefreshSession(sessionId: string, userId: string, expiresAt: number) {
-  db.insert(adminRefreshSessions)
+export async function saveRefreshSession(sessionId: string, userId: string, expiresAt: number) {
+  await db.insert(adminRefreshSessions)
     .values({
       id: sessionId,
       userId,
       expiresAt: normalizeExpiry(expiresAt),
       createdAt: getCurrentTimestamp(),
     })
-    .run()
+    .execute()
 }
 
-export function deleteRefreshSession(sessionId: string) {
-  db.delete(adminRefreshSessions)
+export async function deleteRefreshSession(sessionId: string) {
+  await db.delete(adminRefreshSessions)
     .where(eq(adminRefreshSessions.id, sessionId))
-    .run()
+    .execute()
 }
 
-export function deleteRefreshSessionsForUser(userId: string) {
-  db.delete(adminRefreshSessions)
+export async function deleteRefreshSessionsForUser(userId: string) {
+  await db.delete(adminRefreshSessions)
     .where(eq(adminRefreshSessions.userId, userId))
-    .run()
+    .execute()
 }
 
-export function deleteRefreshSessionsForRole(roleId: string) {
-  const roleUsers = db
+export async function deleteRefreshSessionsForRole(roleId: string) {
+  const roleUsers = await db
     .select({ id: users.id })
     .from(users)
     .where(eq(users.roleId, roleId))
-    .all()
+    .execute()
   if (roleUsers.length === 0) return
 
-  db.delete(adminRefreshSessions)
-    .where(inArray(adminRefreshSessions.userId, roleUsers.map((user) => user.id)))
-    .run()
+  await db.delete(adminRefreshSessions)
+    .where(inArray(adminRefreshSessions.userId, roleUsers.map((user: { id: string }) => user.id)))
+    .execute()
 }
 
-export function findActiveRefreshSession(sessionId: string) {
+export async function findActiveRefreshSession(sessionId: string) {
   const now = getCurrentTimestamp()
-  const row = db
+  const rows = await db
     .select({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt })
     .from(adminRefreshSessions)
     .where(and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now)))
-    .get()
+    .limit(1)
+    .execute()
+  const row = rows[0]
   return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null
 }
 
 /** Atomically consumes one non-expired refresh session, preventing replay races. */
-export function consumeRefreshSession(sessionId: string): { userId: string; expiresAt: number } | null {
+export async function consumeRefreshSession(sessionId: string): Promise<{ userId: string; expiresAt: number } | null> {
   const now = getCurrentTimestamp()
-  const row = db
-    .delete(adminRefreshSessions)
-    .where(and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now)))
-    .returning({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt })
-    .get()
-  return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null
+  const condition = and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now))
+
+  if (databaseConfig.connection !== "mysql") {
+    const rows = await db
+      .delete(adminRefreshSessions)
+      .where(condition)
+      .returning({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt })
+      .execute()
+    const row = rows[0]
+    return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null
+  }
+
+  return await db.transaction(async (tx) => {
+    const rows = await tx
+      .select({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt })
+      .from(adminRefreshSessions)
+      .where(condition)
+      .limit(1)
+      .execute()
+    const row = rows[0]
+    if (!row) return null
+    await tx.delete(adminRefreshSessions).where(condition).execute()
+    return { ...row, expiresAt: normalizeExpiry(row.expiresAt) }
+  })
 }

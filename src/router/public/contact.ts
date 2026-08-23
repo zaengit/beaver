@@ -65,7 +65,7 @@ export const POST: AdminRoute = async ({ request }) => {
   const user = process.env.SMTP_USER
   const password = process.env.SMTP_PASSWORD
   const from = process.env.SMTP_FROM
-  const recipients = getSiteSettings().email_notifications
+  const recipients = (await getSiteSettings()).email_notifications
   if (!host || !Number.isInteger(port) || port < 1 || port > 65535 || !from || recipients.length === 0 || Boolean(user) !== Boolean(password)) {
     return Response.json({ success: false, message: "Contact email is not configured." }, { status: 503 })
   }

@@ -4,6 +4,7 @@ import { db } from "@zbeaver/beaver/app/db"
 import { menus } from "@zbeaver/beaver/app/db/schema"
 import type { MenuRecord } from "@zbeaver/beaver/app/models/menu"
 import { sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
+import { affectedRows } from "@zbeaver/beaver/app/db/query"
 
 export type MenuRow = MenuRecord
 export interface MenuTree {
@@ -20,19 +21,20 @@ export interface MenuTree {
 
 const MAX_MENU_ROWS = 5_000
 
-export function findMenuById(id: string) {
-  return db.select().from(menus).where(eq(menus.id, id)).get() as MenuRow | undefined
+export async function findMenuById(id: string) {
+  const rows = await db.select().from(menus).where(eq(menus.id, id)).limit(1).execute()
+  return rows[0] as MenuRow | undefined
 }
 
-export function listMenus(type?: string, publishedOnly = false) {
+export async function listMenus(type?: string, publishedOnly = false) {
   const query = db.select().from(menus)
   const condition = type ? eq(menus.type, type) : undefined
   const where = publishedOnly ? (condition ? and(condition, eq(menus.status, "published")) : eq(menus.status, "published")) : condition
-  return (where ? query.where(where) : query).limit(MAX_MENU_ROWS).all() as MenuRow[]
+  return await (where ? query.where(where) : query).limit(MAX_MENU_ROWS).execute() as MenuRow[]
 }
 
-export function getMenuTreeRecords(items?: MenuRow[], type?: string) {
-  const rows = items ?? listMenus(type, true)
+export async function getMenuTreeRecords(items?: MenuRow[], type?: string) {
+  const rows = items ?? await listMenus(type, true)
   const map = new Map<string, MenuTree>()
   const roots: MenuTree[] = []
 
@@ -87,7 +89,7 @@ export function getMenuTreeRecords(items?: MenuRow[], type?: string) {
   return sortedRoots
 }
 
-export function createMenuRecord(input: {
+export async function createMenuRecord(input: {
   id: string
   title: string
   url: string
@@ -101,7 +103,7 @@ export function createMenuRecord(input: {
   createdAt: number
   updatedAt: number
 }) {
-  db.insert(menus).values({
+  await db.insert(menus).values({
     id: input.id,
     title: sanitizeText(input.title),
     url: input.url,
@@ -114,12 +116,12 @@ export function createMenuRecord(input: {
     parentId: input.parentId ?? null,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt,
-  }).run()
+  }).execute()
 
-  return findMenuById(input.id)!
+  return (await findMenuById(input.id))!
 }
 
-export function updateMenuRecord(id: string, input: {
+export async function updateMenuRecord(id: string, input: {
   title?: string
   url?: string
   type?: string
@@ -142,20 +144,21 @@ export function updateMenuRecord(id: string, input: {
   if (input.status !== undefined) updateData.status = input.status
   if (input.parentId !== undefined) updateData.parentId = input.parentId ?? null
 
-  db.update(menus).set(updateData).where(eq(menus.id, id)).run()
-  return findMenuById(id) ?? null
+  await db.update(menus).set(updateData).where(eq(menus.id, id)).execute()
+  return await findMenuById(id) ?? null
 }
 
-export function deleteMenuRecord(id: string) {
-  db.update(menus).set({ parentId: null }).where(eq(menus.parentId, id)).run()
-  return db.delete(menus).where(eq(menus.id, id)).run().changes > 0
+export async function deleteMenuRecord(id: string) {
+  await db.update(menus).set({ parentId: null }).where(eq(menus.parentId, id)).execute()
+  const result = await db.delete(menus).where(eq(menus.id, id)).execute()
+  return affectedRows(result) > 0
 }
 
-export function reorderMenuTree(items: { id: string; position: number; parentId: string | null }[]) {
+export async function reorderMenuTree(items: { id: string; position: number; parentId: string | null }[]) {
   for (const item of items) {
-    db.update(menus)
+    await db.update(menus)
       .set({ position: item.position, parentId: item.parentId, updatedAt: Date.now() })
       .where(eq(menus.id, item.id))
-      .run()
+      .execute()
   }
 }

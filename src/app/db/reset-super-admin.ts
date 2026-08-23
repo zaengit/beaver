@@ -6,7 +6,7 @@ import { adminRefreshSessions, roles, users } from "@zbeaver/beaver/app/db/schem
 import { getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
 import { assertSecureSeedEnvironment } from "@zbeaver/beaver/app/config/security"
 
-export function resetSuperAdminPassword() {
+export async function resetSuperAdminPassword() {
   assertSecureSeedEnvironment()
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase()
   const password = process.env.ADMIN_PASSWORD
@@ -14,28 +14,32 @@ export function resetSuperAdminPassword() {
     throw new Error("ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters are required.")
   }
 
-  const superAdmin = db.select({ id: roles.id })
+  const superAdminRows = await db.select({ id: roles.id })
     .from(roles)
     .where(eq(roles.slug, "super-admin"))
-    .get()
+    .limit(1)
+    .execute()
+  const superAdmin = superAdminRows[0]
   if (!superAdmin) throw new Error("The super-admin role does not exist. Run beaver seed first.")
 
-  const user = db.select({ id: users.id })
+  const userRows = await db.select({ id: users.id })
     .from(users)
     .where(and(eq(users.email, email), eq(users.roleId, superAdmin.id)))
-    .get()
+    .limit(1)
+    .execute()
+  const user = userRows[0]
   if (!user) throw new Error(`No super-admin user found for ${email}.`)
 
   const passwordHash = bcrypt.hashSync(password, 12)
   const now = getCurrentTimestamp()
-  db.transaction((tx) => {
-    tx.update(users)
+  await db.transaction(async (tx) => {
+    await tx.update(users)
       .set({ password: passwordHash, updatedAt: now })
       .where(eq(users.id, user.id))
-      .run()
-    tx.delete(adminRefreshSessions)
+      .execute()
+    await tx.delete(adminRefreshSessions)
       .where(eq(adminRefreshSessions.userId, user.id))
-      .run()
+      .execute()
   })
 
   return { email }

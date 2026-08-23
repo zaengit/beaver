@@ -1,25 +1,32 @@
 import { existsSync, readFileSync, mkdirSync, chmodSync, lstatSync, statSync, writeFileSync, renameSync, unlinkSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { resolve, dirname, join } from "node:path";
+import { resolve, dirname, join, relative, sep, isAbsolute } from "node:path";
 import { Hono } from "hono";
 import { setCookie, getCookie } from "hono/cookie";
-import { createHash, randomUUID } from "node:crypto";
+import { migrate as migrate$1 } from "drizzle-orm/sqlite-proxy/migrator";
+import { migrate as migrate$2 } from "drizzle-orm/mysql2/migrator";
+import { migrate as migrate$3 } from "drizzle-orm/node-postgres/migrator";
 import { relations, or, like, eq, and, count, desc, asc, inArray, gt, lt, sql } from "drizzle-orm";
 import bcrypt from "bcrypt";
-import { readFile } from "node:fs/promises";
+import { unlink, mkdir, writeFile, readFile } from "node:fs/promises";
+import { z } from "zod";
 import { ulid } from "ulidx";
 import sanitizeHtmlLibrary from "sanitize-html";
+import { DeleteObjectCommand, PutObjectCommand, S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 import { jwtVerify, SignJWT } from "jose";
-import { unlink } from "fs/promises";
-import path from "path";
-import fs from "fs";
-import { z } from "zod";
+import { createHash, randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
 import { isIP } from "node:net";
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import mysql from "mysql2/promise";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/sqlite-proxy";
+import { drizzle as drizzle$1 } from "drizzle-orm/mysql2";
+import { drizzle as drizzle$2 } from "drizzle-orm/node-postgres";
 import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
+import { mysqlTable, int, varchar, text as text$1, bigint } from "drizzle-orm/mysql-core";
+import { pgTable, integer as integer$1, varchar as varchar$1, text as text$2, bigint as bigint$1 } from "drizzle-orm/pg-core";
 const contentTypes = [];
 const templates = [];
 const fallbackRegistry = {
@@ -98,28 +105,113 @@ function beaver(options = {}) {
         });
         injectRoute({ pattern: "/__cms/control-panel", entrypoint: new URL("./astro/admin.astro", import.meta.url), prerender: false });
         injectRoute({ pattern: "/__cms/http", entrypoint: new URL("./astro/http.js", import.meta.url), prerender: false });
+        injectRoute({ pattern: "/storage/[...path]", entrypoint: new URL("./astro/storage.js", import.meta.url), prerender: false });
         addMiddleware({ entrypoint: new URL("./astro/middleware.js", import.meta.url), order: "pre" });
       }
     }
   };
 }
-const users = sqliteTable("users", {
+function env(name) {
+  const value = process.env[name]?.trim();
+  return value ? value : void 0;
+}
+function parsePort(value, fallback) {
+  if (!value) return fallback;
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`${value} is not a valid database port.`);
+  }
+  return port;
+}
+function parseBoolean$1(value) {
+  return value === "1" || value?.toLowerCase() === "true";
+}
+function legacyDatabaseUrl() {
+  const value = env("DATABASE_URL");
+  if (!value) return {};
+  if (value === ":memory:" || value.startsWith("file:") || !/^[a-z][a-z\d+.-]*:\/\//i.test(value)) {
+    return { connection: "sqlite", database: value };
+  }
+  try {
+    const url = new URL(value);
+    const protocol = url.protocol.toLowerCase();
+    const connection = protocol === "mysql:" || protocol === "mysql2:" ? "mysql" : protocol === "postgres:" || protocol === "postgresql:" ? "pgsql" : void 0;
+    if (!connection) throw new Error("DATABASE_URL must be a SQLite path, mysql:// URL, or postgres:// URL.");
+    const database = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+    if (!database) throw new Error("DATABASE_URL must include a database name.");
+    const defaultPort = connection === "mysql" ? 3306 : 5432;
+    const sslMode = url.searchParams.get("sslmode");
+    return {
+      connection,
+      database,
+      host: url.hostname || "127.0.0.1",
+      port: parsePort(url.port, defaultPort),
+      username: url.username ? decodeURIComponent(url.username) : connection === "mysql" ? "root" : "postgres",
+      password: url.password ? decodeURIComponent(url.password) : "",
+      ssl: url.searchParams.get("ssl") === "true" || sslMode !== null && sslMode !== "disable"
+    };
+  } catch {
+    throw new Error("DATABASE_URL is not a valid database URL.");
+  }
+}
+function normalizeConnection(value) {
+  if (!value) return void 0;
+  const normalized = value.toLowerCase();
+  if (normalized === "sqlite") return "sqlite";
+  if (normalized === "mysql" || normalized === "mysql2") return "mysql";
+  if (normalized === "pgsql" || normalized === "postgres" || normalized === "postgresql") return "pgsql";
+  throw new Error(`Unsupported DB_CONNECTION "${value}". Use sqlite, mysql, or pgsql.`);
+}
+function getDatabaseConfig() {
+  const legacy = legacyDatabaseUrl();
+  const connection = normalizeConnection(env("DB_CONNECTION")) ?? legacy.connection ?? "sqlite";
+  if (connection === "sqlite") {
+    return {
+      connection,
+      database: env("DB_DATABASE") ?? (legacy.connection === "sqlite" ? legacy.database : void 0) ?? "./db/sqlite.db",
+      ssl: false
+    };
+  }
+  const defaultPort = connection === "mysql" ? 3306 : 5432;
+  const database = env("DB_DATABASE") ?? (legacy.connection === connection ? legacy.database : void 0);
+  if (!database) {
+    throw new Error(`DB_DATABASE is required when DB_CONNECTION=${connection}.`);
+  }
+  return {
+    connection,
+    database,
+    host: env("DB_HOST") ?? (legacy.connection === connection ? legacy.host : void 0) ?? "127.0.0.1",
+    port: parsePort(env("DB_PORT"), legacy.connection === connection ? legacy.port ?? defaultPort : defaultPort),
+    username: env("DB_USERNAME") ?? (legacy.connection === connection ? legacy.username : void 0) ?? (connection === "mysql" ? "root" : "postgres"),
+    password: process.env.DB_PASSWORD ?? (legacy.connection === connection ? legacy.password : void 0) ?? "",
+    ssl: env("DB_SSL") !== void 0 ? parseBoolean$1(env("DB_SSL")) : legacy.connection === connection ? legacy.ssl ?? false : false
+  };
+}
+const databaseConfig = getDatabaseConfig();
+const users$3 = sqliteTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  roleId: text("role_id").references(() => roles.id),
+  roleId: text("role_id").references(() => roles$3.id),
   emailVerified: integer("email_verified").notNull().default(0),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
-const adminRefreshSessions = sqliteTable("admin_refresh_sessions", {
+const adminRefreshSessions$3 = sqliteTable("admin_refresh_sessions", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users$3.id, { onDelete: "cascade" }),
   expiresAt: integer("expires_at").notNull(),
   createdAt: integer("created_at").notNull()
 });
-const posts = sqliteTable("posts", {
+const passwordResetTokens$3 = sqliteTable("password_reset_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users$3.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").notNull()
+});
+const posts$3 = sqliteTable("posts", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
   slug: text("slug").notNull().unique(),
@@ -134,18 +226,18 @@ const posts = sqliteTable("posts", {
   metaDescription: text("meta_description"),
   featuredImage: text("featured_image"),
   gallery: text("gallery"),
-  authorId: text("author_id").notNull().references(() => users.id),
+  authorId: text("author_id").notNull().references(() => users$3.id),
   publishedAt: integer("published_at"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
-const menus = sqliteTable("menus", {
+const menus$3 = sqliteTable("menus", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
   url: text("url").notNull(),
   type: text("type").notNull(),
   position: integer("position").notNull().default(0),
-  parentId: text("parent_id").references(() => menus.id),
+  parentId: text("parent_id").references(() => menus$3.id),
   cssClass: text("css_class"),
   target: text("target"),
   image: text("image"),
@@ -153,7 +245,7 @@ const menus = sqliteTable("menus", {
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
-const categories = sqliteTable("categories", {
+const categories$3 = sqliteTable("categories", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
@@ -164,13 +256,13 @@ const categories = sqliteTable("categories", {
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
-const postCategories = sqliteTable("post_categories", {
+const postCategories$3 = sqliteTable("post_categories", {
   id: text("id").primaryKey(),
-  postId: text("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
-  categoryId: text("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
+  postId: text("post_id").notNull().references(() => posts$3.id, { onDelete: "cascade" }),
+  categoryId: text("category_id").notNull().references(() => categories$3.id, { onDelete: "cascade" }),
   createdAt: integer("created_at").notNull()
 });
-const roles = sqliteTable("roles", {
+const roles$3 = sqliteTable("roles", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
@@ -179,7 +271,7 @@ const roles = sqliteTable("roles", {
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
-const permissions = sqliteTable("permissions", {
+const permissions$3 = sqliteTable("permissions", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
@@ -188,15 +280,15 @@ const permissions = sqliteTable("permissions", {
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
-const rolePermissions = sqliteTable("role_permissions", {
+const rolePermissions$3 = sqliteTable("role_permissions", {
   id: text("id").primaryKey(),
-  roleId: text("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
-  permissionId: text("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
+  roleId: text("role_id").notNull().references(() => roles$3.id, { onDelete: "cascade" }),
+  permissionId: text("permission_id").notNull().references(() => permissions$3.id, { onDelete: "cascade" }),
   createdAt: integer("created_at").notNull()
 });
-const media = sqliteTable("media", {
+const media$3 = sqliteTable("media", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id),
+  userId: text("user_id").notNull().references(() => users$3.id),
   name: text("name").notNull(),
   fileName: text("file_name").notNull(),
   mimeType: text("mime_type").notNull(),
@@ -211,116 +303,567 @@ const media = sqliteTable("media", {
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
-const settings$1 = sqliteTable("settings", {
+const settings$4 = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
-const usersRelations = relations(users, ({ one, many }) => ({
-  role: one(roles, {
-    fields: [users.roleId],
-    references: [roles.id]
-  }),
-  posts: many(posts),
-  media: many(media)
+const usersRelations$3 = relations(users$3, ({ one, many }) => ({
+  role: one(roles$3, { fields: [users$3.roleId], references: [roles$3.id] }),
+  posts: many(posts$3),
+  media: many(media$3)
 }));
-const postsRelations = relations(posts, ({ one, many }) => ({
-  author: one(users, {
-    fields: [posts.authorId],
-    references: [users.id]
-  }),
-  postCategories: many(postCategories)
+const postsRelations$3 = relations(posts$3, ({ one, many }) => ({
+  author: one(users$3, { fields: [posts$3.authorId], references: [users$3.id] }),
+  postCategories: many(postCategories$3)
 }));
-const categoriesRelations = relations(categories, ({ many }) => ({
-  postCategories: many(postCategories)
+const categoriesRelations$3 = relations(categories$3, ({ many }) => ({ postCategories: many(postCategories$3) }));
+const postCategoriesRelations$3 = relations(postCategories$3, ({ one }) => ({
+  post: one(posts$3, { fields: [postCategories$3.postId], references: [posts$3.id] }),
+  category: one(categories$3, { fields: [postCategories$3.categoryId], references: [categories$3.id] })
 }));
-const postCategoriesRelations = relations(postCategories, ({ one }) => ({
-  post: one(posts, {
-    fields: [postCategories.postId],
-    references: [posts.id]
-  }),
-  category: one(categories, {
-    fields: [postCategories.categoryId],
-    references: [categories.id]
-  })
+const rolesRelations$3 = relations(roles$3, ({ many }) => ({ users: many(users$3), rolePermissions: many(rolePermissions$3) }));
+const permissionsRelations$3 = relations(permissions$3, ({ many }) => ({ rolePermissions: many(rolePermissions$3) }));
+const rolePermissionsRelations$3 = relations(rolePermissions$3, ({ one }) => ({
+  role: one(roles$3, { fields: [rolePermissions$3.roleId], references: [roles$3.id] }),
+  permission: one(permissions$3, { fields: [rolePermissions$3.permissionId], references: [permissions$3.id] })
 }));
-const rolesRelations = relations(roles, ({ many }) => ({
-  users: many(users),
-  rolePermissions: many(rolePermissions)
+const mediaRelations$3 = relations(media$3, ({ one }) => ({ user: one(users$3, { fields: [media$3.userId], references: [users$3.id] }) }));
+const menusRelations$3 = relations(menus$3, ({ one, many }) => ({
+  parent: one(menus$3, { fields: [menus$3.parentId], references: [menus$3.id], relationName: "menuParentChild" }),
+  children: many(menus$3, { relationName: "menuParentChild" })
 }));
-const permissionsRelations = relations(permissions, ({ many }) => ({
-  rolePermissions: many(rolePermissions)
-}));
-const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
-  role: one(roles, {
-    fields: [rolePermissions.roleId],
-    references: [roles.id]
-  }),
-  permission: one(permissions, {
-    fields: [rolePermissions.permissionId],
-    references: [permissions.id]
-  })
-}));
-const mediaRelations = relations(media, ({ one }) => ({
-  user: one(users, {
-    fields: [media.userId],
-    references: [users.id]
-  })
-}));
-const menusRelations = relations(menus, ({ one, many }) => ({
-  parent: one(menus, {
-    fields: [menus.parentId],
-    references: [menus.id],
-    relationName: "menuParentChild"
-  }),
-  children: many(menus, {
-    relationName: "menuParentChild"
-  })
-}));
-const schema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const sqliteSchema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  adminRefreshSessions,
-  categories,
-  categoriesRelations,
-  media,
-  mediaRelations,
-  menus,
-  menusRelations,
-  permissions,
-  permissionsRelations,
-  postCategories,
-  postCategoriesRelations,
-  posts,
-  postsRelations,
-  rolePermissions,
-  rolePermissionsRelations,
-  roles,
-  rolesRelations,
-  settings: settings$1,
-  users,
-  usersRelations
+  adminRefreshSessions: adminRefreshSessions$3,
+  categories: categories$3,
+  categoriesRelations: categoriesRelations$3,
+  media: media$3,
+  mediaRelations: mediaRelations$3,
+  menus: menus$3,
+  menusRelations: menusRelations$3,
+  passwordResetTokens: passwordResetTokens$3,
+  permissions: permissions$3,
+  permissionsRelations: permissionsRelations$3,
+  postCategories: postCategories$3,
+  postCategoriesRelations: postCategoriesRelations$3,
+  posts: posts$3,
+  postsRelations: postsRelations$3,
+  rolePermissions: rolePermissions$3,
+  rolePermissionsRelations: rolePermissionsRelations$3,
+  roles: roles$3,
+  rolesRelations: rolesRelations$3,
+  settings: settings$4,
+  users: users$3,
+  usersRelations: usersRelations$3
 }, Symbol.toStringTag, { value: "Module" }));
-const dbPath = process.env.DATABASE_URL || "./db/sqlite.db";
-const isFileDatabase = dbPath !== ":memory:" && !dbPath.startsWith("file:");
-const dbDir = isFileDatabase ? dirname(dbPath) : null;
-if (dbDir && dbDir !== "." && dbDir !== "") {
-  if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true, mode: 448 });
-  chmodSync(dbDir, 448);
+const id$1 = (name) => varchar(name, { length: 26 });
+const timestamp$1 = (name) => bigint(name, { mode: "number" });
+const users$2 = mysqlTable("users", {
+  id: id$1("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  password: varchar("password", { length: 255 }).notNull(),
+  roleId: id$1("role_id").references(() => roles$2.id),
+  emailVerified: int("email_verified").notNull().default(0),
+  createdAt: timestamp$1("created_at").notNull(),
+  updatedAt: timestamp$1("updated_at").notNull()
+});
+const adminRefreshSessions$2 = mysqlTable("admin_refresh_sessions", {
+  id: id$1("id").primaryKey(),
+  userId: id$1("user_id").notNull().references(() => users$2.id, { onDelete: "cascade" }),
+  expiresAt: timestamp$1("expires_at").notNull(),
+  createdAt: timestamp$1("created_at").notNull()
+});
+const passwordResetTokens$2 = mysqlTable("password_reset_tokens", {
+  id: id$1("id").primaryKey(),
+  userId: id$1("user_id").notNull().references(() => users$2.id, { onDelete: "cascade" }),
+  token: varchar("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp$1("expires_at").notNull(),
+  createdAt: timestamp$1("created_at").notNull()
+});
+const posts$2 = mysqlTable("posts", {
+  id: id$1("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  type: varchar("type", { length: 64 }).notNull().default("post"),
+  status: varchar("status", { length: 32 }).notNull().default("draft"),
+  excerpt: text$1("excerpt"),
+  description: text$1("description"),
+  tags: text$1("tags"),
+  sections: text$1("sections"),
+  customFieldValues: text$1("custom_field_values"),
+  metaTitle: text$1("meta_title"),
+  metaDescription: text$1("meta_description"),
+  featuredImage: text$1("featured_image"),
+  gallery: text$1("gallery"),
+  authorId: id$1("author_id").notNull().references(() => users$2.id),
+  publishedAt: timestamp$1("published_at"),
+  createdAt: timestamp$1("created_at").notNull(),
+  updatedAt: timestamp$1("updated_at").notNull()
+});
+const menus$2 = mysqlTable("menus", {
+  id: id$1("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  url: text$1("url").notNull(),
+  type: varchar("type", { length: 32 }).notNull(),
+  position: int("position").notNull().default(0),
+  parentId: id$1("parent_id").references(() => menus$2.id),
+  cssClass: varchar("css_class", { length: 255 }),
+  target: varchar("target", { length: 32 }),
+  image: text$1("image"),
+  status: varchar("status", { length: 32 }).notNull().default("published"),
+  createdAt: timestamp$1("created_at").notNull(),
+  updatedAt: timestamp$1("updated_at").notNull()
+});
+const categories$2 = mysqlTable("categories", {
+  id: id$1("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  type: varchar("type", { length: 64 }).notNull().default("post"),
+  description: text$1("description"),
+  image: text$1("image"),
+  status: varchar("status", { length: 32 }).notNull().default("published"),
+  createdAt: timestamp$1("created_at").notNull(),
+  updatedAt: timestamp$1("updated_at").notNull()
+});
+const postCategories$2 = mysqlTable("post_categories", {
+  id: id$1("id").primaryKey(),
+  postId: id$1("post_id").notNull().references(() => posts$2.id, { onDelete: "cascade" }),
+  categoryId: id$1("category_id").notNull().references(() => categories$2.id, { onDelete: "cascade" }),
+  createdAt: timestamp$1("created_at").notNull()
+});
+const roles$2 = mysqlTable("roles", {
+  id: id$1("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  description: text$1("description"),
+  isSystem: int("is_system").notNull().default(0),
+  createdAt: timestamp$1("created_at").notNull(),
+  updatedAt: timestamp$1("updated_at").notNull()
+});
+const permissions$2 = mysqlTable("permissions", {
+  id: id$1("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  group: varchar("group", { length: 64 }).notNull(),
+  description: text$1("description"),
+  createdAt: timestamp$1("created_at").notNull(),
+  updatedAt: timestamp$1("updated_at").notNull()
+});
+const rolePermissions$2 = mysqlTable("role_permissions", {
+  id: id$1("id").primaryKey(),
+  roleId: id$1("role_id").notNull().references(() => roles$2.id, { onDelete: "cascade" }),
+  permissionId: id$1("permission_id").notNull().references(() => permissions$2.id, { onDelete: "cascade" }),
+  createdAt: timestamp$1("created_at").notNull()
+});
+const media$2 = mysqlTable("media", {
+  id: id$1("id").primaryKey(),
+  userId: id$1("user_id").notNull().references(() => users$2.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  mimeType: varchar("mime_type", { length: 255 }).notNull(),
+  size: bigint("size", { mode: "number" }).notNull(),
+  url: text$1("url").notNull(),
+  thumbnailUrl: text$1("thumbnail_url"),
+  alt: text$1("alt"),
+  caption: text$1("caption"),
+  width: int("width"),
+  height: int("height"),
+  folder: varchar("folder", { length: 255 }),
+  createdAt: timestamp$1("created_at").notNull(),
+  updatedAt: timestamp$1("updated_at").notNull()
+});
+const settings$3 = mysqlTable("settings", {
+  key: varchar("key", { length: 255 }).primaryKey(),
+  value: text$1("value").notNull(),
+  createdAt: timestamp$1("created_at").notNull(),
+  updatedAt: timestamp$1("updated_at").notNull()
+});
+const usersRelations$2 = relations(users$2, ({ one, many }) => ({
+  role: one(roles$2, { fields: [users$2.roleId], references: [roles$2.id] }),
+  posts: many(posts$2),
+  media: many(media$2)
+}));
+const postsRelations$2 = relations(posts$2, ({ one, many }) => ({
+  author: one(users$2, { fields: [posts$2.authorId], references: [users$2.id] }),
+  postCategories: many(postCategories$2)
+}));
+const categoriesRelations$2 = relations(categories$2, ({ many }) => ({ postCategories: many(postCategories$2) }));
+const postCategoriesRelations$2 = relations(postCategories$2, ({ one }) => ({
+  post: one(posts$2, { fields: [postCategories$2.postId], references: [posts$2.id] }),
+  category: one(categories$2, { fields: [postCategories$2.categoryId], references: [categories$2.id] })
+}));
+const rolesRelations$2 = relations(roles$2, ({ many }) => ({ users: many(users$2), rolePermissions: many(rolePermissions$2) }));
+const permissionsRelations$2 = relations(permissions$2, ({ many }) => ({ rolePermissions: many(rolePermissions$2) }));
+const rolePermissionsRelations$2 = relations(rolePermissions$2, ({ one }) => ({
+  role: one(roles$2, { fields: [rolePermissions$2.roleId], references: [roles$2.id] }),
+  permission: one(permissions$2, { fields: [rolePermissions$2.permissionId], references: [permissions$2.id] })
+}));
+const mediaRelations$2 = relations(media$2, ({ one }) => ({ user: one(users$2, { fields: [media$2.userId], references: [users$2.id] }) }));
+const menusRelations$2 = relations(menus$2, ({ one, many }) => ({
+  parent: one(menus$2, { fields: [menus$2.parentId], references: [menus$2.id], relationName: "menuParentChild" }),
+  children: many(menus$2, { relationName: "menuParentChild" })
+}));
+const mysqlSchema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  adminRefreshSessions: adminRefreshSessions$2,
+  categories: categories$2,
+  categoriesRelations: categoriesRelations$2,
+  media: media$2,
+  mediaRelations: mediaRelations$2,
+  menus: menus$2,
+  menusRelations: menusRelations$2,
+  passwordResetTokens: passwordResetTokens$2,
+  permissions: permissions$2,
+  permissionsRelations: permissionsRelations$2,
+  postCategories: postCategories$2,
+  postCategoriesRelations: postCategoriesRelations$2,
+  posts: posts$2,
+  postsRelations: postsRelations$2,
+  rolePermissions: rolePermissions$2,
+  rolePermissionsRelations: rolePermissionsRelations$2,
+  roles: roles$2,
+  rolesRelations: rolesRelations$2,
+  settings: settings$3,
+  users: users$2,
+  usersRelations: usersRelations$2
+}, Symbol.toStringTag, { value: "Module" }));
+const id = (name) => varchar$1(name, { length: 26 });
+const timestamp = (name) => bigint$1(name, { mode: "number" });
+const users$1 = pgTable("users", {
+  id: id("id").primaryKey(),
+  name: varchar$1("name", { length: 255 }).notNull(),
+  email: varchar$1("email", { length: 255 }).notNull().unique(),
+  password: varchar$1("password", { length: 255 }).notNull(),
+  roleId: id("role_id").references(() => roles$1.id),
+  emailVerified: integer$1("email_verified").notNull().default(0),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull()
+});
+const adminRefreshSessions$1 = pgTable("admin_refresh_sessions", {
+  id: id("id").primaryKey(),
+  userId: id("user_id").notNull().references(() => users$1.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull()
+});
+const passwordResetTokens$1 = pgTable("password_reset_tokens", {
+  id: id("id").primaryKey(),
+  userId: id("user_id").notNull().references(() => users$1.id, { onDelete: "cascade" }),
+  token: varchar$1("token", { length: 255 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull()
+});
+const posts$1 = pgTable("posts", {
+  id: id("id").primaryKey(),
+  title: varchar$1("title", { length: 255 }).notNull(),
+  slug: varchar$1("slug", { length: 255 }).notNull().unique(),
+  type: varchar$1("type", { length: 64 }).notNull().default("post"),
+  status: varchar$1("status", { length: 32 }).notNull().default("draft"),
+  excerpt: text$2("excerpt"),
+  description: text$2("description"),
+  tags: text$2("tags"),
+  sections: text$2("sections"),
+  customFieldValues: text$2("custom_field_values"),
+  metaTitle: text$2("meta_title"),
+  metaDescription: text$2("meta_description"),
+  featuredImage: text$2("featured_image"),
+  gallery: text$2("gallery"),
+  authorId: id("author_id").notNull().references(() => users$1.id),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull()
+});
+const menus$1 = pgTable("menus", {
+  id: id("id").primaryKey(),
+  title: varchar$1("title", { length: 255 }).notNull(),
+  url: text$2("url").notNull(),
+  type: varchar$1("type", { length: 32 }).notNull(),
+  position: integer$1("position").notNull().default(0),
+  parentId: id("parent_id").references(() => menus$1.id),
+  cssClass: varchar$1("css_class", { length: 255 }),
+  target: varchar$1("target", { length: 32 }),
+  image: text$2("image"),
+  status: varchar$1("status", { length: 32 }).notNull().default("published"),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull()
+});
+const categories$1 = pgTable("categories", {
+  id: id("id").primaryKey(),
+  name: varchar$1("name", { length: 255 }).notNull(),
+  slug: varchar$1("slug", { length: 255 }).notNull().unique(),
+  type: varchar$1("type", { length: 64 }).notNull().default("post"),
+  description: text$2("description"),
+  image: text$2("image"),
+  status: varchar$1("status", { length: 32 }).notNull().default("published"),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull()
+});
+const postCategories$1 = pgTable("post_categories", {
+  id: id("id").primaryKey(),
+  postId: id("post_id").notNull().references(() => posts$1.id, { onDelete: "cascade" }),
+  categoryId: id("category_id").notNull().references(() => categories$1.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull()
+});
+const roles$1 = pgTable("roles", {
+  id: id("id").primaryKey(),
+  name: varchar$1("name", { length: 255 }).notNull(),
+  slug: varchar$1("slug", { length: 255 }).notNull().unique(),
+  description: text$2("description"),
+  isSystem: integer$1("is_system").notNull().default(0),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull()
+});
+const permissions$1 = pgTable("permissions", {
+  id: id("id").primaryKey(),
+  name: varchar$1("name", { length: 255 }).notNull(),
+  slug: varchar$1("slug", { length: 255 }).notNull().unique(),
+  group: varchar$1("group", { length: 64 }).notNull(),
+  description: text$2("description"),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull()
+});
+const rolePermissions$1 = pgTable("role_permissions", {
+  id: id("id").primaryKey(),
+  roleId: id("role_id").notNull().references(() => roles$1.id, { onDelete: "cascade" }),
+  permissionId: id("permission_id").notNull().references(() => permissions$1.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").notNull()
+});
+const media$1 = pgTable("media", {
+  id: id("id").primaryKey(),
+  userId: id("user_id").notNull().references(() => users$1.id),
+  name: varchar$1("name", { length: 255 }).notNull(),
+  fileName: varchar$1("file_name", { length: 255 }).notNull(),
+  mimeType: varchar$1("mime_type", { length: 255 }).notNull(),
+  size: bigint$1("size", { mode: "number" }).notNull(),
+  url: text$2("url").notNull(),
+  thumbnailUrl: text$2("thumbnail_url"),
+  alt: text$2("alt"),
+  caption: text$2("caption"),
+  width: integer$1("width"),
+  height: integer$1("height"),
+  folder: varchar$1("folder", { length: 255 }),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull()
+});
+const settings$2 = pgTable("settings", {
+  key: varchar$1("key", { length: 255 }).primaryKey(),
+  value: text$2("value").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull()
+});
+const usersRelations$1 = relations(users$1, ({ one, many }) => ({
+  role: one(roles$1, { fields: [users$1.roleId], references: [roles$1.id] }),
+  posts: many(posts$1),
+  media: many(media$1)
+}));
+const postsRelations$1 = relations(posts$1, ({ one, many }) => ({
+  author: one(users$1, { fields: [posts$1.authorId], references: [users$1.id] }),
+  postCategories: many(postCategories$1)
+}));
+const categoriesRelations$1 = relations(categories$1, ({ many }) => ({ postCategories: many(postCategories$1) }));
+const postCategoriesRelations$1 = relations(postCategories$1, ({ one }) => ({
+  post: one(posts$1, { fields: [postCategories$1.postId], references: [posts$1.id] }),
+  category: one(categories$1, { fields: [postCategories$1.categoryId], references: [categories$1.id] })
+}));
+const rolesRelations$1 = relations(roles$1, ({ many }) => ({ users: many(users$1), rolePermissions: many(rolePermissions$1) }));
+const permissionsRelations$1 = relations(permissions$1, ({ many }) => ({ rolePermissions: many(rolePermissions$1) }));
+const rolePermissionsRelations$1 = relations(rolePermissions$1, ({ one }) => ({
+  role: one(roles$1, { fields: [rolePermissions$1.roleId], references: [roles$1.id] }),
+  permission: one(permissions$1, { fields: [rolePermissions$1.permissionId], references: [permissions$1.id] })
+}));
+const mediaRelations$1 = relations(media$1, ({ one }) => ({ user: one(users$1, { fields: [media$1.userId], references: [users$1.id] }) }));
+const menusRelations$1 = relations(menus$1, ({ one, many }) => ({
+  parent: one(menus$1, { fields: [menus$1.parentId], references: [menus$1.id], relationName: "menuParentChild" }),
+  children: many(menus$1, { relationName: "menuParentChild" })
+}));
+const pgsqlSchema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  adminRefreshSessions: adminRefreshSessions$1,
+  categories: categories$1,
+  categoriesRelations: categoriesRelations$1,
+  media: media$1,
+  mediaRelations: mediaRelations$1,
+  menus: menus$1,
+  menusRelations: menusRelations$1,
+  passwordResetTokens: passwordResetTokens$1,
+  permissions: permissions$1,
+  permissionsRelations: permissionsRelations$1,
+  postCategories: postCategories$1,
+  postCategoriesRelations: postCategoriesRelations$1,
+  posts: posts$1,
+  postsRelations: postsRelations$1,
+  rolePermissions: rolePermissions$1,
+  rolePermissionsRelations: rolePermissionsRelations$1,
+  roles: roles$1,
+  rolesRelations: rolesRelations$1,
+  settings: settings$2,
+  users: users$1,
+  usersRelations: usersRelations$1
+}, Symbol.toStringTag, { value: "Module" }));
+const activeSchema = databaseConfig.connection === "mysql" ? mysqlSchema : databaseConfig.connection === "pgsql" ? pgsqlSchema : sqliteSchema;
+const users = activeSchema.users;
+const adminRefreshSessions = activeSchema.adminRefreshSessions;
+const passwordResetTokens = activeSchema.passwordResetTokens;
+const posts = activeSchema.posts;
+const menus = activeSchema.menus;
+const categories = activeSchema.categories;
+const postCategories = activeSchema.postCategories;
+const roles = activeSchema.roles;
+const permissions = activeSchema.permissions;
+const rolePermissions = activeSchema.rolePermissions;
+const media = activeSchema.media;
+const settings$1 = activeSchema.settings;
+const usersRelations = activeSchema.usersRelations;
+const postsRelations = activeSchema.postsRelations;
+const categoriesRelations = activeSchema.categoriesRelations;
+const postCategoriesRelations = activeSchema.postCategoriesRelations;
+const rolesRelations = activeSchema.rolesRelations;
+const permissionsRelations = activeSchema.permissionsRelations;
+const rolePermissionsRelations = activeSchema.rolePermissionsRelations;
+const mediaRelations = activeSchema.mediaRelations;
+const menusRelations = activeSchema.menusRelations;
+const schema = {
+  users,
+  adminRefreshSessions,
+  passwordResetTokens,
+  posts,
+  menus,
+  categories,
+  postCategories,
+  roles,
+  permissions,
+  rolePermissions,
+  media,
+  settings: settings$1,
+  usersRelations,
+  postsRelations,
+  categoriesRelations,
+  postCategoriesRelations,
+  rolesRelations,
+  permissionsRelations,
+  rolePermissionsRelations,
+  mediaRelations,
+  menusRelations
+};
+const databaseDialect = databaseConfig.connection;
+const sqliteClient = databaseConfig.connection === "sqlite" ? createSqliteClient(databaseConfig.database) : null;
+const mysqlClient = databaseConfig.connection === "mysql" ? mysql.createPool({
+  host: databaseConfig.host,
+  port: databaseConfig.port,
+  user: databaseConfig.username,
+  password: databaseConfig.password,
+  database: databaseConfig.database,
+  waitForConnections: true,
+  connectionLimit: 10,
+  enableKeepAlive: true,
+  ssl: databaseConfig.ssl ? { rejectUnauthorized: false } : void 0
+}) : null;
+const pgClient = databaseConfig.connection === "pgsql" ? new Pool({
+  host: databaseConfig.host,
+  port: databaseConfig.port,
+  user: databaseConfig.username,
+  password: databaseConfig.password,
+  database: databaseConfig.database,
+  max: 10,
+  ssl: databaseConfig.ssl ? { rejectUnauthorized: false } : void 0
+}) : null;
+const databaseTables = [
+  "admin_refresh_sessions",
+  "password_reset_tokens",
+  "post_categories",
+  "role_permissions",
+  "posts",
+  "menus",
+  "categories",
+  "media",
+  "settings",
+  "users",
+  "permissions",
+  "roles",
+  "__drizzle_migrations"
+];
+async function closeDatabase() {
+  if (sqliteClient) {
+    sqliteClient.close();
+    return;
+  }
+  if (mysqlClient) {
+    await mysqlClient.end();
+    return;
+  }
+  if (pgClient) await pgClient.end();
 }
-const sqlite = new Database(dbPath);
-if (isFileDatabase) {
-  chmodSync(dbPath, 384);
-}
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
-if (isFileDatabase) {
-  for (const suffix of ["-wal", "-shm"]) {
-    const journalPath = `${dbPath}${suffix}`;
-    if (existsSync(journalPath)) chmodSync(journalPath, 384);
+async function resetDatabase() {
+  if (sqliteClient) {
+    sqliteClient.pragma("foreign_keys = OFF");
+    try {
+      sqliteClient.exec(databaseTables.map((table) => `DROP TABLE IF EXISTS "${table}"`).join(";\n"));
+    } finally {
+      sqliteClient.pragma("foreign_keys = ON");
+    }
+    return;
+  }
+  if (mysqlClient) {
+    const connection = await mysqlClient.getConnection();
+    try {
+      await connection.query("SET FOREIGN_KEY_CHECKS = 0");
+      for (const table of databaseTables) {
+        await connection.query(`DROP TABLE IF EXISTS \`${table}\``);
+      }
+    } finally {
+      try {
+        await connection.query("SET FOREIGN_KEY_CHECKS = 1");
+      } finally {
+        connection.release();
+      }
+    }
+    return;
+  }
+  if (pgClient) {
+    const quotedTables = databaseTables.map((table) => `"${table}"`).join(", ");
+    await pgClient.query(`DROP TABLE IF EXISTS ${quotedTables} CASCADE`);
+    await pgClient.query('DROP SCHEMA IF EXISTS "drizzle" CASCADE');
   }
 }
-const db = drizzle(sqlite, { schema });
+function createSqliteClient(dbPath) {
+  const isFileDatabase = dbPath !== ":memory:" && !dbPath.startsWith("file:");
+  const dbDir = isFileDatabase ? dirname(dbPath) : null;
+  if (dbDir && dbDir !== "." && dbDir !== "") {
+    if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true, mode: 448 });
+    chmodSync(dbDir, 448);
+  }
+  const sqlite = new Database(dbPath);
+  if (isFileDatabase) chmodSync(dbPath, 384);
+  sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("foreign_keys = ON");
+  if (isFileDatabase) {
+    for (const suffix of ["-wal", "-shm"]) {
+      const journalPath = `${dbPath}${suffix}`;
+      if (existsSync(journalPath)) chmodSync(journalPath, 384);
+    }
+  }
+  return sqlite;
+}
+const executeSqlite = async (sql2, params, method) => {
+  const statement = sqliteClient.prepare(sql2);
+  if (method === "run") {
+    const result = statement.run(...params);
+    return { rows: [{ changes: result.changes, lastInsertRowid: result.lastInsertRowid }] };
+  }
+  if (method === "get") {
+    const row = statement.raw().get(...params);
+    return { rows: row };
+  }
+  if (method === "values") return { rows: statement.raw().all(...params) };
+  return { rows: statement.raw().all(...params) };
+};
+async function executeSqliteMigrations(queries) {
+  if (queries.length > 0) sqliteClient.exec(queries.join("\n"));
+}
+const sqliteDb = drizzle(executeSqlite, { schema });
+const db = databaseConfig.connection === "sqlite" ? sqliteDb : databaseConfig.connection === "mysql" ? drizzle$1({ client: mysqlClient, schema, mode: "default" }) : drizzle$2({ client: pgClient, schema });
 const allowedTags = [
   "p",
   "br",
@@ -412,19 +955,32 @@ function clampPagination(filters) {
   const perPage = clampPerPage(filters.perPage);
   return { page, perPage, offset: (page - 1) * perPage };
 }
+function affectedRows(result) {
+  if (Array.isArray(result)) return affectedRows(result[0]);
+  if (!result || typeof result !== "object") return 0;
+  const record = result;
+  for (const key of ["changes", "affectedRows", "rowCount"]) {
+    const value = record[key];
+    if (typeof value === "number") return value;
+  }
+  if (record.rows !== result) return affectedRows(record.rows);
+  return 0;
+}
 const MAX_FILTER_TEXT_LENGTH$2 = 100;
 function toSafe(user) {
   const safe = { ...user };
   Reflect.deleteProperty(safe, "password");
   return safe;
 }
-function findUserByIdRecord(id) {
-  return db.select().from(users).where(eq(users.id, id)).get();
+async function findUserByIdRecord(id2) {
+  const rows = await db.select().from(users).where(eq(users.id, id2)).limit(1).execute();
+  return rows[0];
 }
-function findUserByEmailRecord(email) {
-  return db.select().from(users).where(eq(users.email, email.toLowerCase().trim())).get();
+async function findUserByEmailRecord(email) {
+  const rows = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim())).limit(1).execute();
+  return rows[0];
 }
-function listUsersPaginatedRecord(filters) {
+async function listUsersPaginatedRecord(filters) {
   const { page, perPage, offset } = clampPagination(filters);
   const conditions = [];
   const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH$2);
@@ -439,7 +995,7 @@ function listUsersPaginatedRecord(filters) {
   }
   const whereClause = conditions.length > 0 ? and(...conditions) : void 0;
   const totalQuery = db.select({ value: count() }).from(users);
-  const totalRows = whereClause ? totalQuery.where(whereClause).all() : totalQuery.all();
+  const totalRows = whereClause ? await totalQuery.where(whereClause).execute() : await totalQuery.execute();
   const total = totalRows[0]?.value ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / perPage));
   let orderColumn = desc(users.updatedAt);
@@ -459,7 +1015,7 @@ function listUsersPaginatedRecord(filters) {
     updatedAt: users.updatedAt,
     roleName: roles.name
   }).from(users).leftJoin(roles, eq(users.roleId, roles.id));
-  const paged = (whereClause ? dataQuery.where(whereClause) : dataQuery).orderBy(orderColumn).limit(perPage).offset(offset).all();
+  const paged = await (whereClause ? dataQuery.where(whereClause) : dataQuery).orderBy(orderColumn).limit(perPage).offset(offset).execute();
   return {
     data: paged,
     meta: {
@@ -472,8 +1028,8 @@ function listUsersPaginatedRecord(filters) {
     }
   };
 }
-function createUserRecord(input) {
-  db.insert(users).values({
+async function createUserRecord(input) {
+  await db.insert(users).values({
     id: input.id,
     name: sanitizeText(input.name),
     email: input.email.toLowerCase().trim(),
@@ -482,35 +1038,32 @@ function createUserRecord(input) {
     emailVerified: 0,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt
-  }).run();
-  return findSafeUserByIdRecord(input.id);
+  }).execute();
+  return await findSafeUserByIdRecord(input.id);
 }
-function updateUserRecord(id, input) {
+async function updateUserRecord(id2, input) {
   const updates = { updatedAt: input.updatedAt };
   if (input.name !== void 0) updates.name = sanitizeText(input.name);
   if (input.email !== void 0) updates.email = input.email.toLowerCase().trim();
   if (input.passwordHash !== void 0) updates.password = input.passwordHash;
   if (input.roleId !== void 0) updates.roleId = input.roleId;
-  db.update(users).set(updates).where(eq(users.id, id)).run();
-  return findSafeUserByIdRecord(id) ?? null;
+  await db.update(users).set(updates).where(eq(users.id, id2)).execute();
+  return await findSafeUserByIdRecord(id2) ?? null;
 }
-function deleteUserRecord(id) {
-  return db.delete(users).where(eq(users.id, id)).run().changes > 0;
+async function deleteUserRecord(id2) {
+  const result = await db.delete(users).where(eq(users.id, id2)).execute();
+  return affectedRows(result) > 0;
 }
-function findSafeUserByIdRecord(id) {
-  const user = findUserByIdRecord(id);
+async function findSafeUserByIdRecord(id2) {
+  const user = await findUserByIdRecord(id2);
   return user ? toSafe(user) : null;
 }
 async function getUserRole(userId) {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-    columns: { roleId: true }
-  });
+  const userRows = await db.select({ roleId: users.roleId }).from(users).where(eq(users.id, userId)).limit(1).execute();
+  const user = userRows[0];
   if (!user?.roleId) return null;
-  const role = await db.query.roles.findFirst({
-    where: eq(roles.id, user.roleId),
-    columns: { isSystem: true }
-  });
+  const roleRows = await db.select({ isSystem: roles.isSystem }).from(roles).where(eq(roles.id, user.roleId)).limit(1).execute();
+  const role = roleRows[0];
   if (!role) return null;
   return { roleId: user.roleId, isSystem: role.isSystem === 1 };
 }
@@ -518,14 +1071,11 @@ async function getUserPermissions(userId) {
   const userRole = await getUserRole(userId);
   if (!userRole) return [];
   if (userRole.isSystem) {
-    const allPermissions = db.select({ slug: permissions.slug }).from(permissions).all();
+    const allPermissions = await db.select({ slug: permissions.slug }).from(permissions).execute();
     return allPermissions.map((permission) => permission.slug);
   }
-  const rolePerms = await db.query.rolePermissions.findMany({
-    where: eq(rolePermissions.roleId, userRole.roleId),
-    with: { permission: true }
-  });
-  return rolePerms.map((rolePermission) => rolePermission.permission.slug);
+  const rolePerms = await db.select({ slug: permissions.slug }).from(rolePermissions).innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id)).where(eq(rolePermissions.roleId, userRole.roleId)).execute();
+  return rolePerms.map((rolePermission) => rolePermission.slug);
 }
 async function can(userId, permission) {
   const userRole = await getUserRole(userId);
@@ -679,34 +1229,46 @@ function activeExpiryCondition(now) {
 function getRefreshSessionExpiry() {
   return getCurrentTimestamp() + REFRESH_SESSION_TTL_SECONDS;
 }
-function saveRefreshSession(sessionId, userId, expiresAt) {
-  db.insert(adminRefreshSessions).values({
+async function saveRefreshSession(sessionId, userId, expiresAt) {
+  await db.insert(adminRefreshSessions).values({
     id: sessionId,
     userId,
     expiresAt: normalizeExpiry(expiresAt),
     createdAt: getCurrentTimestamp()
-  }).run();
+  }).execute();
 }
-function deleteRefreshSession(sessionId) {
-  db.delete(adminRefreshSessions).where(eq(adminRefreshSessions.id, sessionId)).run();
+async function deleteRefreshSession(sessionId) {
+  await db.delete(adminRefreshSessions).where(eq(adminRefreshSessions.id, sessionId)).execute();
 }
-function deleteRefreshSessionsForUser(userId) {
-  db.delete(adminRefreshSessions).where(eq(adminRefreshSessions.userId, userId)).run();
+async function deleteRefreshSessionsForUser(userId) {
+  await db.delete(adminRefreshSessions).where(eq(adminRefreshSessions.userId, userId)).execute();
 }
-function deleteRefreshSessionsForRole(roleId) {
-  const roleUsers = db.select({ id: users.id }).from(users).where(eq(users.roleId, roleId)).all();
+async function deleteRefreshSessionsForRole(roleId) {
+  const roleUsers = await db.select({ id: users.id }).from(users).where(eq(users.roleId, roleId)).execute();
   if (roleUsers.length === 0) return;
-  db.delete(adminRefreshSessions).where(inArray(adminRefreshSessions.userId, roleUsers.map((user) => user.id))).run();
+  await db.delete(adminRefreshSessions).where(inArray(adminRefreshSessions.userId, roleUsers.map((user) => user.id))).execute();
 }
-function findActiveRefreshSession(sessionId) {
+async function findActiveRefreshSession(sessionId) {
   const now = getCurrentTimestamp();
-  const row = db.select({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).from(adminRefreshSessions).where(and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now))).get();
+  const rows = await db.select({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).from(adminRefreshSessions).where(and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now))).limit(1).execute();
+  const row = rows[0];
   return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null;
 }
-function consumeRefreshSession(sessionId) {
+async function consumeRefreshSession(sessionId) {
   const now = getCurrentTimestamp();
-  const row = db.delete(adminRefreshSessions).where(and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now))).returning({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).get();
-  return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null;
+  const condition = and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now));
+  if (databaseConfig.connection !== "mysql") {
+    const rows = await db.delete(adminRefreshSessions).where(condition).returning({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).execute();
+    const row = rows[0];
+    return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null;
+  }
+  return await db.transaction(async (tx) => {
+    const rows = await tx.select({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).from(adminRefreshSessions).where(condition).limit(1).execute();
+    const row = rows[0];
+    if (!row) return null;
+    await tx.delete(adminRefreshSessions).where(condition).execute();
+    return { ...row, expiresAt: normalizeExpiry(row.expiresAt) };
+  });
 }
 async function getAdminSession(cookies) {
   const access = readAdminAccessToken(cookies);
@@ -714,9 +1276,9 @@ async function getAdminSession(cookies) {
   try {
     const payload = await verifyAccessToken(access);
     if (typeof payload.sessionId !== "string") return null;
-    const stored = findActiveRefreshSession(payload.sessionId);
+    const stored = await findActiveRefreshSession(payload.sessionId);
     if (!stored || stored.userId !== payload.sub) return null;
-    const user = findSafeUserByIdRecord(payload.sub);
+    const user = await findSafeUserByIdRecord(payload.sub);
     if (!user) return null;
     return { user, permissions: await getUserPermissions(user.id) };
   } catch {
@@ -728,9 +1290,9 @@ async function refreshAdminSession(cookies) {
   if (!refresh2) return null;
   try {
     const payload = await verifyRefreshToken(refresh2);
-    const stored = consumeRefreshSession(payload.sessionId);
+    const stored = await consumeRefreshSession(payload.sessionId);
     if (!stored || stored.userId !== payload.sub) return null;
-    const user = findSafeUserByIdRecord(payload.sub);
+    const user = await findSafeUserByIdRecord(payload.sub);
     if (!user) return null;
     const permissions2 = await getUserPermissions(user.id);
     const nextSessionId = crypto.randomUUID();
@@ -745,7 +1307,7 @@ async function refreshAdminSession(cookies) {
       sub: user.id,
       sessionId: nextSessionId
     });
-    saveRefreshSession(nextSessionId, user.id, getRefreshSessionExpiry());
+    await saveRefreshSession(nextSessionId, user.id, getRefreshSessionExpiry());
     cookies.set(ADMIN_ACCESS_COOKIE, nextAccess, buildAdminAccessCookieOptions());
     cookies.set(ADMIN_REFRESH_COOKIE, nextRefresh, buildAdminRefreshCookieOptions());
     return { user, permissions: permissions2 };
@@ -972,22 +1534,50 @@ function buildPaginationMeta(page, perPage, total, offset) {
   const to = Math.min(offset + perPage, total);
   return { currentPage: page, perPage, total, lastPage, from, to };
 }
-function findPostByIdRecord(id) {
-  const row = db.select().from(posts).where(eq(posts.id, id)).get();
+function parseJson(value) {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+function hasTag(value, tag) {
+  const parsed = parseJson(value);
+  return Array.isArray(parsed) && parsed.some((item) => typeof item === "string" && item.toLowerCase() === tag.toLowerCase());
+}
+function matchesCustomFields(value, fields) {
+  if (Object.keys(fields).length === 0) return true;
+  const parsed = parseJson(value);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
+  const record = parsed;
+  return Object.entries(fields).every(([key, expected]) => String(record[key] ?? "") === expected);
+}
+function stripFilterFields(row) {
+  return Object.fromEntries(
+    Object.entries(row).filter(([key]) => key !== "tags" && key !== "customFieldValues" && key !== "createdAt")
+  );
+}
+async function findPostByIdRecord(id2) {
+  const rows = await db.select().from(posts).where(eq(posts.id, id2)).limit(1).execute();
+  const row = rows[0];
   if (!row) return void 0;
-  const author = db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.id, row.authorId)).get();
-  const postCategoriesRows = db.select({ id: categories.id, name: categories.name, slug: categories.slug }).from(postCategories).innerJoin(categories, eq(postCategories.categoryId, categories.id)).where(eq(postCategories.postId, id)).all();
+  const [authorRows, postCategoriesRows] = await Promise.all([
+    db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.id, row.authorId)).limit(1).execute(),
+    db.select({ id: categories.id, name: categories.name, slug: categories.slug }).from(postCategories).innerJoin(categories, eq(postCategories.categoryId, categories.id)).where(eq(postCategories.postId, id2)).execute()
+  ]);
   return {
     ...row,
-    author: author ?? null,
+    author: authorRows[0] ?? null,
     categories: postCategoriesRows
   };
 }
-function findPostBySlugRecord(slug) {
-  return db.select().from(posts).where(eq(posts.slug, slug)).get();
+async function findPostBySlugRecord(slug) {
+  const rows = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1).execute();
+  return rows[0];
 }
-function findPublishedByTypeAndSlugRecord(type, slug) {
-  return db.select({
+async function findPublishedByTypeAndSlugRecord(type, slug) {
+  const rows = await db.select({
     id: posts.id,
     title: posts.title,
     slug: posts.slug,
@@ -1007,9 +1597,10 @@ function findPublishedByTypeAndSlugRecord(type, slug) {
     createdAt: posts.createdAt,
     updatedAt: posts.updatedAt,
     authorName: users.name
-  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(and(eq(posts.type, type), eq(posts.slug, slug), eq(posts.status, "published"))).get();
+  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(and(eq(posts.type, type), eq(posts.slug, slug), eq(posts.status, "published"))).limit(1).execute();
+  return rows[0];
 }
-function listPostRecords(filters = {}) {
+async function listPostRecords(filters = {}) {
   const { page, perPage, offset } = clampPagination(filters);
   const conditions = [];
   const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH$1);
@@ -1017,18 +1608,10 @@ function listPostRecords(filters = {}) {
   const status2 = filters.status?.slice(0, 32);
   const authorId = filters.authorId?.slice(0, 128);
   const categoryId = filters.categoryId?.slice(0, 128);
-  if (search2) {
-    conditions.push(like(posts.title, `%${search2}%`));
-  }
-  if (type) {
-    conditions.push(eq(posts.type, type));
-  }
-  if (status2) {
-    conditions.push(eq(posts.status, status2));
-  }
-  if (authorId) {
-    conditions.push(eq(posts.authorId, authorId));
-  }
+  if (search2) conditions.push(like(posts.title, `%${search2}%`));
+  if (type) conditions.push(eq(posts.type, type));
+  if (status2) conditions.push(eq(posts.status, status2));
+  if (authorId) conditions.push(eq(posts.authorId, authorId));
   if (categoryId) {
     conditions.push(sql`exists (
       select 1 from ${postCategories}
@@ -1038,8 +1621,8 @@ function listPostRecords(filters = {}) {
   }
   const whereClause = conditions.length > 0 ? and(...conditions) : void 0;
   const totalQuery = db.select({ value: count() }).from(posts);
-  const totalRows = whereClause ? totalQuery.where(whereClause).all() : totalQuery.all();
-  const total = totalRows[0]?.value ?? 0;
+  const totalRows = whereClause ? await totalQuery.where(whereClause).execute() : await totalQuery.execute();
+  const total = Number(totalRows[0]?.value ?? 0);
   const dataQuery = db.select({
     id: posts.id,
     title: posts.title,
@@ -1062,13 +1645,10 @@ function listPostRecords(filters = {}) {
     authorName: users.name
   }).from(posts).leftJoin(users, eq(posts.authorId, users.id));
   const orderColumn = filters.sortBy === "title" ? filters.sortOrder === "asc" ? posts.title : desc(posts.title) : filters.sortBy === "updatedAt" && filters.sortOrder === "asc" ? posts.updatedAt : desc(posts.updatedAt);
-  const data = (whereClause ? dataQuery.where(whereClause) : dataQuery).orderBy(orderColumn).limit(perPage).offset(offset).all();
-  return {
-    data,
-    meta: buildPaginationMeta(page, perPage, total, offset)
-  };
+  const data = await (whereClause ? dataQuery.where(whereClause) : dataQuery).orderBy(orderColumn).limit(perPage).offset(offset).execute();
+  return { data, meta: buildPaginationMeta(page, perPage, total, offset) };
 }
-function listPublishedPostRecordsByType(type, page = 1, perPage = 12, filters = {}) {
+async function listPublishedPostRecordsByType(type, page = 1, perPage = 12, filters = {}) {
   const clampedPage = clampPage(page);
   const clampedPerPage = clampPerPage(perPage, 12);
   const offset = (clampedPage - 1) * clampedPerPage;
@@ -1079,7 +1659,8 @@ function listPublishedPostRecordsByType(type, page = 1, perPage = 12, filters = 
     conditions.push(or(like(posts.title, pattern), like(posts.excerpt, pattern), like(posts.description, pattern)));
   }
   if (filters.category) {
-    const category = db.select({ id: categories.id }).from(categories).where(and(or(eq(categories.slug, filters.category), eq(categories.id, filters.category)), eq(categories.status, "published"))).get();
+    const categoryRows = await db.select({ id: categories.id }).from(categories).where(and(or(eq(categories.slug, filters.category), eq(categories.id, filters.category)), eq(categories.status, "published"))).limit(1).execute();
+    const category = categoryRows[0];
     if (!category) return { data: [], meta: buildPaginationMeta(clampedPage, clampedPerPage, 0, offset) };
     conditions.push(sql`exists (
       select 1 from ${postCategories}
@@ -1087,16 +1668,8 @@ function listPublishedPostRecordsByType(type, page = 1, perPage = 12, filters = 
         and ${postCategories.categoryId} = ${category.id}
     )`);
   }
-  if (filters.tag) {
-    conditions.push(sql`json_valid(${posts.tags})`);
-    conditions.push(sql`exists (select 1 from json_each(${posts.tags}) where lower(value) = lower(${filters.tag}))`);
-  }
-  for (const [fieldName, value] of Object.entries(filters.customFields ?? {})) {
-    conditions.push(sql`json_valid(${posts.customFieldValues})`);
-    conditions.push(sql`cast(json_extract(${posts.customFieldValues}, ${`$.${fieldName}`}) as text) = ${value}`);
-  }
   const condition = and(...conditions);
-  const data = db.select({
+  const rows = await db.select({
     id: posts.id,
     title: posts.title,
     slug: posts.slug,
@@ -1105,41 +1678,37 @@ function listPublishedPostRecordsByType(type, page = 1, perPage = 12, filters = 
     featuredImage: posts.featuredImage,
     gallery: posts.gallery,
     publishedAt: posts.publishedAt,
-    authorName: users.name
-  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(condition).orderBy(filters.sortBy === "title" ? filters.sortOrder === "desc" ? desc(posts.title) : posts.title : filters.sortOrder === "asc" ? posts.createdAt : desc(posts.createdAt)).limit(clampedPerPage).offset(offset).all();
-  const total = db.select({ value: count() }).from(posts).where(condition).all()[0]?.value ?? 0;
+    authorName: users.name,
+    tags: posts.tags,
+    customFieldValues: posts.customFieldValues,
+    createdAt: posts.createdAt
+  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(condition).orderBy(filters.sortBy === "title" ? filters.sortOrder === "desc" ? desc(posts.title) : posts.title : filters.sortOrder === "asc" ? posts.createdAt : desc(posts.createdAt)).execute();
+  const filtered = rows.filter((row) => !filters.tag || hasTag(row.tags, filters.tag)).filter((row) => matchesCustomFields(row.customFieldValues, filters.customFields ?? {}));
+  const data = filtered.slice(offset, offset + clampedPerPage).map(stripFilterFields);
   return {
     data,
-    meta: buildPaginationMeta(clampedPage, clampedPerPage, total, offset)
+    meta: buildPaginationMeta(clampedPage, clampedPerPage, filtered.length, offset)
   };
 }
-function listPublishedArchiveFilterOptionsByType(type) {
-  const categoryOptions = db.selectDistinct({ name: categories.name, slug: categories.slug }).from(categories).innerJoin(postCategories, eq(categories.id, postCategories.categoryId)).innerJoin(posts, eq(postCategories.postId, posts.id)).where(and(eq(posts.type, type), eq(posts.status, "published"), eq(categories.status, "published"))).orderBy(asc(categories.name)).limit(5e3).all();
-  const tagRows = db.select({ tags: posts.tags }).from(posts).where(and(eq(posts.type, type), eq(posts.status, "published"))).limit(5e3).all();
+async function listPublishedArchiveFilterOptionsByType(type) {
+  const categoryOptions = await db.selectDistinct({ name: categories.name, slug: categories.slug }).from(categories).innerJoin(postCategories, eq(categories.id, postCategories.categoryId)).innerJoin(posts, eq(postCategories.postId, posts.id)).where(and(eq(posts.type, type), eq(posts.status, "published"), eq(categories.status, "published"))).orderBy(asc(categories.name)).limit(5e3).execute();
+  const tagRows = await db.select({ tags: posts.tags }).from(posts).where(and(eq(posts.type, type), eq(posts.status, "published"))).limit(5e3).execute();
   const tags = [...new Set(tagRows.flatMap(({ tags: tags2 }) => {
-    try {
-      const value = tags2 ? JSON.parse(tags2) : [];
-      return Array.isArray(value) ? value.filter((tag) => typeof tag === "string").map((tag) => tag.trim().slice(0, 100)).filter(Boolean) : [];
-    } catch {
-      return [];
-    }
+    const value = parseJson(tags2);
+    return Array.isArray(value) ? value.filter((tag) => typeof tag === "string").map((tag) => tag.trim().slice(0, 100)).filter(Boolean) : [];
   }))].sort((a, b) => a.localeCompare(b)).slice(0, 5e3);
   return { categories: categoryOptions, tags, customFields: [] };
 }
-function searchPublishedPostRecords(query, page = 1, perPage = 12) {
+async function searchPublishedPostRecords(query, page = 1, perPage = 12) {
   const clampedPage = clampPage(page);
   const clampedPerPage = clampPerPage(perPage, 12);
   const offset = (clampedPage - 1) * clampedPerPage;
   const pattern = `%${query}%`;
   const condition = and(
     eq(posts.status, "published"),
-    or(
-      like(posts.title, pattern),
-      like(posts.excerpt, pattern),
-      like(posts.description, pattern)
-    )
+    or(like(posts.title, pattern), like(posts.excerpt, pattern), like(posts.description, pattern))
   );
-  const data = db.select({
+  const data = await db.select({
     id: posts.id,
     title: posts.title,
     slug: posts.slug,
@@ -1149,23 +1718,15 @@ function searchPublishedPostRecords(query, page = 1, perPage = 12) {
     gallery: posts.gallery,
     publishedAt: posts.publishedAt,
     authorName: users.name
-  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(condition).orderBy(desc(posts.publishedAt)).limit(clampedPerPage).offset(offset).all();
-  const total = db.select({ value: count() }).from(posts).where(condition).all()[0]?.value ?? 0;
-  return {
-    data,
-    meta: buildPaginationMeta(clampedPage, clampedPerPage, total, offset)
-  };
+  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(condition).orderBy(desc(posts.publishedAt)).limit(clampedPerPage).offset(offset).execute();
+  const totalRows = await db.select({ value: count() }).from(posts).where(condition).execute();
+  return { data, meta: buildPaginationMeta(clampedPage, clampedPerPage, Number(totalRows[0]?.value ?? 0), offset) };
 }
-function listPublishedPostRecordsByTag(tag, page = 1, perPage = 12) {
+async function listPublishedPostRecordsByTag(tag, page = 1, perPage = 12) {
   const clampedPage = clampPage(page);
   const clampedPerPage = clampPerPage(perPage, 12);
   const offset = (clampedPage - 1) * clampedPerPage;
-  const condition = and(
-    eq(posts.status, "published"),
-    sql`json_valid(${posts.tags})`,
-    sql`exists (select 1 from json_each(${posts.tags}) where lower(value) = lower(${tag}))`
-  );
-  const data = db.select({
+  const rows = await db.select({
     id: posts.id,
     title: posts.title,
     slug: posts.slug,
@@ -1174,44 +1735,53 @@ function listPublishedPostRecordsByTag(tag, page = 1, perPage = 12) {
     featuredImage: posts.featuredImage,
     gallery: posts.gallery,
     publishedAt: posts.publishedAt,
-    authorName: users.name
-  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(condition).orderBy(desc(posts.publishedAt)).limit(clampedPerPage).offset(offset).all();
-  const total = db.select({ value: count() }).from(posts).where(condition).all()[0]?.value ?? 0;
+    authorName: users.name,
+    tags: posts.tags,
+    customFieldValues: posts.customFieldValues,
+    createdAt: posts.createdAt
+  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(eq(posts.status, "published")).orderBy(desc(posts.publishedAt)).execute();
+  const filtered = rows.filter((row) => hasTag(row.tags, tag));
   return {
-    data,
-    meta: buildPaginationMeta(clampedPage, clampedPerPage, total, offset)
+    data: filtered.slice(offset, offset + clampedPerPage).map(stripFilterFields),
+    meta: buildPaginationMeta(clampedPage, clampedPerPage, filtered.length, offset)
   };
 }
-function getDashboardStatsRecord() {
+async function getDashboardStatsRecord() {
+  const [totalPosts, publishedPosts, draftPosts, totalMedia, totalUsers, totalCategories] = await Promise.all([
+    db.select({ value: count() }).from(posts).execute(),
+    db.select({ value: count() }).from(posts).where(eq(posts.status, "published")).execute(),
+    db.select({ value: count() }).from(posts).where(eq(posts.status, "draft")).execute(),
+    db.select({ value: count() }).from(media).execute(),
+    db.select({ value: count() }).from(users).execute(),
+    db.select({ value: count() }).from(categories).execute()
+  ]);
   return {
-    totalPosts: db.select({ value: count() }).from(posts).all()[0]?.value ?? 0,
-    publishedPosts: db.select({ value: count() }).from(posts).where(eq(posts.status, "published")).all()[0]?.value ?? 0,
-    draftPosts: db.select({ value: count() }).from(posts).where(eq(posts.status, "draft")).all()[0]?.value ?? 0,
-    totalMedia: db.select({ value: count() }).from(media).all()[0]?.value ?? 0,
-    totalUsers: db.select({ value: count() }).from(users).all()[0]?.value ?? 0,
-    totalCategories: db.select({ value: count() }).from(categories).all()[0]?.value ?? 0
+    totalPosts: Number(totalPosts[0]?.value ?? 0),
+    publishedPosts: Number(publishedPosts[0]?.value ?? 0),
+    draftPosts: Number(draftPosts[0]?.value ?? 0),
+    totalMedia: Number(totalMedia[0]?.value ?? 0),
+    totalUsers: Number(totalUsers[0]?.value ?? 0),
+    totalCategories: Number(totalCategories[0]?.value ?? 0)
   };
 }
-function createPostRecord(input) {
-  db.insert(posts).values(input).run();
-  return db.select().from(posts).where(eq(posts.id, input.id)).get();
+async function createPostRecord(input) {
+  await db.insert(posts).values(input).execute();
+  const rows = await db.select().from(posts).where(eq(posts.id, input.id)).limit(1).execute();
+  return rows[0];
 }
-function updatePostRecord(id, input) {
-  db.update(posts).set(input).where(eq(posts.id, id)).run();
-  return db.select().from(posts).where(eq(posts.id, id)).get();
+async function updatePostRecord(id2, input) {
+  await db.update(posts).set(input).where(eq(posts.id, id2)).execute();
+  const rows = await db.select().from(posts).where(eq(posts.id, id2)).limit(1).execute();
+  return rows[0];
 }
-function deletePostRecord(id) {
-  return db.delete(posts).where(eq(posts.id, id)).run().changes > 0;
+async function deletePostRecord(id2) {
+  const result = await db.delete(posts).where(eq(posts.id, id2)).execute();
+  return affectedRows(result) > 0;
 }
-function syncPostCategoriesRecord(postId, categoryIds, now) {
-  db.delete(postCategories).where(eq(postCategories.postId, postId)).run();
+async function syncPostCategoriesRecord(postId, categoryIds, now) {
+  await db.delete(postCategories).where(eq(postCategories.postId, postId)).execute();
   for (const categoryId of categoryIds) {
-    db.insert(postCategories).values({
-      id: generateId(),
-      postId,
-      categoryId,
-      createdAt: now
-    }).run();
+    await db.insert(postCategories).values({ id: generateId(), postId, categoryId, createdAt: now }).execute();
   }
 }
 let loadedPath;
@@ -1302,18 +1872,18 @@ function pruneCacheDirectory(requiredBytes = 0) {
     }
   }
 }
-function getCachedPublicData(key, loader, ttlMs = defaultTtlMs) {
-  if (!Number.isFinite(ttlMs) || ttlMs <= 0) return loader();
+async function getCachedPublicData(key, loader, ttlMs = defaultTtlMs) {
+  if (!Number.isFinite(ttlMs) || ttlMs <= 0) return await loader();
   const generationAtStart = cacheGeneration;
-  const path2 = cachePath(key);
+  const path = cachePath(key);
   try {
-    if (existsSync(path2) && lstatSync(path2).isFile() && statSync(path2).size <= MAX_CACHE_ENTRY_BYTES) {
-      const entry = JSON.parse(readFileSync(path2, "utf8"));
+    if (existsSync(path) && lstatSync(path).isFile() && statSync(path).size <= MAX_CACHE_ENTRY_BYTES) {
+      const entry = JSON.parse(readFileSync(path, "utf8"));
       if (generationAtStart === cacheGeneration && Number.isFinite(entry.expiresAt) && entry.expiresAt > Date.now()) return entry.value;
     }
   } catch {
   }
-  const value = loader();
+  const value = await loader();
   if (value === null || value === void 0) return value;
   if (generationAtStart !== cacheGeneration) return value;
   let serialized;
@@ -1328,13 +1898,13 @@ function getCachedPublicData(key, loader, ttlMs = defaultTtlMs) {
   let tempPath;
   try {
     if (generationAtStart !== cacheGeneration) return value;
-    const directory = dirname(path2);
+    const directory = dirname(path);
     mkdirSync(directory, { recursive: true, mode: 448 });
     chmodSync(directory, 448);
     pruneCacheDirectory(Buffer.byteLength(serialized, "utf8"));
-    tempPath = `${path2}.${process.pid}.${randomUUID()}.tmp`;
+    tempPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
     writeFileSync(tempPath, serialized, { encoding: "utf8", mode: 384, flag: "wx" });
-    renameSync(tempPath, path2);
+    renameSync(tempPath, path);
     tempPath = void 0;
   } catch {
     if (tempPath) {
@@ -1363,7 +1933,7 @@ function invalidatePublicDataCache() {
 function buildSlug(input, title) {
   return (input || title).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 100);
 }
-function jsonOrNull(value) {
+function jsonOrNull$1(value) {
   if (Array.isArray(value)) return value.length > 0 ? JSON.stringify(value) : null;
   return value ? JSON.stringify(value) : null;
 }
@@ -1384,13 +1954,13 @@ function buildPostPayload(data, userId) {
     status: data.status ?? "draft",
     excerpt: data.excerpt ?? null,
     description: data.description ? sanitizeHtml(data.description) : null,
-    tags: jsonOrNull(data.tags),
-    sections: jsonOrNull(data.sections),
-    customFieldValues: jsonOrNull(data.customFieldValues),
+    tags: jsonOrNull$1(data.tags),
+    sections: jsonOrNull$1(data.sections),
+    customFieldValues: jsonOrNull$1(data.customFieldValues),
     metaTitle: data.metaTitle ?? null,
     metaDescription: data.metaDescription ?? null,
     featuredImage: data.featuredImage ?? null,
-    gallery: jsonOrNull(data.gallery),
+    gallery: jsonOrNull$1(data.gallery),
     authorId: userId,
     publishedAt: isPublished ? data.publishedAt ?? now : null,
     createdAt: now,
@@ -1414,26 +1984,26 @@ function buildUpdatePayload(data, existing, now) {
   if (data.status !== void 0) update.status = data.status;
   if (data.excerpt !== void 0) update.excerpt = data.excerpt ?? null;
   if (data.description !== void 0) update.description = data.description ? sanitizeHtml(data.description) : null;
-  if (data.tags !== void 0) update.tags = jsonOrNull(data.tags);
-  if (data.sections !== void 0) update.sections = jsonOrNull(data.sections);
-  if (data.customFieldValues !== void 0) update.customFieldValues = jsonOrNull(data.customFieldValues);
+  if (data.tags !== void 0) update.tags = jsonOrNull$1(data.tags);
+  if (data.sections !== void 0) update.sections = jsonOrNull$1(data.sections);
+  if (data.customFieldValues !== void 0) update.customFieldValues = jsonOrNull$1(data.customFieldValues);
   if (data.metaTitle !== void 0) update.metaTitle = data.metaTitle ?? null;
   if (data.metaDescription !== void 0) update.metaDescription = data.metaDescription ?? null;
   if (data.featuredImage !== void 0) update.featuredImage = data.featuredImage ?? null;
-  if (data.gallery !== void 0) update.gallery = jsonOrNull(data.gallery);
+  if (data.gallery !== void 0) update.gallery = jsonOrNull$1(data.gallery);
   update.publishedAt = publishedAt;
   return update;
 }
-function createPost(data, userId) {
+async function createPost(data, userId) {
   const slug = buildSlug(data.slug, data.title);
-  const existing = findPostBySlugRecord(slug);
+  const existing = await findPostBySlugRecord(slug);
   if (existing) return serviceConflict("slug", "A post with this slug already exists.");
   try {
     const payload = buildPostPayload(data, userId);
     payload.slug = slug;
-    const post = createPostRecord(payload);
+    const post = await createPostRecord(payload);
     if (data.categoryIds?.length) {
-      syncPostCategoriesRecord(payload.id, data.categoryIds, payload.createdAt);
+      await syncPostCategoriesRecord(payload.id, data.categoryIds, payload.createdAt);
     }
     invalidatePublicDataCache();
     return serviceSuccess(post, "Post created.");
@@ -1441,19 +2011,19 @@ function createPost(data, userId) {
     return { success: false, error: { code: "db_error", message: "Failed to create post." } };
   }
 }
-function updatePost(id, data) {
-  const existing = findPostByIdRecord(id);
+async function updatePost(id2, data) {
+  const existing = await findPostByIdRecord(id2);
   if (!existing) return serviceNotFound("Post");
   if (data.slug && data.slug !== existing.slug) {
-    const slugConflict = findPostBySlugRecord(data.slug);
+    const slugConflict = await findPostBySlugRecord(data.slug);
     if (slugConflict) return serviceConflict("slug", "A post with this slug already exists.");
   }
   try {
     const now = Date.now();
     const updateData = buildUpdatePayload(data, existing, now);
-    const post = updatePostRecord(id, updateData);
+    const post = await updatePostRecord(id2, updateData);
     if (data.categoryIds !== void 0) {
-      syncPostCategoriesRecord(id, data.categoryIds, now);
+      await syncPostCategoriesRecord(id2, data.categoryIds, now);
     }
     invalidatePublicDataCache();
     return serviceSuccess(post, "Post updated.");
@@ -1461,19 +2031,19 @@ function updatePost(id, data) {
     return { success: false, error: { code: "db_error", message: "Failed to update post." } };
   }
 }
-function duplicatePost(id, userId) {
-  const original = findPostByIdRecord(id);
+async function duplicatePost(id2, userId) {
+  const original = await findPostByIdRecord(id2);
   if (!original) return serviceNotFound("Post");
   const now = Date.now();
   const newId = generateId();
   let newSlug = `${original.slug}-copy`;
-  const slugConflict = findPostBySlugRecord(newSlug);
+  const slugConflict = await findPostBySlugRecord(newSlug);
   if (slugConflict) {
-    const timestamp = now.toString(36).slice(-6);
-    newSlug = `${original.slug}-copy-${timestamp}`;
+    const timestamp2 = now.toString(36).slice(-6);
+    newSlug = `${original.slug}-copy-${timestamp2}`;
   }
   try {
-    const post = createPostRecord({
+    const post = await createPostRecord({
       id: newId,
       title: original.title ? `${original.title} (Copy)` : "Untitled (Copy)",
       slug: newSlug,
@@ -1494,7 +2064,7 @@ function duplicatePost(id, userId) {
       updatedAt: now
     });
     if (original.categories?.length) {
-      syncPostCategoriesRecord(
+      await syncPostCategoriesRecord(
         newId,
         original.categories.map((c) => c.id),
         now
@@ -1506,66 +2076,66 @@ function duplicatePost(id, userId) {
     return { success: false, error: { code: "db_error", message: "Failed to duplicate post." } };
   }
 }
-function bulkDeletePosts(ids) {
+async function bulkDeletePosts(ids) {
   const results = [];
-  for (const id of ids) {
-    const existing = findPostByIdRecord(id);
+  for (const id2 of ids) {
+    const existing = await findPostByIdRecord(id2);
     if (!existing) {
-      results.push({ id, success: false });
+      results.push({ id: id2, success: false });
       continue;
     }
     try {
-      deletePostRecord(id);
-      results.push({ id, success: true });
+      await deletePostRecord(id2);
+      results.push({ id: id2, success: true });
     } catch {
-      results.push({ id, success: false });
+      results.push({ id: id2, success: false });
     }
   }
   if (results.some((result) => result.success)) invalidatePublicDataCache();
   return serviceSuccess(results, "Bulk delete completed.");
 }
-function bulkPublishPosts(ids) {
+async function bulkPublishPosts(ids) {
   const now = Date.now();
   const results = [];
-  for (const id of ids) {
-    const existing = findPostByIdRecord(id);
+  for (const id2 of ids) {
+    const existing = await findPostByIdRecord(id2);
     if (!existing) {
-      results.push({ id, success: false });
+      results.push({ id: id2, success: false });
       continue;
     }
     try {
-      updatePostRecord(id, { status: "published", publishedAt: now, updatedAt: now });
-      results.push({ id, success: true });
+      await updatePostRecord(id2, { status: "published", publishedAt: now, updatedAt: now });
+      results.push({ id: id2, success: true });
     } catch {
-      results.push({ id, success: false });
+      results.push({ id: id2, success: false });
     }
   }
   if (results.some((result) => result.success)) invalidatePublicDataCache();
   return serviceSuccess(results, "Bulk publish completed.");
 }
-function bulkUnpublishPosts(ids) {
+async function bulkUnpublishPosts(ids) {
   const now = Date.now();
   const results = [];
-  for (const id of ids) {
-    const existing = findPostByIdRecord(id);
+  for (const id2 of ids) {
+    const existing = await findPostByIdRecord(id2);
     if (!existing) {
-      results.push({ id, success: false });
+      results.push({ id: id2, success: false });
       continue;
     }
     try {
-      updatePostRecord(id, { status: "draft", publishedAt: null, updatedAt: now });
-      results.push({ id, success: true });
+      await updatePostRecord(id2, { status: "draft", publishedAt: null, updatedAt: now });
+      results.push({ id: id2, success: true });
     } catch {
-      results.push({ id, success: false });
+      results.push({ id: id2, success: false });
     }
   }
   if (results.some((result) => result.success)) invalidatePublicDataCache();
   return serviceSuccess(results, "Bulk unpublish completed.");
 }
-function bulkDuplicatePosts(ids, userId) {
+async function bulkDuplicatePosts(ids, userId) {
   const results = [];
   for (const originalId of ids) {
-    const result = duplicatePost(originalId, userId);
+    const result = await duplicatePost(originalId, userId);
     if (result.success) {
       results.push({ id: originalId, success: true, newId: result.data.id });
     } else {
@@ -1574,36 +2144,36 @@ function bulkDuplicatePosts(ids, userId) {
   }
   return serviceSuccess(results, "Bulk duplicate completed.");
 }
-function deletePost(id) {
-  const existing = findPostByIdRecord(id);
+async function deletePost(id2) {
+  const existing = await findPostByIdRecord(id2);
   if (!existing) return serviceNotFound("Post");
   try {
-    deletePostRecord(id);
+    await deletePostRecord(id2);
     invalidatePublicDataCache();
     return serviceSuccess(null, "Post deleted.");
   } catch {
     return { success: false, error: { code: "db_error", message: "Failed to delete post." } };
   }
 }
-function getPost(id) {
-  const post = findPostByIdRecord(id);
+async function getPost(id2) {
+  const post = await findPostByIdRecord(id2);
   if (!post) return serviceNotFound("Post");
   return serviceSuccess(post, "OK");
 }
-function listPosts(filters) {
-  const result = listPostRecords(filters);
+async function listPosts(filters) {
+  const result = await listPostRecords(filters);
   return serviceSuccess(result, "OK");
 }
-function getPublishedPostByType(type, slug) {
+async function getPublishedPostByType(type, slug) {
   if (!slugRegex.test(type) || !slugRegex.test(slug)) return serviceNotFound("Post");
-  const post = getCachedPublicData(`post:published:${type}:${slug}`, () => {
-    const record = findPublishedByTypeAndSlugRecord(type, slug);
+  const post = await getCachedPublicData(`post:published:${type}:${slug}`, async () => {
+    const record = await findPublishedByTypeAndSlugRecord(type, slug);
     return record ? { ...record, description: record.description ? sanitizeHtml(record.description) : null } : record;
   });
   if (!post) return serviceNotFound("Post");
   return serviceSuccess(post, "OK");
 }
-function listPublishedPostsByType(type, page = 1, perPage = 12, filters = {}) {
+async function listPublishedPostsByType(type, page = 1, perPage = 12, filters = {}) {
   const normalizedPage = clampPage(page);
   const normalizedPerPage = clampPerPage(perPage, 12);
   const availableCustomFields = getPublicCustomFieldFilters(type);
@@ -1625,11 +2195,11 @@ function listPublishedPostsByType(type, page = 1, perPage = 12, filters = {}) {
   };
   const customFieldCacheKey = Object.entries(normalizedFilters.customFields ?? {}).sort(([a], [b]) => a.localeCompare(b)).map(([name, value]) => `${name}=${value}`).join(",");
   const cacheKey = [type, normalizedPage, normalizedPerPage, normalizedFilters.search?.toLowerCase() ?? "", normalizedFilters.category?.toLowerCase() ?? "", normalizedFilters.tag?.toLowerCase() ?? "", customFieldCacheKey, normalizedFilters.sortBy ?? "", normalizedFilters.sortOrder ?? ""].join(":");
-  return serviceSuccess(getCachedPublicData(`posts:published:${cacheKey}`, () => listPublishedPostRecordsByType(type, normalizedPage, normalizedPerPage, normalizedFilters)), "OK");
+  return serviceSuccess(await getCachedPublicData(`posts:published:${cacheKey}`, () => listPublishedPostRecordsByType(type, normalizedPage, normalizedPerPage, normalizedFilters)), "OK");
 }
-function getPublishedArchiveFilterOptions(type) {
-  return serviceSuccess(getCachedPublicData(`posts:published:archive-filter-options:${type}`, () => ({
-    ...listPublishedArchiveFilterOptionsByType(type),
+async function getPublishedArchiveFilterOptions(type) {
+  return serviceSuccess(await getCachedPublicData(`posts:published:archive-filter-options:${type}`, async () => ({
+    ...await listPublishedArchiveFilterOptionsByType(type),
     customFields: getPublicCustomFieldFilters(type)
   })), "OK");
 }
@@ -1658,20 +2228,20 @@ function isValidCustomFieldFilterValue(field, value) {
   if (field.type === "date") return /^\d{4}-\d{2}-\d{2}$/.test(value);
   return true;
 }
-function searchPublishedPosts(query, page = 1, perPage = 12) {
+async function searchPublishedPosts(query, page = 1, perPage = 12) {
   const normalizedQuery = query.trim().slice(0, 100);
   const normalizedPage = clampPage(page);
   const normalizedPerPage = clampPerPage(perPage, 12);
   if (!normalizedQuery) {
     return serviceSuccess({ data: [], meta: { currentPage: 1, perPage: normalizedPerPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK");
   }
-  const result = getCachedPublicData(
+  const result = await getCachedPublicData(
     `posts:published:search:${normalizedQuery.toLowerCase()}:${normalizedPage}:${normalizedPerPage}`,
     () => searchPublishedPostRecords(normalizedQuery, normalizedPage, normalizedPerPage)
   );
   return serviceSuccess(result, "OK");
 }
-function listPublishedPostsByTag(tag, page = 1, perPage = 12) {
+async function listPublishedPostsByTag(tag, page = 1, perPage = 12) {
   const normalizedTag = tag.trim().slice(0, 100);
   const normalizedPage = clampPage(page);
   const normalizedPerPage = clampPerPage(perPage, 12);
@@ -1679,7 +2249,7 @@ function listPublishedPostsByTag(tag, page = 1, perPage = 12) {
     return serviceSuccess({ data: [], meta: { currentPage: 1, perPage: normalizedPerPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK");
   }
   return serviceSuccess(
-    getCachedPublicData(
+    await getCachedPublicData(
       `posts:published:tag:${normalizedTag.toLowerCase()}:${normalizedPage}:${normalizedPerPage}`,
       () => listPublishedPostRecordsByTag(normalizedTag, normalizedPage, normalizedPerPage)
     ),
@@ -1687,17 +2257,18 @@ function listPublishedPostsByTag(tag, page = 1, perPage = 12) {
   );
 }
 const MAX_MENU_ROWS = 5e3;
-function findMenuById(id) {
-  return db.select().from(menus).where(eq(menus.id, id)).get();
+async function findMenuById(id2) {
+  const rows = await db.select().from(menus).where(eq(menus.id, id2)).limit(1).execute();
+  return rows[0];
 }
-function listMenus$1(type, publishedOnly = false) {
+async function listMenus$1(type, publishedOnly = false) {
   const query = db.select().from(menus);
   const condition = type ? eq(menus.type, type) : void 0;
   const where = publishedOnly ? condition ? and(condition, eq(menus.status, "published")) : eq(menus.status, "published") : condition;
-  return (where ? query.where(where) : query).limit(MAX_MENU_ROWS).all();
+  return await (where ? query.where(where) : query).limit(MAX_MENU_ROWS).execute();
 }
-function getMenuTreeRecords(items, type) {
-  const rows = listMenus$1(type, true);
+async function getMenuTreeRecords(items, type) {
+  const rows = await listMenus$1(type, true);
   const map = /* @__PURE__ */ new Map();
   const roots = [];
   for (const row of rows) {
@@ -1744,8 +2315,8 @@ function getMenuTreeRecords(items, type) {
   }
   return sortedRoots;
 }
-function createMenuRecord(input) {
-  db.insert(menus).values({
+async function createMenuRecord(input) {
+  await db.insert(menus).values({
     id: input.id,
     title: sanitizeText(input.title),
     url: input.url,
@@ -1758,10 +2329,10 @@ function createMenuRecord(input) {
     parentId: input.parentId ?? null,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt
-  }).run();
-  return findMenuById(input.id);
+  }).execute();
+  return await findMenuById(input.id);
 }
-function updateMenuRecord(id, input) {
+async function updateMenuRecord(id2, input) {
   const updateData = { updatedAt: input.updatedAt };
   if (input.title !== void 0) updateData.title = sanitizeText(input.title);
   if (input.url !== void 0) updateData.url = input.url;
@@ -1772,23 +2343,24 @@ function updateMenuRecord(id, input) {
   if (input.image !== void 0) updateData.image = input.image ?? null;
   if (input.status !== void 0) updateData.status = input.status;
   if (input.parentId !== void 0) updateData.parentId = input.parentId ?? null;
-  db.update(menus).set(updateData).where(eq(menus.id, id)).run();
-  return findMenuById(id) ?? null;
+  await db.update(menus).set(updateData).where(eq(menus.id, id2)).execute();
+  return await findMenuById(id2) ?? null;
 }
-function deleteMenuRecord(id) {
-  db.update(menus).set({ parentId: null }).where(eq(menus.parentId, id)).run();
-  return db.delete(menus).where(eq(menus.id, id)).run().changes > 0;
+async function deleteMenuRecord(id2) {
+  await db.update(menus).set({ parentId: null }).where(eq(menus.parentId, id2)).execute();
+  const result = await db.delete(menus).where(eq(menus.id, id2)).execute();
+  return affectedRows(result) > 0;
 }
-function reorderMenuTree(items) {
+async function reorderMenuTree(items) {
   for (const item of items) {
-    db.update(menus).set({ position: item.position, parentId: item.parentId, updatedAt: Date.now() }).where(eq(menus.id, item.id)).run();
+    await db.update(menus).set({ position: item.position, parentId: item.parentId, updatedAt: Date.now() }).where(eq(menus.id, item.id)).execute();
   }
 }
 const MAX_MENU_PARENT_DEPTH = 20;
-function validateParentId(parentId, type, currentId) {
+async function validateParentId(parentId, type, currentId) {
   if (!parentId) return null;
   if (parentId === currentId) return "A menu item cannot be its own parent.";
-  const parent = findMenuById(parentId);
+  const parent = await findMenuById(parentId);
   if (!parent || parent.type !== type) return "Parent menu item was not found in this menu.";
   const visited = new Set(currentId ? [currentId] : []);
   let cursor = parent;
@@ -1796,31 +2368,31 @@ function validateParentId(parentId, type, currentId) {
     if (visited.has(cursor.id)) return "Menu hierarchy cannot contain a cycle.";
     visited.add(cursor.id);
     if (!cursor.parentId) return null;
-    cursor = findMenuById(cursor.parentId);
+    cursor = await findMenuById(cursor.parentId);
     if (cursor && cursor.type !== type) return "Parent menu item was not found in this menu.";
   }
   return cursor ? "Menu hierarchy is too deep or contains a cycle." : null;
 }
-function getMenuTree(type) {
-  const tree = getCachedPublicData(`menu-tree:${type ?? "all"}`, () => getMenuTreeRecords(void 0, type));
+async function getMenuTree(type) {
+  const tree = await getCachedPublicData(`menu-tree:${type ?? "all"}`, () => getMenuTreeRecords(void 0, type));
   return serviceSuccess(tree, "OK");
 }
-function listMenus() {
-  const items = listMenus$1();
+async function listMenus() {
+  const items = await listMenus$1();
   return serviceSuccess(items, "OK");
 }
-function getMenu(id) {
-  const item = findMenuById(id);
+async function getMenu(id2) {
+  const item = await findMenuById(id2);
   if (!item) return serviceNotFound("Menu");
   return serviceSuccess(item, "OK");
 }
-function createMenu(data) {
-  const parentError = validateParentId(data.parentId, data.type);
+async function createMenu(data) {
+  const parentError = await validateParentId(data.parentId, data.type);
   if (parentError) return serviceValidation(parentError);
-  const id = generateId();
+  const id2 = generateId();
   const now = getCurrentTimestamp();
-  const record = createMenuRecord({
-    id,
+  const record = await createMenuRecord({
+    id: id2,
     title: data.title,
     url: data.url,
     type: data.type,
@@ -1836,12 +2408,12 @@ function createMenu(data) {
   invalidatePublicDataCache();
   return serviceSuccess(record, "Menu created.");
 }
-function updateMenu(id, data) {
-  const existing = findMenuById(id);
+async function updateMenu(id2, data) {
+  const existing = await findMenuById(id2);
   if (!existing) return serviceNotFound("Menu");
   const nextType = data.type ?? existing.type;
   const nextParentId = data.parentId !== void 0 ? data.parentId : existing.parentId;
-  const parentError = validateParentId(nextParentId, nextType, id);
+  const parentError = await validateParentId(nextParentId, nextType, id2);
   if (parentError) return serviceValidation(parentError);
   const now = getCurrentTimestamp();
   const updateData = { updatedAt: now };
@@ -1854,7 +2426,7 @@ function updateMenu(id, data) {
   if (data.image !== void 0) updateData.image = data.image;
   if (data.parentId !== void 0) updateData.parentId = data.parentId;
   if (data.status !== void 0) updateData.status = data.status;
-  const updated = updateMenuRecord(id, updateData);
+  const updated = await updateMenuRecord(id2, updateData);
   if (!updated) return serviceNotFound("Menu");
   invalidatePublicDataCache();
   return serviceSuccess(updated, "Menu updated.");
@@ -1869,9 +2441,9 @@ function flattenTree(tree) {
   }
   return result;
 }
-function reorderMenus(data) {
+async function reorderMenus(data) {
   const items = flattenTree(data.tree);
-  const existing = listMenus$1(data.type);
+  const existing = await listMenus$1(data.type);
   const existingById = new Map(existing.map((item) => [item.id, item]));
   const proposedParents = new Map(existing.map((item) => [item.id, item.parentId]));
   const seen = /* @__PURE__ */ new Set();
@@ -1894,31 +2466,32 @@ function reorderMenus(data) {
     }
     if (cursor) return serviceValidation("Menu hierarchy is too deep or contains a cycle.");
   }
-  reorderMenuTree(items);
+  await reorderMenuTree(items);
   invalidatePublicDataCache();
   return serviceSuccess(null, "Menus reordered.");
 }
-function deleteMenu(id) {
-  const existing = findMenuById(id);
+async function deleteMenu(id2) {
+  const existing = await findMenuById(id2);
   if (!existing) return serviceNotFound("Menu");
-  deleteMenuRecord(id);
+  await deleteMenuRecord(id2);
   invalidatePublicDataCache();
   return serviceSuccess(null, "Menu deleted.");
 }
-function getAllSettingsRecords() {
-  return db.select().from(settings$1).all();
+async function getAllSettingsRecords() {
+  return await db.select().from(settings$1).execute();
 }
-function getSettingRecord(key) {
-  return db.select().from(settings$1).where(eq(settings$1.key, key)).get();
+async function getSettingRecord(key) {
+  const rows = await db.select().from(settings$1).where(eq(settings$1.key, key)).limit(1).execute();
+  return rows[0];
 }
-function upsertSettingRecord(key, value) {
+async function upsertSettingRecord(key, value) {
   const now = getCurrentTimestamp();
-  const existing = getSettingRecord(key);
+  const existing = await getSettingRecord(key);
   if (existing) {
-    db.update(settings$1).set({ value, updatedAt: now }).where(eq(settings$1.key, key)).run();
+    await db.update(settings$1).set({ value, updatedAt: now }).where(eq(settings$1.key, key)).execute();
     return { key, value, createdAt: existing.createdAt, updatedAt: now };
   }
-  db.insert(settings$1).values({ key, value, createdAt: now, updatedAt: now }).run();
+  await db.insert(settings$1).values({ key, value, createdAt: now, updatedAt: now }).execute();
   return { key, value, createdAt: now, updatedAt: now };
 }
 const SETTING_KEYS = {
@@ -1976,9 +2549,9 @@ function parseStringArraySetting(record, fallback) {
     return Array.isArray(parsed) && parsed.every((value) => typeof value === "string") ? parsed : fallback;
   });
 }
-function getSiteSettings() {
-  return getCachedPublicData("site-settings", () => {
-    const records = getAllSettingsRecords();
+async function getSiteSettings() {
+  return await getCachedPublicData("site-settings", async () => {
+    const records = await getAllSettingsRecords();
     const map = new Map(records.map((r) => [r.key, r]));
     return {
       title: parseStringSetting(map.get(SETTING_KEYS.TITLE), DEFAULT_SETTINGS.title),
@@ -1998,7 +2571,7 @@ function getSiteSettings() {
     };
   });
 }
-function updateSiteSettings(data) {
+async function updateSiteSettings(data) {
   const upserts = [];
   if (data.title !== void 0) {
     upserts.push({ key: SETTING_KEYS.TITLE, value: data.title });
@@ -2050,35 +2623,160 @@ function updateSiteSettings(data) {
     });
   }
   if (upserts.length === 0) {
-    return serviceSuccess(getSiteSettings(), "No settings to update.");
+    return serviceSuccess(await getSiteSettings(), "No settings to update.");
   }
   for (const { key, value } of upserts) {
-    upsertSettingRecord(key, value);
+    await upsertSettingRecord(key, value);
   }
   invalidatePublicDataCache();
-  return serviceSuccess(getSiteSettings(), "Settings updated successfully.");
+  return serviceSuccess(await getSiteSettings(), "Settings updated successfully.");
 }
-const migrationsFolder = fileURLToPath(new URL("./migrations/", import.meta.url));
-function migrate() {
-  const sqlite2 = db.$client;
-  const journal = JSON.parse(readFileSync(join(migrationsFolder, "meta", "_journal.json"), "utf8"));
-  const migrationTable = "__drizzle_migrations";
-  sqlite2.exec(`CREATE TABLE IF NOT EXISTS ${migrationTable} (id INTEGER PRIMARY KEY, hash text NOT NULL, created_at numeric)`);
-  const lastMigration = sqlite2.prepare(`SELECT created_at FROM ${migrationTable} ORDER BY created_at DESC LIMIT 1`).get();
-  const lastCreatedAt = Number(lastMigration?.created_at ?? -1);
-  const recordMigration = sqlite2.prepare(`INSERT INTO ${migrationTable} (hash, created_at) VALUES (?, ?)`);
-  sqlite2.exec("BEGIN");
-  try {
-    for (const entry of journal.entries) {
-      if (entry.when <= lastCreatedAt) continue;
-      const sql2 = readFileSync(join(migrationsFolder, `${entry.tag}.sql`), "utf8");
-      sqlite2.exec(sql2);
-      recordMigration.run(createHash("sha256").update(sql2).digest("hex"), entry.when);
+let cachedS3 = null;
+function envValue(name) {
+  const value = process.env[name]?.trim();
+  return value || void 0;
+}
+function parseBoolean(value, fallback) {
+  if (value === void 0) return fallback;
+  return !["false", "0", "no", "off"].includes(value.toLowerCase());
+}
+function getStorageType() {
+  const value = envValue("STORAGE_TYPE")?.toLowerCase() || "local";
+  if (value !== "local" && value !== "s3") {
+    throw new Error('STORAGE_TYPE must be either "local" or "s3".');
+  }
+  return value;
+}
+function getStorageDir() {
+  const configuredPath = envValue("STORAGE_PATH") || envValue("STORAGE_DIR");
+  if (configuredPath) return resolve(process.cwd(), configuredPath);
+  const uploadDir = envValue("UPLOAD_DIR") || "./public";
+  return resolve(process.cwd(), uploadDir, "storage");
+}
+function normalizeStorageKey(filePath) {
+  const value = filePath.trim().replace(/^\/+/, "");
+  const key = value === "storage" ? "" : value.startsWith("storage/") ? value.slice("storage/".length) : value;
+  if (!key || key.includes("\0") || key.includes("\\") || key.split("/").some((segment) => !segment || segment === "." || segment === "..")) {
+    throw new Error("Invalid storage file path.");
+  }
+  return key;
+}
+function resolveStorageFile(filePath) {
+  const storageDir = getStorageDir();
+  const target = resolve(storageDir, normalizeStorageKey(filePath));
+  const relativeTarget = relative(storageDir, target);
+  if (!relativeTarget || relativeTarget === ".." || relativeTarget.startsWith(`..${sep}`) || isAbsolute(relativeTarget)) {
+    throw new Error("Invalid storage file path.");
+  }
+  return target;
+}
+function getS3StorageConfig() {
+  const bucket = envValue("S3_BUCKET");
+  if (!bucket) throw new Error("S3_BUCKET is required when STORAGE_TYPE=s3.");
+  const accessKeyId = envValue("S3_ACCESS_KEY_ID") || envValue("S3_ACCESS_KEY") || envValue("AWS_ACCESS_KEY_ID");
+  const secretAccessKey = envValue("S3_SECRET_ACCESS_KEY") || envValue("S3_SECRET_KEY") || envValue("AWS_SECRET_ACCESS_KEY");
+  if (accessKeyId && !secretAccessKey || !accessKeyId && secretAccessKey) {
+    throw new Error("S3 access key and secret key must be configured together.");
+  }
+  return {
+    bucket,
+    endpoint: envValue("S3_ENDPOINT"),
+    region: envValue("S3_REGION") || "us-east-1",
+    forcePathStyle: parseBoolean(envValue("S3_FORCE_PATH_STYLE"), false),
+    accessKeyId,
+    secretAccessKey
+  };
+}
+function getS3Storage() {
+  const config = getS3StorageConfig();
+  const cacheKey = JSON.stringify(config);
+  if (cachedS3?.cacheKey === cacheKey) return cachedS3;
+  const clientConfig = {
+    region: config.region,
+    forcePathStyle: config.forcePathStyle,
+    ...config.endpoint ? { endpoint: config.endpoint } : {},
+    ...config.accessKeyId && config.secretAccessKey ? { credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey } } : {}
+  };
+  const client = new S3Client(clientConfig);
+  cachedS3 = { cacheKey, client, config };
+  return cachedS3;
+}
+function isMissingS3Object(error) {
+  const candidate = error;
+  return candidate.name === "NoSuchKey" || candidate.name === "NotFound" || candidate.$metadata?.httpStatusCode === 404;
+}
+async function writeStorageFile(filePath, data) {
+  if (getStorageType() === "local") {
+    const target = resolveStorageFile(filePath);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, data);
+    return;
+  }
+  const key = normalizeStorageKey(filePath);
+  const { client, config } = getS3Storage();
+  await client.send(new PutObjectCommand({ Bucket: config.bucket, Key: key, Body: data }));
+}
+async function readStorageFile(filePath) {
+  if (getStorageType() === "local") {
+    const target = resolveStorageFile(filePath);
+    try {
+      return await readFile(target);
+    } catch (error) {
+      if (error.code === "ENOENT") return null;
+      throw error;
     }
-    sqlite2.exec("COMMIT");
+  }
+  const key = normalizeStorageKey(filePath);
+  const { client, config } = getS3Storage();
+  try {
+    const response = await client.send(new GetObjectCommand({ Bucket: config.bucket, Key: key }));
+    if (!response.Body) return null;
+    return Buffer.from(await response.Body.transformToByteArray());
   } catch (error) {
-    sqlite2.exec("ROLLBACK");
+    if (isMissingS3Object(error)) return null;
     throw error;
+  }
+}
+async function deleteStorageFile(filePath) {
+  if (getStorageType() === "local") {
+    const target = resolveStorageFile(filePath);
+    try {
+      await unlink(target);
+      return true;
+    } catch (error) {
+      if (error.code === "ENOENT") return false;
+      throw error;
+    }
+  }
+  const key = normalizeStorageKey(filePath);
+  const { client, config } = getS3Storage();
+  try {
+    await client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: key }));
+    return true;
+  } catch (error) {
+    if (isMissingS3Object(error)) return false;
+    throw error;
+  }
+}
+function resolveMigrationsFolder() {
+  const dialect = databaseConfig.connection;
+  const packaged = fileURLToPath(new URL(`./migrations/${dialect}/`, import.meta.url));
+  const source = fileURLToPath(new URL(`../../../migrations/${dialect}/`, import.meta.url));
+  const legacySqlite = fileURLToPath(new URL("../../../migrations/", import.meta.url));
+  const candidates = dialect === "sqlite" ? [packaged, source, legacySqlite] : [packaged, source];
+  const folder = candidates.find((candidate) => existsSync(join(candidate, "meta", "_journal.json")));
+  if (!folder) throw new Error(`No ${dialect} database migrations were packaged.`);
+  return folder;
+}
+async function migrate() {
+  const migrationsFolder = resolveMigrationsFolder();
+  const config = { migrationsFolder };
+  if (databaseConfig.connection === "sqlite") {
+    await migrate$1(db, executeSqliteMigrations, config);
+  } else if (databaseConfig.connection === "mysql") {
+    await migrate$2(db, config);
+  } else {
+    await migrate$3(db, config);
   }
 }
 const CONTENT_TYPE_REGISTRY_PATH = "src/components/web/content-type-templates/registry.json";
@@ -2166,32 +2864,32 @@ function getPermissionDefinitions() {
 function isContentPermissionSlug(slug) {
   return slug.startsWith("content.") || slug.startsWith("category.");
 }
-function syncPermissionRecords(definitions) {
+async function syncPermissionRecords(definitions) {
   const now = getCurrentTimestamp();
-  return db.transaction((tx) => {
-    const existing = tx.select({ id: permissions.id, slug: permissions.slug }).from(permissions).all();
+  return await db.transaction(async (tx) => {
+    const existing = await tx.select({ id: permissions.id, slug: permissions.slug }).from(permissions).execute();
     const existingBySlug = new Map(existing.map((permission) => [permission.slug, permission]));
     const desiredSlugs = new Set(definitions.map((permission) => permission.slug));
     const obsolete = existing.filter((permission) => isContentPermissionSlug(permission.slug) && !desiredSlugs.has(permission.slug));
     for (const permission of obsolete) {
-      tx.delete(rolePermissions).where(eq(rolePermissions.permissionId, permission.id)).run();
-      tx.delete(permissions).where(eq(permissions.id, permission.id)).run();
+      await tx.delete(rolePermissions).where(eq(rolePermissions.permissionId, permission.id)).execute();
+      await tx.delete(permissions).where(eq(permissions.id, permission.id)).execute();
     }
     let added = 0;
     let updated = 0;
     for (const definition of definitions) {
       const current = existingBySlug.get(definition.slug);
       if (current) {
-        tx.update(permissions).set({
+        await tx.update(permissions).set({
           name: definition.name,
           group: definition.group,
           description: definition.name,
           updatedAt: now
-        }).where(eq(permissions.id, current.id)).run();
+        }).where(eq(permissions.id, current.id)).execute();
         updated++;
         continue;
       }
-      tx.insert(permissions).values({
+      await tx.insert(permissions).values({
         id: generateId(),
         name: definition.name,
         slug: definition.slug,
@@ -2199,7 +2897,7 @@ function syncPermissionRecords(definitions) {
         description: definition.name,
         createdAt: now,
         updatedAt: now
-      }).run();
+      }).execute();
       added++;
     }
     return { added, updated, removed: obsolete.length, total: definitions.length };
@@ -2268,16 +2966,16 @@ async function seed() {
   const rolePermissionMap = getRolePermissionMap(permissionDefinitions);
   const now = getCurrentTimestamp();
   console.log("  → Inserting permissions...");
-  const permissionSync = syncPermissionRecords(permissionDefinitions);
+  const permissionSync = await syncPermissionRecords(permissionDefinitions);
   console.log(`  ✓ ${permissionSync.total} permissions ready`);
-  db.transaction((tx) => {
-    const existingPermissions = tx.select({ id: permissions.id, slug: permissions.slug }).from(permissions).all();
+  await db.transaction(async (tx) => {
+    const existingPermissions = await tx.select({ id: permissions.id, slug: permissions.slug }).from(permissions).execute();
     const permissionSlugToId = new Map(
       existingPermissions.map((p) => [p.slug, p.id])
     );
     console.log("  → Inserting roles...");
     for (const role of DEFAULT_ROLES) {
-      tx.insert(roles).values({
+      const insert = tx.insert(roles).values({
         id: generateId(),
         name: role.name,
         slug: role.slug,
@@ -2285,9 +2983,14 @@ async function seed() {
         isSystem: role.isSystem,
         createdAt: now,
         updatedAt: now
-      }).onConflictDoNothing({ target: roles.slug }).run();
+      });
+      if (databaseConfig.connection === "mysql") {
+        await insert.onDuplicateKeyUpdate({ set: { slug: role.slug } }).execute();
+      } else {
+        await insert.onConflictDoNothing({ target: roles.slug }).execute();
+      }
     }
-    const existingRoles = tx.select({ id: roles.id, slug: roles.slug }).from(roles).all();
+    const existingRoles = await tx.select({ id: roles.id, slug: roles.slug }).from(roles).execute();
     const roleSlugToId = new Map(
       existingRoles.map((r) => [r.slug, r.id])
     );
@@ -2296,7 +2999,7 @@ async function seed() {
     for (const role of DEFAULT_ROLES) {
       const roleId = roleSlugToId.get(role.slug);
       if (roleId) {
-        tx.delete(rolePermissions).where(sql`${rolePermissions.roleId} = ${roleId}`).run();
+        await tx.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId)).execute();
       }
     }
     let assignmentCount = 0;
@@ -2312,12 +3015,12 @@ async function seed() {
           console.warn(`  ⚠ Permission "${permSlug}" not found, skipping`);
           continue;
         }
-        tx.insert(rolePermissions).values({
+        await tx.insert(rolePermissions).values({
           id: generateId(),
           roleId,
           permissionId,
           createdAt: now
-        }).run();
+        }).execute();
         assignmentCount++;
       }
     }
@@ -2332,7 +3035,7 @@ async function seed() {
     if (!superAdminRoleId) {
       console.warn("  ⚠ Super Admin role not found, skipping user creation");
     } else {
-      tx.insert(users).values({
+      const insert = tx.insert(users).values({
         id: generateId(),
         name: resolvedAdminName,
         email: resolvedAdminEmail,
@@ -2341,7 +3044,12 @@ async function seed() {
         emailVerified: 1,
         createdAt: now,
         updatedAt: now
-      }).onConflictDoNothing({ target: users.email }).run();
+      });
+      if (databaseConfig.connection === "mysql") {
+        await insert.onDuplicateKeyUpdate({ set: { email: resolvedAdminEmail } }).execute();
+      } else {
+        await insert.onConflictDoNothing({ target: users.email }).execute();
+      }
       console.log(`  ✓ Super-admin user ready (${resolvedAdminEmail})`);
     }
   });
@@ -2353,283 +3061,631 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exitCode = 1;
   });
 }
-const MAX_CATEGORY_ROWS = 5e3;
-function findCategoryByIdRecord(id) {
-  return db.select({
-    id: categories.id,
-    name: categories.name,
-    slug: categories.slug,
-    type: categories.type,
-    description: categories.description,
-    image: categories.image,
-    status: categories.status,
-    createdAt: categories.createdAt,
-    updatedAt: categories.updatedAt
-  }).from(categories).where(eq(categories.id, id)).get();
+const createCategorySchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters"),
+  type: z.string().min(1).max(64).regex(slugRegex, "Type must contain only lowercase alphanumeric characters and hyphens").default("post"),
+  status: publishStatusEnum.default("published"),
+  description: emptyToNull,
+  image: imageUrlSimpleSchema
+});
+const updateCategorySchema = createCategorySchema.partial();
+const menuTypeEnum = z.enum(["navbar", "footer", "sidebar"]);
+const createMenuSchema = z.object({
+  // Required: 1-100 characters (Req 7.1)
+  title: z.string().min(1, "Title is required").max(100, "Title must be at most 100 characters"),
+  // Required: URL string
+  url: safeHrefSchema,
+  // Required: menu type (Req 7.1)
+  type: menuTypeEnum,
+  // Optional: non-negative integer, defaults to 0 (Req 7.1)
+  position: z.number().int().min(0, "Position must be a non-negative integer").default(0),
+  // Optional: parent menu item ID (ULID)
+  parentId: z.string().regex(ulidRegex, "Parent ID must be a valid ULID").nullable().optional(),
+  // Optional: empty → null (Req 9.9)
+  cssClass: emptyToNull,
+  // Optional: empty → null (Req 9.9)
+  target: z.preprocess(
+    (value) => value === "" ? null : value,
+    z.enum(["_self", "_blank", "_parent", "_top"]).nullable().optional()
+  ),
+  image: imageUrlSimpleSchema,
+  status: publishStatusEnum.default("published")
+});
+const updateMenuSchema = createMenuSchema.partial();
+const MAX_MENU_DEPTH = 20;
+const MAX_MENU_CHILDREN = 100;
+const MAX_MENU_NODES = 1e3;
+function menuTreeItemSchemaAtDepth(depth) {
+  const children = depth >= MAX_MENU_DEPTH ? z.array(z.never()).max(0) : z.array(menuTreeItemSchemaAtDepth(depth + 1)).max(MAX_MENU_CHILDREN);
+  return z.object({
+    id: z.string().regex(ulidRegex, "Menu item ID must be a valid ULID"),
+    parentId: z.string().regex(ulidRegex, "Parent ID must be a valid ULID").nullable(),
+    position: z.number().int().min(0, "Position must be a non-negative integer"),
+    children
+  });
 }
-function findCategoryBySlugRecord(slug) {
-  return db.select({
-    id: categories.id,
-    name: categories.name,
-    slug: categories.slug,
-    type: categories.type,
-    description: categories.description,
-    image: categories.image,
-    status: categories.status,
-    createdAt: categories.createdAt,
-    updatedAt: categories.updatedAt
-  }).from(categories).where(eq(categories.slug, slug)).get();
-}
-function listCategoryRecords(filters) {
-  const conditions = [];
-  const type = filters?.type?.slice(0, 64);
-  const search2 = filters?.search?.slice(0, 100);
-  if (type) {
-    conditions.push(eq(categories.type, type));
-  }
-  if (search2) {
-    conditions.push(like(categories.name, `%${search2}%`));
-  }
-  let orderColumn = desc(categories.updatedAt);
-  if (filters?.sortBy) {
-    const column = filters.sortBy === "name" ? categories.name : filters.sortBy === "createdAt" ? categories.createdAt : null;
-    if (column) {
-      orderColumn = filters.sortOrder === "asc" ? asc(column) : desc(column);
+const menuTreeItemSchema = menuTreeItemSchemaAtDepth(0);
+const reorderMenusSchema = z.object({
+  type: menuTypeEnum,
+  tree: z.array(menuTreeItemSchema).max(MAX_MENU_CHILDREN, "Too many top-level menu items")
+}).superRefine((value, context) => {
+  let count2 = 0;
+  const visit = (nodes) => {
+    for (const node of nodes) {
+      count2 += 1;
+      if (count2 > MAX_MENU_NODES) return true;
+      if (visit(node.children)) return true;
     }
+    return false;
+  };
+  if (visit(value.tree)) {
+    context.addIssue({ code: "custom", message: `At most ${MAX_MENU_NODES} menu items may be reordered.` });
   }
-  const query = db.select({
-    id: categories.id,
-    name: categories.name,
-    slug: categories.slug,
-    type: categories.type,
-    description: categories.description,
-    image: categories.image,
-    status: categories.status,
-    createdAt: categories.createdAt,
-    updatedAt: categories.updatedAt
-  }).from(categories).orderBy(orderColumn);
-  return (conditions.length > 0 ? query.where(and(...conditions)) : query).limit(MAX_CATEGORY_ROWS).all();
+});
+const sectionText = z.string().max(1e4).nullable().optional();
+const sectionShortText = z.string().max(512).nullable().optional();
+const sectionLinkSchema = z.object({
+  label: z.string().max(200),
+  url: safeHrefSchema
+});
+const sectionItemSchema = z.object({
+  caption: sectionShortText,
+  title: sectionShortText,
+  text: sectionText,
+  image: safeImageUrlSchema.nullable().optional(),
+  alt_image: sectionShortText,
+  video: z.string().max(2048).nullable().optional(),
+  map: z.string().max(256).nullable().optional(),
+  icon: sectionShortText,
+  form_inquiry: z.boolean().nullable().optional(),
+  embed: z.string().max(4e3).nullable().optional(),
+  bg_color: z.string().max(200).nullable().optional(),
+  bg_image: safeImageUrlSchema.nullable().optional(),
+  links: z.array(sectionLinkSchema).max(20, "Too many section links").nullable().optional(),
+  style_css: z.string().max(1e3).nullable().optional(),
+  style_css_inline: z.string().max(4e3).nullable().optional(),
+  style_id: z.string().max(128).nullable().optional()
+});
+const sectionSchema = z.object({
+  id: z.string().min(1, "Section id is required").max(128),
+  type: z.string().min(1, "Section type is required").max(64),
+  caption: sectionShortText,
+  title: sectionShortText,
+  text: sectionText,
+  image: safeImageUrlSchema.nullable().optional(),
+  alt_image: sectionShortText,
+  bg_color: z.string().max(200).nullable().optional(),
+  bg_image: safeImageUrlSchema.nullable().optional(),
+  style_css: z.string().max(1e3).nullable().optional(),
+  style_css_inline: z.string().max(4e3).nullable().optional(),
+  style_id: z.string().max(128).nullable().optional(),
+  alignment: z.string().max(32).nullable().optional(),
+  limit: z.number().int().min(0).max(100).nullable().optional(),
+  sort: z.number().int().min(0).max(1e6).optional(),
+  sort_by: z.string().max(32).nullable().optional(),
+  sort_order: z.enum(["asc", "desc"]).nullable().optional(),
+  category: z.string().max(128).nullable().optional(),
+  links: z.array(sectionLinkSchema).max(20, "Too many section links").nullable().optional(),
+  item: z.array(sectionItemSchema).max(100, "Too many section items").nullable().optional()
+});
+const tagSchema = z.string().min(1, "Tag must not be empty").max(50, "Tag must be at most 50 characters");
+const createPostSchema = z.object({
+  // Required
+  title: z.string().min(1, "Title is required").max(200, "Title must be at most 200 characters"),
+  // Optional with validation
+  slug: z.string().max(100, "Slug must be at most 100 characters").regex(slugRegex, "Slug must contain only lowercase alphanumeric characters and hyphens").optional(),
+  type: z.string().min(1).max(64).regex(slugRegex, "Type must contain only lowercase alphanumeric characters and hyphens").default("post"),
+  status: publishStatusEnum.default("draft"),
+  publishedAt: z.number().int().positive().nullable().optional(),
+  // Optional string fields with empty-to-null transform (Req 9.9)
+  excerpt: emptyToNull,
+  description: z.string().max(1e5, "Description must be at most 100000 characters").optional(),
+  // Tags: array of strings, max 30 items (Req 20.1)
+  tags: z.array(tagSchema).max(30, "Tags must contain at most 30 items").optional(),
+  // Sections: array of objects, max 50 items (Req 20.2)
+  sections: z.array(sectionSchema).max(50, "Sections must contain at most 50 items").optional(),
+  // SEO fields (Req 9.6)
+  metaTitle: z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(
+    z.string().max(60, "Meta title must be at most 60 characters").nullable().optional()
+  ),
+  metaDescription: z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(
+    z.string().max(160, "Meta description must be at most 160 characters").nullable().optional()
+  ),
+  // Featured image (Req 17.4)
+  featuredImage: featuredImageSchema,
+  // Gallery images stored as JSON array of URLs
+  gallery: z.array(galleryImageSchema).max(20, "Gallery must contain at most 20 images").optional(),
+  // Category IDs: array of ULIDs (Req 9.7)
+  categoryIds: z.array(z.string().regex(ulidRegex, "Invalid category ID format")).max(100, "Too many categories").optional(),
+  // Custom field values: record of arbitrary values (Req 20.3)
+  customFieldValues: z.record(z.string().max(64), z.unknown()).refine((value) => Object.keys(value).length <= 100, "Too many custom fields").optional()
+});
+const updatePostSchema = createPostSchema.partial();
+const settingsSeedSchema = z.object({
+  title: z.string().max(200).optional(),
+  description: z.string().max(1e4).optional(),
+  meta_title: z.string().max(200).optional(),
+  meta_description: z.string().max(1e4).optional(),
+  maintenance_mode: z.boolean().optional(),
+  timezone: z.string().max(100).optional(),
+  logo: z.string().max(2048).optional(),
+  favicon: z.string().max(2048).optional(),
+  links: z.array(z.object({
+    platform: z.string().min(1).max(100),
+    url: safeHrefSchema,
+    icon: z.string().max(100).optional()
+  }).strict()).max(100).optional(),
+  open_hours: z.array(z.object({
+    day: z.string().min(1).max(100),
+    open: z.string().min(1).max(20),
+    close: z.string().min(1).max(20)
+  }).strict()).max(100).optional(),
+  custom_css: z.string().max(1e5).optional(),
+  custom_javascript: z.string().max(1e5).optional(),
+  translate_countries: z.array(z.string().min(1).max(20)).max(100).optional(),
+  email_notifications: z.array(z.string().email()).max(100).optional()
+}).strict();
+const categorySeedSchema = createCategorySchema.extend({
+  slug: z.string().regex(slugRegex, "Slug must contain only lowercase alphanumeric characters and hyphens").optional()
+}).strict();
+const contentSeedSchema = createPostSchema.omit({ categoryIds: true }).extend({
+  status: z.enum(["draft", "published"]).default("published"),
+  categorySlugs: z.array(z.string().trim().min(1).max(200)).max(100).optional()
+}).strict();
+const menuSeedSchema = createMenuSchema.omit({ parentId: true }).extend({
+  position: z.number().int().min(0).optional(),
+  parentUrl: safeHrefSchema.optional()
+}).strict();
+const seedDataSchema = z.object({
+  settings: settingsSeedSchema.default({}),
+  categories: z.array(categorySeedSchema).max(5e3).default([]),
+  posts: z.array(contentSeedSchema).max(5e3).default([]),
+  pages: z.array(contentSeedSchema).max(5e3).default([]),
+  menus: z.array(menuSeedSchema).max(5e3).default([])
+}).strict();
+function emptyEntitySummary() {
+  return { created: 0, updated: 0, skipped: 0 };
 }
-function categorySlugExistsRecord(slug, excludeId) {
-  const rows = db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).all();
-  return excludeId ? rows.some((row) => row.id !== excludeId) : rows.length > 0;
-}
-function createCategoryRecord(input) {
-  db.insert(categories).values({
-    ...input,
-    name: sanitizeText(input.name),
-    description: input.description ? sanitizeText(input.description) : null
-  }).run();
+function emptySummary(source, dryRun) {
   return {
-    id: input.id,
-    name: sanitizeText(input.name),
-    slug: input.slug,
-    type: input.type,
-    description: input.description ? sanitizeText(input.description) : null,
-    image: input.image,
-    status: input.status,
-    createdAt: input.createdAt,
-    updatedAt: input.updatedAt
+    source,
+    dryRun,
+    settings: emptyEntitySummary(),
+    categories: emptyEntitySummary(),
+    posts: emptyEntitySummary(),
+    pages: emptyEntitySummary(),
+    menus: emptyEntitySummary()
   };
 }
-function updateCategoryRecord(id, input) {
-  const updates = { updatedAt: input.updatedAt };
-  if (input.name !== void 0) updates.name = sanitizeText(input.name);
-  if (input.slug !== void 0) updates.slug = input.slug;
-  if (input.type !== void 0) updates.type = input.type;
-  if (input.description !== void 0) updates.description = input.description ? sanitizeText(input.description) : null;
-  if (input.image !== void 0) updates.image = input.image;
-  if (input.status !== void 0) updates.status = input.status;
-  db.update(categories).set(updates).where(eq(categories.id, id)).run();
-  return findCategoryByIdRecord(id) ?? null;
+function seedError(message) {
+  return new Error(`Seed data error: ${message}`);
 }
-function deleteCategoryRecord(id) {
-  return db.delete(categories).where(eq(categories.id, id)).run().changes > 0;
-}
-async function generateUniqueSlug(name, excludeId) {
-  let slug = slugify(name);
-  if (!slug) slug = "category";
-  if (categorySlugExistsRecord(slug, excludeId)) {
-    let counter = 1;
-    while (categorySlugExistsRecord(`${slug}-${counter}`, excludeId)) {
-      counter++;
-    }
-    slug = `${slug}-${counter}`;
+function assertUnique(label, values) {
+  const seen = /* @__PURE__ */ new Set();
+  for (const value of values) {
+    if (seen.has(value)) throw seedError(`Duplicate ${label}: "${value}".`);
+    seen.add(value);
   }
+}
+function contentSlug(item) {
+  const slug = item.slug ?? slugify(item.title);
+  if (!slug) throw seedError(`Unable to generate a slug for content "${item.title}".`);
   return slug;
 }
-async function createCategoryAsync(data) {
-  const id = generateId();
-  const now = getCurrentTimestamp();
-  const slug = await generateUniqueSlug(data.name);
-  const created = createCategoryRecord({
-    id,
-    name: data.name,
-    slug,
-    type: data.type ?? "category",
-    description: data.description ?? null,
-    image: data.image ?? null,
-    status: data.status ?? "published",
-    createdAt: now,
-    updatedAt: now
-  });
-  return serviceSuccess(created, "Category created.");
+function categorySlug(item) {
+  const slug = item.slug ?? slugify(item.name);
+  if (!slug) throw seedError(`Unable to generate a slug for category "${item.name}".`);
+  return slug;
 }
-async function updateCategory(id, data) {
-  const existing = findCategoryByIdRecord(id);
-  if (!existing) return serviceNotFound("Category");
-  const now = getCurrentTimestamp();
-  const updateData = { updatedAt: now };
-  if (data.name !== void 0) updateData.name = data.name;
-  if (data.type !== void 0) updateData.type = data.type;
-  if (data.description !== void 0) updateData.description = data.description;
-  if (data.image !== void 0) updateData.image = data.image;
-  if (data.status !== void 0) updateData.status = data.status;
-  if (data.name !== void 0 && data.name !== existing.name) {
-    updateData.slug = await generateUniqueSlug(data.name, id);
+function menuKey(type, url) {
+  return `${type}:${url}`;
+}
+function validateSeedData(data) {
+  const categorySlugs = data.categories.map(categorySlug);
+  assertUnique("category slug", categorySlugs);
+  const contentSlugs = [...data.posts, ...data.pages].map(contentSlug);
+  assertUnique("content slug", contentSlugs);
+  const menuKeys = data.menus.map((menu) => menuKey(menu.type, menu.url));
+  assertUnique("menu item", menuKeys);
+  validateMenuParentGraph(data.menus);
+  return data;
+}
+function parseSeedData(input, source = "<seed data>") {
+  const result = seedDataSchema.safeParse(input);
+  if (!result.success) {
+    const details = result.error.issues.map((issue) => `${issue.path.length ? issue.path.join(".") : "<root>"}: ${issue.message}`).join("; ");
+    throw seedError(`Invalid data in ${source}: ${details}`);
   }
-  const updated = updateCategoryRecord(id, updateData);
-  if (!updated) return serviceNotFound("Category");
-  return serviceSuccess(updated, "Category updated.");
+  return validateSeedData(result.data);
 }
-function deleteCategory(id) {
-  const existing = findCategoryByIdRecord(id);
-  if (!existing) return serviceNotFound("Category");
-  deleteCategoryRecord(id);
-  return serviceSuccess(null, "Category deleted.");
-}
-function duplicateCategory(id) {
-  const existing = findCategoryByIdRecord(id);
-  if (!existing) return serviceNotFound("Category");
-  const newId = generateId();
-  const now = getCurrentTimestamp();
-  const newSlug = `${existing.slug}-copy`;
-  let finalSlug = newSlug;
-  if (categorySlugExistsRecord(finalSlug)) {
-    const ts = now.toString(36).slice(-4);
-    finalSlug = `${newSlug}-${ts}`;
-  }
+function assertRegularFile(filePath) {
+  let stats;
   try {
-    const created = createCategoryRecord({
-      id: newId,
-      name: `${existing.name} (Copy)`,
-      slug: finalSlug,
-      type: existing.type,
-      description: existing.description,
-      image: existing.image,
-      status: existing.status,
-      createdAt: now,
-      updatedAt: now
-    });
-    return serviceSuccess(created, "Category duplicated.");
+    stats = lstatSync(filePath);
   } catch {
-    return { success: false, error: { code: "db_error", message: "Failed to duplicate category." } };
+    throw seedError(`Seed file was not found: ${filePath}`);
+  }
+  if (!stats.isFile() || stats.isSymbolicLink()) {
+    throw seedError(`Seed path must be a regular file: ${filePath}`);
   }
 }
-function bulkDeleteCategories(ids) {
-  const results = [];
-  for (const id of ids) {
-    const existing = findCategoryByIdRecord(id);
-    if (!existing) {
-      results.push({ id, success: false });
-      continue;
-    }
-    try {
-      deleteCategoryRecord(id);
-      results.push({ id, success: true });
-    } catch {
-      results.push({ id, success: false });
-    }
-  }
-  return serviceSuccess(results, "Bulk delete completed.");
-}
-function bulkDuplicateCategories(ids) {
-  const results = [];
-  for (const id of ids) {
-    const result = duplicateCategory(id);
-    if (result.success) {
-      results.push({ id, success: true, newId: result.data.id });
-    } else {
-      results.push({ id, success: false });
-    }
-  }
-  return serviceSuccess(results, "Bulk duplicate completed.");
-}
-function bulkUpdateCategoryStatus(ids, status2) {
-  const now = getCurrentTimestamp();
-  const results = ids.map((id) => {
-    const updated = updateCategoryRecord(id, { status: status2, updatedAt: now });
-    return { id, success: updated !== null };
-  });
-  return serviceSuccess(results, `Categories ${status2 === "published" ? "published" : "unpublished"}.`);
-}
-function listCategories(filters) {
-  const items = listCategoryRecords(filters);
-  return serviceSuccess(items, "Categories retrieved.");
-}
-function templatePath(name) {
-  if (!/^[a-z0-9-]+$/.test(name)) throw new Error("Invalid template name.");
+function packagedTemplateSeedPath(name) {
+  if (!/^[a-z0-9-]+$/.test(name)) throw seedError("Invalid template name.");
   const moduleDir = dirname(fileURLToPath(import.meta.url));
   const packaged = resolve(moduleDir, "templates", name, "data", "seed.json");
-  return existsSync(packaged) ? packaged : resolve(moduleDir, "..", "..", "..", "templates", name, "data", "seed.json");
+  const source = resolve(moduleDir, "..", "..", "..", "templates", name, "data", "seed.json");
+  const filePath = existsSync(packaged) ? packaged : source;
+  assertRegularFile(filePath);
+  return filePath;
 }
-async function seedTemplate(name) {
-  const template = JSON.parse(await readFile(templatePath(name), "utf8"));
-  const user = db.select({ id: users.id }).from(users).get();
-  if (!user) throw new Error("Run the base seed before importing template data.");
-  const settings2 = getSiteSettings();
-  if (template.settings && settings2.title === "My CMS") {
-    const result = updateSiteSettings(template.settings);
-    if (!result.success) throw new Error(result.error.message);
+function resolveSeedPath(options) {
+  if (options.filePath && options.template) {
+    throw seedError("Choose either a seed file or a template, not both.");
   }
-  const categories2 = /* @__PURE__ */ new Map();
-  for (const category of template.categories ?? []) {
-    const slug = category.name.toLowerCase().replace(/\s+/g, "-");
-    const existing = findCategoryBySlugRecord(slug);
-    if (existing) {
-      categories2.set(slug, existing.id);
+  if (!options.filePath && !options.template) {
+    throw seedError("A seed file or template is required.");
+  }
+  if (options.template) {
+    return {
+      filePath: packagedTemplateSeedPath(options.template),
+      source: `template:${options.template}`
+    };
+  }
+  const filePath = isAbsolute(options.filePath) ? options.filePath : resolve(process.cwd(), options.filePath);
+  assertRegularFile(filePath);
+  return { filePath, source: filePath };
+}
+async function loadSeedData(options) {
+  const { filePath, source } = resolveSeedPath(options);
+  let raw;
+  try {
+    raw = await readFile(filePath, "utf8");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw seedError(`Unable to read ${source}: ${message}`);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw seedError(`Invalid JSON in ${source}: ${message}`);
+  }
+  return { data: parseSeedData(parsed, source), source };
+}
+function serializeSettingValue(value) {
+  if (typeof value === "string") return value;
+  const serialized = JSON.stringify(value);
+  if (serialized === void 0) throw seedError("A setting value could not be serialized.");
+  return serialized;
+}
+function jsonOrNull(value) {
+  if (value === void 0 || value === null) return null;
+  if (Array.isArray(value) && value.length === 0) return null;
+  if (typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === 0) return null;
+  return JSON.stringify(value) ?? null;
+}
+async function importSettings(tx, data, summary, overwrite, now) {
+  for (const [key, value] of Object.entries(data)) {
+    if (value === void 0) continue;
+    const serialized = serializeSettingValue(value);
+    const rows = await tx.select().from(settings$1).where(eq(settings$1.key, key)).limit(1).execute();
+    const existing = rows[0];
+    if (!existing) {
+      await tx.insert(settings$1).values({ key, value: serialized, createdAt: now, updatedAt: now }).execute();
+      summary.created++;
       continue;
     }
-    const result = await createCategoryAsync({ name: category.name, type: "post", description: category.description, status: "published" });
-    if (!result.success) throw new Error(result.error.message);
-    categories2.set(slug, result.data.id);
+    if (!overwrite || existing.value === serialized) {
+      summary.skipped++;
+      continue;
+    }
+    await tx.update(settings$1).set({ value: serialized, updatedAt: now }).where(eq(settings$1.key, key)).execute();
+    summary.updated++;
   }
-  for (const post of template.posts ?? []) {
-    if (findPostBySlugRecord(post.slug)) continue;
-    const categorySlugs = Array.isArray(post.categorySlugs) ? post.categorySlugs.filter((value) => typeof value === "string") : [];
-    const data = Object.fromEntries(Object.entries(post).filter(([key]) => key !== "categorySlugs"));
-    const result = createPost({ ...data, type: "post", status: "published", categoryIds: categorySlugs.map((slug) => categories2.get(slug)).filter((id) => Boolean(id)) }, user.id);
-    if (!result.success) throw new Error(result.error.message);
-  }
-  for (const page of template.pages ?? []) {
-    if (findPostBySlugRecord(page.slug)) continue;
-    const result = createPost({ ...page, type: "page", status: "published" }, user.id);
-    if (!result.success) throw new Error(result.error.message);
-  }
-  const existingMenus = listMenus$1();
-  for (const [position, menu] of (template.menus ?? []).entries()) {
-    if (existingMenus.some((item) => item.type === menu.type && item.url === menu.url)) continue;
-    const result = createMenu({ ...menu, position, status: "published" });
-    if (!result.success) throw new Error(result.error.message);
-  }
-  console.log(`Template data ready: ${name}`);
 }
-function resetSuperAdminPassword() {
+async function importCategories(tx, data, summary, overwrite, now) {
+  const categoryIds = /* @__PURE__ */ new Map();
+  for (const category of data) {
+    const slug = categorySlug(category);
+    const rows = await tx.select().from(categories).where(eq(categories.slug, slug)).limit(1).execute();
+    const existing = rows[0];
+    if (!existing) {
+      const id2 = generateId();
+      await tx.insert(categories).values({
+        id: id2,
+        name: sanitizeText(category.name),
+        slug,
+        type: category.type ?? "post",
+        description: category.description ?? null,
+        image: category.image ?? null,
+        status: category.status ?? "published",
+        createdAt: now,
+        updatedAt: now
+      }).execute();
+      categoryIds.set(slug, id2);
+      summary.created++;
+      continue;
+    }
+    categoryIds.set(slug, existing.id);
+    if (!overwrite) {
+      summary.skipped++;
+      continue;
+    }
+    const next = {
+      name: sanitizeText(category.name),
+      type: category.type ?? "post",
+      description: category.description ?? null,
+      image: category.image ?? null,
+      status: category.status ?? "published"
+    };
+    const changed = existing.name !== next.name || existing.type !== next.type || existing.description !== next.description || existing.image !== next.image || existing.status !== next.status;
+    if (!changed) {
+      summary.skipped++;
+      continue;
+    }
+    await tx.update(categories).set({ ...next, updatedAt: now }).where(eq(categories.id, existing.id)).execute();
+    summary.updated++;
+  }
+  return categoryIds;
+}
+async function resolveCategoryIds(tx, slugs, categoryIds, contentLabel) {
+  const resolved = [];
+  for (const slug of slugs ?? []) {
+    let categoryId = categoryIds.get(slug);
+    if (!categoryId) {
+      const rows = await tx.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).limit(1).execute();
+      categoryId = rows[0]?.id;
+    }
+    if (!categoryId) {
+      throw seedError(`Content "${contentLabel}" references unknown category slug "${slug}".`);
+    }
+    if (!resolved.includes(categoryId)) resolved.push(categoryId);
+  }
+  return resolved;
+}
+function buildContentFields(item, type, now, existingPublishedAt) {
+  const status2 = item.status ?? "published";
+  return {
+    title: sanitizeText(item.title),
+    slug: contentSlug(item),
+    type,
+    status: status2,
+    excerpt: item.excerpt ?? null,
+    description: item.description ? sanitizeHtml(item.description) : null,
+    tags: jsonOrNull(item.tags),
+    sections: jsonOrNull(item.sections),
+    customFieldValues: jsonOrNull(item.customFieldValues),
+    metaTitle: item.metaTitle ?? null,
+    metaDescription: item.metaDescription ?? null,
+    featuredImage: item.featuredImage ?? null,
+    gallery: jsonOrNull(item.gallery),
+    publishedAt: status2 === "published" ? item.publishedAt ?? existingPublishedAt ?? now : null
+  };
+}
+async function syncContentCategories(tx, postId, categoryIds, now) {
+  await tx.delete(postCategories).where(eq(postCategories.postId, postId)).execute();
+  for (const categoryId of categoryIds) {
+    await tx.insert(postCategories).values({
+      id: generateId(),
+      postId,
+      categoryId,
+      createdAt: now
+    }).execute();
+  }
+}
+async function importContent(tx, data, kind, authorId, categoryIds, summary, overwrite, now) {
+  for (const item of data) {
+    const slug = contentSlug(item);
+    const type = kind === "page" ? "page" : item.type ?? "post";
+    const rows = await tx.select().from(posts).where(eq(posts.slug, slug)).limit(1).execute();
+    const existing = rows[0];
+    if (existing && existing.type !== type) {
+      throw seedError(`Content slug "${slug}" already belongs to type "${existing.type}"; expected "${type}".`);
+    }
+    const resolvedCategoryIds = await resolveCategoryIds(tx, item.categorySlugs, categoryIds, item.title);
+    if (existing && !overwrite) {
+      summary.skipped++;
+      continue;
+    }
+    const fields = buildContentFields(item, type, now, existing?.publishedAt);
+    if (existing) {
+      const changed = existing.title !== fields.title || existing.type !== fields.type || existing.status !== fields.status || existing.excerpt !== fields.excerpt || existing.description !== fields.description || existing.tags !== fields.tags || existing.sections !== fields.sections || existing.customFieldValues !== fields.customFieldValues || existing.metaTitle !== fields.metaTitle || existing.metaDescription !== fields.metaDescription || existing.featuredImage !== fields.featuredImage || existing.gallery !== fields.gallery || existing.publishedAt !== fields.publishedAt;
+      const existingCategoryRows = await tx.select({ categoryId: postCategories.categoryId }).from(postCategories).where(eq(postCategories.postId, existing.id)).execute();
+      const existingCategoryIds = existingCategoryRows.map((row) => row.categoryId).sort();
+      const nextCategoryIds = [...resolvedCategoryIds].sort();
+      const categoriesChanged = existingCategoryIds.length !== nextCategoryIds.length || existingCategoryIds.some((categoryId, index2) => categoryId !== nextCategoryIds[index2]);
+      if (!changed && !categoriesChanged) {
+        summary.skipped++;
+        continue;
+      }
+      await tx.update(posts).set({ ...fields, updatedAt: now }).where(eq(posts.id, existing.id)).execute();
+      await syncContentCategories(tx, existing.id, resolvedCategoryIds, now);
+      summary.updated++;
+      continue;
+    }
+    const id2 = generateId();
+    await tx.insert(posts).values({
+      id: id2,
+      ...fields,
+      authorId,
+      createdAt: now,
+      updatedAt: now
+    }).execute();
+    await syncContentCategories(tx, id2, resolvedCategoryIds, now);
+    summary.created++;
+  }
+}
+async function findMenuByKey(tx, type, url) {
+  const rows = await tx.select().from(menus).where(and(eq(menus.type, type), eq(menus.url, url))).limit(1).execute();
+  return rows[0];
+}
+function validateMenuParentGraph(data) {
+  const keys = new Set(data.map((menu) => menuKey(menu.type, menu.url)));
+  const parents = new Map(
+    data.filter((menu) => menu.parentUrl).map((menu) => [menuKey(menu.type, menu.url), menuKey(menu.type, menu.parentUrl)])
+  );
+  for (const [key, parent] of parents) {
+    if (key === parent) throw seedError(`Menu item "${key}" cannot be its own parent.`);
+    if (!keys.has(parent)) continue;
+    const visited = /* @__PURE__ */ new Set([key]);
+    let cursor = parent;
+    while (cursor && keys.has(cursor)) {
+      if (visited.has(cursor)) throw seedError(`Menu hierarchy contains a cycle at "${cursor}".`);
+      visited.add(cursor);
+      cursor = parents.get(cursor);
+    }
+  }
+}
+async function validateMenuParentReferences(tx, data) {
+  validateMenuParentGraph(data);
+  const sourceKeys = new Set(data.map((menu) => menuKey(menu.type, menu.url)));
+  for (const menu of data) {
+    if (!menu.parentUrl) continue;
+    const parentKey = menuKey(menu.type, menu.parentUrl);
+    if (sourceKeys.has(parentKey)) continue;
+    const existing = await findMenuByKey(tx, menu.type, menu.parentUrl);
+    if (!existing) throw seedError(`Menu "${menuKey(menu.type, menu.url)}" references unknown parent "${parentKey}".`);
+  }
+}
+async function resolveMenuParentId(tx, menu, menuIds) {
+  if (!menu.parentUrl) return null;
+  const key = menuKey(menu.type, menu.parentUrl);
+  const fromSeed = menuIds.get(key);
+  if (fromSeed) return fromSeed;
+  const existing = await findMenuByKey(tx, menu.type, menu.parentUrl);
+  if (!existing) throw seedError(`Menu "${menuKey(menu.type, menu.url)}" references unknown parent "${key}".`);
+  return existing.id;
+}
+async function importMenus(tx, data, summary, overwrite, now) {
+  await validateMenuParentReferences(tx, data);
+  const menuIds = /* @__PURE__ */ new Map();
+  const parentUpdates = /* @__PURE__ */ new Set();
+  for (const [index2, menu] of data.entries()) {
+    const key = menuKey(menu.type, menu.url);
+    const existing = await findMenuByKey(tx, menu.type, menu.url);
+    if (!existing) {
+      const id2 = generateId();
+      await tx.insert(menus).values({
+        id: id2,
+        title: sanitizeText(menu.title),
+        url: menu.url,
+        type: menu.type,
+        position: menu.position ?? index2,
+        cssClass: menu.cssClass ? sanitizeText(menu.cssClass) : null,
+        target: menu.target ?? null,
+        image: menu.image ?? null,
+        status: menu.status ?? "published",
+        parentId: null,
+        createdAt: now,
+        updatedAt: now
+      }).execute();
+      menuIds.set(key, id2);
+      parentUpdates.add(id2);
+      summary.created++;
+      continue;
+    }
+    menuIds.set(key, existing.id);
+    if (!overwrite) {
+      summary.skipped++;
+      continue;
+    }
+    const next = {
+      title: sanitizeText(menu.title),
+      url: menu.url,
+      type: menu.type,
+      position: menu.position ?? index2,
+      cssClass: menu.cssClass ? sanitizeText(menu.cssClass) : null,
+      target: menu.target ?? null,
+      image: menu.image ?? null,
+      status: menu.status ?? "published",
+      parentId: null
+    };
+    const changed = existing.title !== next.title || existing.url !== next.url || existing.type !== next.type || existing.position !== next.position || existing.cssClass !== next.cssClass || existing.target !== next.target || existing.image !== next.image || existing.status !== next.status || existing.parentId !== next.parentId;
+    if (!changed) {
+      summary.skipped++;
+      continue;
+    }
+    await tx.update(menus).set({ ...next, updatedAt: now }).where(eq(menus.id, existing.id)).execute();
+    parentUpdates.add(existing.id);
+    summary.updated++;
+  }
+  for (const menu of data) {
+    const id2 = menuIds.get(menuKey(menu.type, menu.url));
+    if (!id2 || !parentUpdates.has(id2)) continue;
+    const parentId = await resolveMenuParentId(tx, menu, menuIds);
+    if (parentId === id2) throw seedError(`Menu item "${menuKey(menu.type, menu.url)}" cannot be its own parent.`);
+    await tx.update(menus).set({ parentId, updatedAt: now }).where(eq(menus.id, id2)).execute();
+  }
+}
+function plannedSummary(data, source) {
+  const result = emptySummary(source, true);
+  result.settings.created = Object.keys(data.settings).length;
+  result.categories.created = data.categories.length;
+  result.posts.created = data.posts.length;
+  result.pages.created = data.pages.length;
+  result.menus.created = data.menus.length;
+  return result;
+}
+function formatSeedDataSummary(result) {
+  const prefix = result.dryRun ? "Seed data dry-run" : "Seed data migration";
+  const lines = [
+    `${prefix} complete: ${result.source}`,
+    `  settings: ${result.settings.created} created, ${result.settings.updated} updated, ${result.settings.skipped} skipped`,
+    `  categories: ${result.categories.created} created, ${result.categories.updated} updated, ${result.categories.skipped} skipped`,
+    `  posts: ${result.posts.created} created, ${result.posts.updated} updated, ${result.posts.skipped} skipped`,
+    `  pages: ${result.pages.created} created, ${result.pages.updated} updated, ${result.pages.skipped} skipped`,
+    `  menus: ${result.menus.created} created, ${result.menus.updated} updated, ${result.menus.skipped} skipped`
+  ];
+  return lines.join("\n");
+}
+async function migrateData(options) {
+  const { data, source } = await loadSeedData(options);
+  const dryRun = options.dryRun === true;
+  if (dryRun) return plannedSummary(data, source);
+  const userRows = await db.select({ id: users.id }).from(users).limit(1).execute();
+  const author = userRows[0];
+  if (!author) throw seedError("Run the base seed before importing content data.");
+  const result = emptySummary(source, false);
+  const overwrite = options.overwrite === true;
+  const now = getCurrentTimestamp();
+  await db.transaction(async (tx) => {
+    await importSettings(tx, data.settings, result.settings, overwrite, now);
+    const categoryIds = await importCategories(tx, data.categories, result.categories, overwrite, now);
+    await importContent(tx, data.posts, "post", author.id, categoryIds, result.posts, overwrite, now);
+    await importContent(tx, data.pages, "page", author.id, categoryIds, result.pages, overwrite, now);
+    await importMenus(tx, data.menus, result.menus, overwrite, now);
+  });
+  const changed = Object.values(result).some((value) => {
+    if (typeof value !== "object" || value === null || !("created" in value)) return false;
+    const summary = value;
+    return summary.created > 0 || summary.updated > 0;
+  });
+  if (changed) invalidatePublicDataCache();
+  return result;
+}
+async function seedTemplate(name) {
+  const result = await migrateData({ template: name });
+  console.log(formatSeedDataSummary(result));
+}
+async function resetSuperAdminPassword() {
   assertSecureSeedEnvironment();
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
   if (!email || !password || password.length < 12 || password.length > 128) {
     throw new Error("ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters are required.");
   }
-  const superAdmin = db.select({ id: roles.id }).from(roles).where(eq(roles.slug, "super-admin")).get();
+  const superAdminRows = await db.select({ id: roles.id }).from(roles).where(eq(roles.slug, "super-admin")).limit(1).execute();
+  const superAdmin = superAdminRows[0];
   if (!superAdmin) throw new Error("The super-admin role does not exist. Run beaver seed first.");
-  const user = db.select({ id: users.id }).from(users).where(and(eq(users.email, email), eq(users.roleId, superAdmin.id))).get();
+  const userRows = await db.select({ id: users.id }).from(users).where(and(eq(users.email, email), eq(users.roleId, superAdmin.id))).limit(1).execute();
+  const user = userRows[0];
   if (!user) throw new Error(`No super-admin user found for ${email}.`);
   const passwordHash = bcrypt.hashSync(password, 12);
   const now = getCurrentTimestamp();
-  db.transaction((tx) => {
-    tx.update(users).set({ password: passwordHash, updatedAt: now }).where(eq(users.id, user.id)).run();
-    tx.delete(adminRefreshSessions).where(eq(adminRefreshSessions.userId, user.id)).run();
+  await db.transaction(async (tx) => {
+    await tx.update(users).set({ password: passwordHash, updatedAt: now }).where(eq(users.id, user.id)).execute();
+    await tx.delete(adminRefreshSessions).where(eq(adminRefreshSessions.userId, user.id)).execute();
   });
   return { email };
 }
@@ -2641,13 +3697,15 @@ async function verifyPassword(password, hash) {
   return bcrypt.compare(password, hash);
 }
 const MAX_ROLE_ROWS = 1e3;
-function findRoleByIdRecord(id) {
-  return db.select().from(roles).where(eq(roles.id, id)).get();
+async function findRoleByIdRecord(id2) {
+  const rows = await db.select().from(roles).where(eq(roles.id, id2)).limit(1).execute();
+  return rows[0];
 }
-function findRoleBySlugRecord(slug) {
-  return db.select().from(roles).where(eq(roles.slug, slug)).get();
+async function findRoleBySlugRecord(slug) {
+  const rows = await db.select().from(roles).where(eq(roles.slug, slug)).limit(1).execute();
+  return rows[0];
 }
-function listRolesWithUserCountRecords(filters) {
+async function listRolesWithUserCountRecords(filters) {
   const conditions = [];
   const search2 = filters?.search?.slice(0, 100);
   if (search2) {
@@ -2664,21 +3722,21 @@ function listRolesWithUserCountRecords(filters) {
     }
   }
   const baseQuery = db.select().from(roles).orderBy(orderColumn);
-  const roleRows = conditions.length > 0 ? baseQuery.where(and(...conditions)).limit(MAX_ROLE_ROWS).all() : baseQuery.limit(MAX_ROLE_ROWS).all();
-  return roleRows.map((role) => {
-    const countResult = db.select({ value: count() }).from(users).where(eq(users.roleId, role.id)).get();
-    return { ...role, userCount: countResult?.value ?? 0 };
-  });
+  const roleRows = conditions.length > 0 ? await baseQuery.where(and(...conditions)).limit(MAX_ROLE_ROWS).execute() : await baseQuery.limit(MAX_ROLE_ROWS).execute();
+  return await Promise.all(roleRows.map(async (role) => {
+    const countRows = await db.select({ value: count() }).from(users).where(eq(users.roleId, role.id)).limit(1).execute();
+    return { ...role, userCount: countRows[0]?.value ?? 0 };
+  }));
 }
-function getRoleNameRecord(roleId) {
-  const row = db.select({ name: roles.name }).from(roles).where(eq(roles.id, roleId)).get();
-  return row?.name ?? null;
+async function getRoleNameRecord(roleId) {
+  const rows = await db.select({ name: roles.name }).from(roles).where(eq(roles.id, roleId)).limit(1).execute();
+  return rows[0]?.name ?? null;
 }
-function listAllPermissionRecords() {
-  return db.select().from(permissions).all();
+async function listAllPermissionRecords() {
+  return await db.select().from(permissions).execute();
 }
-function createRoleRecord(input) {
-  db.insert(roles).values({
+async function createRoleRecord(input) {
+  await db.insert(roles).values({
     id: input.id,
     name: sanitizeText(input.name),
     slug: input.slug.toLowerCase(),
@@ -2686,54 +3744,57 @@ function createRoleRecord(input) {
     isSystem: 0,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt
-  }).run();
+  }).execute();
   for (const permissionId of input.permissionIds) {
-    db.insert(rolePermissions).values({
+    await db.insert(rolePermissions).values({
       id: generateId(),
       roleId: input.id,
       permissionId,
       createdAt: input.createdAt
-    }).run();
+    }).execute();
   }
-  return findRoleByIdRecord(input.id);
+  return await findRoleByIdRecord(input.id);
 }
-function updateRoleRecord(id, input) {
+async function updateRoleRecord(id2, input) {
   const updates = { updatedAt: input.updatedAt };
   if (input.name !== void 0) updates.name = sanitizeText(input.name);
   if (input.slug !== void 0) updates.slug = input.slug.toLowerCase();
   if (input.description !== void 0) updates.description = input.description ? sanitizeText(input.description) : null;
-  db.update(roles).set(updates).where(eq(roles.id, id)).run();
+  await db.update(roles).set(updates).where(eq(roles.id, id2)).execute();
   if (input.permissionIds !== void 0) {
-    db.delete(rolePermissions).where(eq(rolePermissions.roleId, id)).run();
+    await db.delete(rolePermissions).where(eq(rolePermissions.roleId, id2)).execute();
     for (const permissionId of input.permissionIds) {
-      db.insert(rolePermissions).values({
+      await db.insert(rolePermissions).values({
         id: generateId(),
-        roleId: id,
+        roleId: id2,
         permissionId,
         createdAt: input.updatedAt
-      }).run();
+      }).execute();
     }
   }
-  return findRoleByIdRecord(id) ?? null;
+  return await findRoleByIdRecord(id2) ?? null;
 }
-function deleteRoleRecord(id) {
-  db.delete(rolePermissions).where(eq(rolePermissions.roleId, id)).run();
-  return db.delete(roles).where(eq(roles.id, id)).run().changes > 0;
+async function deleteRoleRecord(id2) {
+  await db.delete(rolePermissions).where(eq(rolePermissions.roleId, id2)).execute();
+  const result = await db.delete(roles).where(eq(roles.id, id2)).execute();
+  return affectedRows(result) > 0;
 }
-function getRolePermissionIdsRecord(roleId) {
-  return db.select({ permissionId: rolePermissions.permissionId }).from(rolePermissions).where(eq(rolePermissions.roleId, roleId)).all().map((row) => row.permissionId);
+async function getRolePermissionIdsRecord(roleId) {
+  const rows = await db.select({ permissionId: rolePermissions.permissionId }).from(rolePermissions).where(eq(rolePermissions.roleId, roleId)).execute();
+  return rows.map((row) => row.permissionId);
 }
-function getRolePermissionSlugsRecord(roleId) {
-  return db.select({ slug: permissions.slug }).from(rolePermissions).innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id)).where(eq(rolePermissions.roleId, roleId)).all().map((row) => row.slug);
+async function getRolePermissionSlugsRecord(roleId) {
+  const rows = await db.select({ slug: permissions.slug }).from(rolePermissions).innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id)).where(eq(rolePermissions.roleId, roleId)).execute();
+  return rows.map((row) => row.slug);
 }
-function getPermissionSlugsRecord(permissionIds) {
+async function getPermissionSlugsRecord(permissionIds) {
   if (permissionIds.length === 0) return [];
-  return db.select({ id: permissions.id, slug: permissions.slug }).from(permissions).where(inArray(permissions.id, [...new Set(permissionIds)])).all();
+  return await db.select({ id: permissions.id, slug: permissions.slug }).from(permissions).where(inArray(permissions.id, [...new Set(permissionIds)])).execute();
 }
 async function loadAdminActor(userId) {
-  const user = findUserByIdRecord(userId);
+  const user = await findUserByIdRecord(userId);
   if (!user) return null;
-  const role = user.roleId ? findRoleByIdRecord(user.roleId) : void 0;
+  const role = user.roleId ? await findRoleByIdRecord(user.roleId) : void 0;
   return {
     id: user.id,
     roleId: user.roleId,
@@ -2750,53 +3811,53 @@ function hasAnyAdminPermission(actor, permissions2) {
 function permissionsWithinActor(actor, permissionSlugs) {
   return actor.isSystemRole || permissionSlugs.every((permission) => actor.permissions.has(permission));
 }
-function canAssignRole(actor, roleId) {
+async function canAssignRole(actor, roleId) {
   if (roleId === void 0 || roleId === null) return true;
-  const role = findRoleByIdRecord(roleId);
+  const role = await findRoleByIdRecord(roleId);
   if (!role) return false;
   if (role.isSystem === 1) return actor.isSystemRole;
-  return permissionsWithinActor(actor, getRolePermissionSlugsRecord(role.id));
+  return permissionsWithinActor(actor, await getRolePermissionSlugsRecord(role.id));
 }
-function canManageExistingRole(actor, roleId) {
-  const role = findRoleByIdRecord(roleId);
+async function canManageExistingRole(actor, roleId) {
+  const role = await findRoleByIdRecord(roleId);
   if (!role || role.isSystem === 1) return false;
   if (actor.isSystemRole) return true;
-  return permissionsWithinActor(actor, getRolePermissionSlugsRecord(role.id));
+  return permissionsWithinActor(actor, await getRolePermissionSlugsRecord(role.id));
 }
-function canAssignPermissionIds(actor, permissionIds) {
+async function canAssignPermissionIds(actor, permissionIds) {
   const uniqueIds = [...new Set(permissionIds)];
-  const rows = getPermissionSlugsRecord(uniqueIds);
+  const rows = await getPermissionSlugsRecord(uniqueIds);
   if (rows.length !== uniqueIds.length) return false;
   return permissionsWithinActor(actor, rows.map((row) => row.slug));
 }
 function canManageSensitiveUserFields(actor, targetUserId) {
   return actor.id === targetUserId || hasAdminPermission(actor, "users.manage");
 }
-function getUser(id) {
-  const user = findSafeUserByIdRecord(id);
+async function getUser(id2) {
+  const user = await findSafeUserByIdRecord(id2);
   if (!user) return serviceNotFound("User");
   return serviceSuccess(user, "OK");
 }
-function getUserByEmail(email) {
-  const user = findUserByEmailRecord(email);
+async function getUserByEmail(email) {
+  const user = await findUserByEmailRecord(email);
   if (!user) return serviceNotFound("User");
   return serviceSuccess(user, "OK");
 }
-function listUsersPaginated(filters = {}) {
-  const result = listUsersPaginatedRecord(filters);
+async function listUsersPaginated(filters = {}) {
+  const result = await listUsersPaginatedRecord(filters);
   return serviceSuccess(result, "OK");
 }
 async function createUser(data, actorId) {
   const actor = await loadAdminActor(actorId);
   if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.");
-  if (!canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.");
-  const existing = findUserByEmailRecord(data.email);
+  if (!await canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.");
+  const existing = await findUserByEmailRecord(data.email);
   if (existing) return serviceConflict("email", "A user with this email already exists.");
-  const id = generateId();
+  const id2 = generateId();
   const now = getCurrentTimestamp();
   const passwordHash = await hashPassword(data.password);
-  const created = createUserRecord({
-    id,
+  const created = await createUserRecord({
+    id: id2,
     name: data.name,
     email: data.email,
     passwordHash,
@@ -2806,25 +3867,25 @@ async function createUser(data, actorId) {
   });
   return serviceSuccess(created, "User created.");
 }
-async function updateUser(id, data, currentUserId) {
+async function updateUser(id2, data, currentUserId) {
   const actor = await loadAdminActor(currentUserId);
   if (!actor || !hasAnyAdminPermission(actor, ["users.edit", "users.manage"])) return serviceForbidden("Insufficient permissions.");
-  const existing = findUserByIdRecord(id);
+  const existing = await findUserByIdRecord(id2);
   if (!existing) return serviceNotFound("User");
-  const isSelf = id === currentUserId;
+  const isSelf = id2 === currentUserId;
   const changesSensitiveFields = data.email !== void 0 || data.password !== void 0 || data.roleId !== void 0;
   if (!isSelf && changesSensitiveFields) {
-    if (!canManageSensitiveUserFields(actor, id) || !canAssignRole(actor, existing.roleId)) {
+    if (!canManageSensitiveUserFields(actor, id2) || !await canAssignRole(actor, existing.roleId)) {
       return serviceForbidden("You cannot manage this user.");
     }
   }
   if (data.email !== void 0 && data.email !== existing.email) {
-    const conflict = findUserByEmailRecord(data.email);
+    const conflict = await findUserByEmailRecord(data.email);
     if (conflict) return serviceConflict("email", "A user with this email already exists.");
   }
   if (data.roleId !== void 0) {
     if (isSelf) return serviceForbidden("You cannot change your own role.");
-    if (!canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.");
+    if (!await canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.");
   }
   const now = getCurrentTimestamp();
   const updateData = { updatedAt: now };
@@ -2832,38 +3893,38 @@ async function updateUser(id, data, currentUserId) {
   if (data.email !== void 0) updateData.email = data.email;
   if (data.password !== void 0) updateData.passwordHash = await hashPassword(data.password);
   if (data.roleId !== void 0) updateData.roleId = data.roleId;
-  const updated = updateUserRecord(id, updateData);
+  const updated = await updateUserRecord(id2, updateData);
   if (!updated) return serviceNotFound("User");
   if (data.email !== void 0 || data.password !== void 0 || data.roleId !== void 0) {
-    deleteRefreshSessionsForUser(id);
+    await deleteRefreshSessionsForUser(id2);
   }
   return serviceSuccess(updated, "User updated.");
 }
-async function deleteUser(id, currentUserId) {
+async function deleteUser(id2, currentUserId) {
   const actor = await loadAdminActor(currentUserId);
   if (!actor || !hasAnyAdminPermission(actor, ["users.delete", "users.manage"])) return serviceForbidden("Insufficient permissions.");
-  const existing = findUserByIdRecord(id);
+  const existing = await findUserByIdRecord(id2);
   if (!existing) return serviceNotFound("User");
-  if (id === currentUserId) return serviceForbidden("You cannot delete your own account.");
-  if (!canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot manage this user.");
-  deleteUserRecord(id);
+  if (id2 === currentUserId) return serviceForbidden("You cannot delete your own account.");
+  if (!await canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot manage this user.");
+  await deleteUserRecord(id2);
   return serviceSuccess(null, "User deleted.");
 }
-async function duplicateUser(id, currentUserId) {
+async function duplicateUser(id2, currentUserId) {
   const actor = await loadAdminActor(currentUserId);
   if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.");
-  const existing = findUserByIdRecord(id);
+  const existing = await findUserByIdRecord(id2);
   if (!existing) return serviceNotFound("User");
-  if (!canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot assign this role.");
+  if (!await canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot assign this role.");
   const newId = generateId();
   const now = getCurrentTimestamp();
   let newEmail = `duplicated_${existing.email}`;
-  if (findUserByEmailRecord(newEmail)) {
+  if (await findUserByEmailRecord(newEmail)) {
     const ts = now.toString(36).slice(-4);
     newEmail = `duplicated_${ts}_${existing.email}`;
   }
   try {
-    const created = createUserRecord({
+    const created = await createUserRecord({
       id: newId,
       name: `${existing.name} (Copy)`,
       email: newEmail,
@@ -2880,20 +3941,20 @@ async function duplicateUser(id, currentUserId) {
 }
 async function bulkDeleteUsers(ids, currentUserId) {
   const results = [];
-  for (const id of ids) {
-    const result = await deleteUser(id, currentUserId);
-    results.push({ id, success: result.success, error: !result.success ? result.error.message : void 0 });
+  for (const id2 of ids) {
+    const result = await deleteUser(id2, currentUserId);
+    results.push({ id: id2, success: result.success, error: !result.success ? result.error.message : void 0 });
   }
   return serviceSuccess(results, "Bulk delete completed.");
 }
 async function bulkDuplicateUsers(ids, currentUserId) {
   const results = [];
-  for (const id of ids) {
-    const result = await duplicateUser(id, currentUserId);
+  for (const id2 of ids) {
+    const result = await duplicateUser(id2, currentUserId);
     if (result.success) {
-      results.push({ id, success: true, newId: result.data.id });
+      results.push({ id: id2, success: true, newId: result.data.id });
     } else {
-      results.push({ id, success: false });
+      results.push({ id: id2, success: false });
     }
   }
   return serviceSuccess(results, "Bulk duplicate completed.");
@@ -2928,7 +3989,7 @@ async function handlePasswordLogin(body) {
       message: "Too many requests. Please try again later."
     };
   }
-  const userResult = getUserByEmail(email);
+  const userResult = await getUserByEmail(email);
   const isValid = await verifyPassword(password, userResult.success ? userResult.data.password : DUMMY_PASSWORD_HASH);
   if (!userResult.success || !isValid) {
     return {
@@ -3023,14 +4084,209 @@ function parseBulkIds(input) {
   }
   return { success: true, ids };
 }
-const createCategorySchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters"),
-  type: z.string().min(1).max(64).regex(slugRegex, "Type must contain only lowercase alphanumeric characters and hyphens").default("post"),
-  status: publishStatusEnum.default("published"),
-  description: emptyToNull,
-  image: imageUrlSimpleSchema
-});
-const updateCategorySchema = createCategorySchema.partial();
+const MAX_CATEGORY_ROWS = 5e3;
+async function findCategoryByIdRecord(id2) {
+  const rows = await db.select({
+    id: categories.id,
+    name: categories.name,
+    slug: categories.slug,
+    type: categories.type,
+    description: categories.description,
+    image: categories.image,
+    status: categories.status,
+    createdAt: categories.createdAt,
+    updatedAt: categories.updatedAt
+  }).from(categories).where(eq(categories.id, id2)).limit(1).execute();
+  return rows[0];
+}
+async function listCategoryRecords(filters) {
+  const conditions = [];
+  const type = filters?.type?.slice(0, 64);
+  const search2 = filters?.search?.slice(0, 100);
+  if (type) {
+    conditions.push(eq(categories.type, type));
+  }
+  if (search2) {
+    conditions.push(like(categories.name, `%${search2}%`));
+  }
+  let orderColumn = desc(categories.updatedAt);
+  if (filters?.sortBy) {
+    const column = filters.sortBy === "name" ? categories.name : filters.sortBy === "createdAt" ? categories.createdAt : null;
+    if (column) {
+      orderColumn = filters.sortOrder === "asc" ? asc(column) : desc(column);
+    }
+  }
+  const query = db.select({
+    id: categories.id,
+    name: categories.name,
+    slug: categories.slug,
+    type: categories.type,
+    description: categories.description,
+    image: categories.image,
+    status: categories.status,
+    createdAt: categories.createdAt,
+    updatedAt: categories.updatedAt
+  }).from(categories).orderBy(orderColumn);
+  return await (conditions.length > 0 ? query.where(and(...conditions)) : query).limit(MAX_CATEGORY_ROWS).execute();
+}
+async function categorySlugExistsRecord(slug, excludeId) {
+  const rows = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).limit(1).execute();
+  return excludeId ? rows.some((row) => row.id !== excludeId) : rows.length > 0;
+}
+async function createCategoryRecord(input) {
+  await db.insert(categories).values({
+    ...input,
+    name: sanitizeText(input.name),
+    description: input.description ? sanitizeText(input.description) : null
+  }).execute();
+  return {
+    id: input.id,
+    name: sanitizeText(input.name),
+    slug: input.slug,
+    type: input.type,
+    description: input.description ? sanitizeText(input.description) : null,
+    image: input.image,
+    status: input.status,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt
+  };
+}
+async function updateCategoryRecord(id2, input) {
+  const updates = { updatedAt: input.updatedAt };
+  if (input.name !== void 0) updates.name = sanitizeText(input.name);
+  if (input.slug !== void 0) updates.slug = input.slug;
+  if (input.type !== void 0) updates.type = input.type;
+  if (input.description !== void 0) updates.description = input.description ? sanitizeText(input.description) : null;
+  if (input.image !== void 0) updates.image = input.image;
+  if (input.status !== void 0) updates.status = input.status;
+  await db.update(categories).set(updates).where(eq(categories.id, id2)).execute();
+  return await findCategoryByIdRecord(id2) ?? null;
+}
+async function deleteCategoryRecord(id2) {
+  const result = await db.delete(categories).where(eq(categories.id, id2)).execute();
+  return affectedRows(result) > 0;
+}
+async function generateUniqueSlug(name, excludeId) {
+  let slug = slugify(name);
+  if (!slug) slug = "category";
+  if (await categorySlugExistsRecord(slug, excludeId)) {
+    let counter = 1;
+    while (await categorySlugExistsRecord(`${slug}-${counter}`, excludeId)) {
+      counter++;
+    }
+    slug = `${slug}-${counter}`;
+  }
+  return slug;
+}
+async function createCategoryAsync(data) {
+  const id2 = generateId();
+  const now = getCurrentTimestamp();
+  const slug = await generateUniqueSlug(data.name);
+  const created = await createCategoryRecord({
+    id: id2,
+    name: data.name,
+    slug,
+    type: data.type ?? "category",
+    description: data.description ?? null,
+    image: data.image ?? null,
+    status: data.status ?? "published",
+    createdAt: now,
+    updatedAt: now
+  });
+  return serviceSuccess(created, "Category created.");
+}
+async function updateCategory(id2, data) {
+  const existing = await findCategoryByIdRecord(id2);
+  if (!existing) return serviceNotFound("Category");
+  const now = getCurrentTimestamp();
+  const updateData = { updatedAt: now };
+  if (data.name !== void 0) updateData.name = data.name;
+  if (data.type !== void 0) updateData.type = data.type;
+  if (data.description !== void 0) updateData.description = data.description;
+  if (data.image !== void 0) updateData.image = data.image;
+  if (data.status !== void 0) updateData.status = data.status;
+  if (data.name !== void 0 && data.name !== existing.name) {
+    updateData.slug = await generateUniqueSlug(data.name, id2);
+  }
+  const updated = await updateCategoryRecord(id2, updateData);
+  if (!updated) return serviceNotFound("Category");
+  return serviceSuccess(updated, "Category updated.");
+}
+async function deleteCategory(id2) {
+  const existing = await findCategoryByIdRecord(id2);
+  if (!existing) return serviceNotFound("Category");
+  await deleteCategoryRecord(id2);
+  return serviceSuccess(null, "Category deleted.");
+}
+async function duplicateCategory(id2) {
+  const existing = await findCategoryByIdRecord(id2);
+  if (!existing) return serviceNotFound("Category");
+  const newId = generateId();
+  const now = getCurrentTimestamp();
+  const newSlug = `${existing.slug}-copy`;
+  let finalSlug = newSlug;
+  if (await categorySlugExistsRecord(finalSlug)) {
+    const ts = now.toString(36).slice(-4);
+    finalSlug = `${newSlug}-${ts}`;
+  }
+  try {
+    const created = await createCategoryRecord({
+      id: newId,
+      name: `${existing.name} (Copy)`,
+      slug: finalSlug,
+      type: existing.type,
+      description: existing.description,
+      image: existing.image,
+      status: existing.status,
+      createdAt: now,
+      updatedAt: now
+    });
+    return serviceSuccess(created, "Category duplicated.");
+  } catch {
+    return { success: false, error: { code: "db_error", message: "Failed to duplicate category." } };
+  }
+}
+async function bulkDeleteCategories(ids) {
+  const results = [];
+  for (const id2 of ids) {
+    const existing = await findCategoryByIdRecord(id2);
+    if (!existing) {
+      results.push({ id: id2, success: false });
+      continue;
+    }
+    try {
+      await deleteCategoryRecord(id2);
+      results.push({ id: id2, success: true });
+    } catch {
+      results.push({ id: id2, success: false });
+    }
+  }
+  return serviceSuccess(results, "Bulk delete completed.");
+}
+async function bulkDuplicateCategories(ids) {
+  const results = [];
+  for (const id2 of ids) {
+    const result = await duplicateCategory(id2);
+    if (result.success) {
+      results.push({ id: id2, success: true, newId: result.data.id });
+    } else {
+      results.push({ id: id2, success: false });
+    }
+  }
+  return serviceSuccess(results, "Bulk duplicate completed.");
+}
+async function bulkUpdateCategoryStatus(ids, status2) {
+  const now = getCurrentTimestamp();
+  const results = await Promise.all(ids.map(async (id2) => {
+    const updated = await updateCategoryRecord(id2, { status: status2, updatedAt: now });
+    return { id: id2, success: updated !== null };
+  }));
+  return serviceSuccess(results, `Categories ${status2 === "published" ? "published" : "unpublished"}.`);
+}
+async function listCategories(filters) {
+  const items = await listCategoryRecords(filters);
+  return serviceSuccess(items, "Categories retrieved.");
+}
 const builtInContentTypes = ["post", "page"];
 function isKnownContentType(type) {
   return builtInContentTypes.includes(type) || getServerContentTypeRegistry().contentTypes.some((contentType) => contentType.slug === type);
@@ -3052,9 +4308,9 @@ async function guardBulkCategory(session2, ids, action) {
   const parsedIds = parseBulkIds(ids);
   if (!parsedIds.success) return { perm: adminError(parsedIds.message, 400), ids };
   const allowed = await Promise.all(
-    parsedIds.ids.map(async (id) => {
-      const category = findCategoryByIdRecord(id);
-      return category && canCategory(session2.user.id, category.type, action);
+    parsedIds.ids.map(async (id2) => {
+      const category = await findCategoryByIdRecord(id2);
+      return category && await canCategory(session2.user.id, category.type, action);
     })
   );
   return allowed.every(Boolean) ? { ids } : { perm: adminError(INSUFFICIENT$1, 403), ids };
@@ -3064,7 +4320,7 @@ async function handleListCategories(session2, filters) {
   if (unauth) return unauth;
   const type = filters?.type ?? "post";
   if (!await canCategory(session2.user.id, type, "view")) return adminError(INSUFFICIENT$1, 403);
-  const result = listCategories({ ...filters, type });
+  const result = await listCategories({ ...filters, type });
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 async function handleCreateCategory(session2, body) {
@@ -3078,18 +4334,18 @@ async function handleCreateCategory(session2, body) {
   const result = await createCategoryAsync(parsed.data);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
-async function handleGetCategory(session2, id) {
+async function handleGetCategory(session2, id2) {
   const unauth = requireAuth(session2);
   if (unauth) return unauth;
-  const category = findCategoryByIdRecord(id);
+  const category = await findCategoryByIdRecord(id2);
   if (!category) return adminError(CATEGORY_NOT_FOUND, 404);
   if (!await canCategory(session2.user.id, category.type, "view")) return adminError(INSUFFICIENT$1, 403);
   return adminSuccess(category);
 }
-async function handleUpdateCategory(session2, id, body) {
+async function handleUpdateCategory(session2, id2, body) {
   const parsed = parseWithSchema(updateCategorySchema, body);
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const existing = findCategoryByIdRecord(id);
+  const existing = await findCategoryByIdRecord(id2);
   if (!existing) return adminError(CATEGORY_NOT_FOUND, 404);
   if (parsed.data.type !== void 0 && parsed.data.type !== existing.type)
     return adminError("Category type cannot be changed.", 422);
@@ -3100,131 +4356,52 @@ async function handleUpdateCategory(session2, id, body) {
     return adminError(INSUFFICIENT$1, 403);
   if (parsed.data.status === "draft" && existing.status === "published" && !await canCategory(session2.user.id, existing.type, "unpublish"))
     return adminError(INSUFFICIENT$1, 403);
-  const result = await updateCategory(id, parsed.data);
+  const result = await updateCategory(id2, parsed.data);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
-async function handleDuplicateCategory(session2, id) {
+async function handleDuplicateCategory(session2, id2) {
   const unauth = requireAuth(session2);
   if (unauth) return unauth;
-  const existing = findCategoryByIdRecord(id);
+  const existing = await findCategoryByIdRecord(id2);
   if (!existing || !await canCategory(session2.user.id, existing.type, "manage"))
     return adminError(INSUFFICIENT$1, 403);
-  const result = duplicateCategory(id);
+  const result = await duplicateCategory(id2);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
-async function handleDeleteCategory(session2, id) {
+async function handleDeleteCategory(session2, id2) {
   const unauth = requireAuth(session2);
   if (unauth) return unauth;
-  const existing = findCategoryByIdRecord(id);
+  const existing = await findCategoryByIdRecord(id2);
   if (!existing || !await canCategory(session2.user.id, existing.type, "manage"))
     return adminError(INSUFFICIENT$1, 403);
-  const result = deleteCategory(id);
+  const result = await deleteCategory(id2);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
 async function handleBulkDeleteCategories(session2, ids) {
   const { perm } = await guardBulkCategory(session2, ids, "manage");
   if (perm) return perm;
-  const result = bulkDeleteCategories(ids);
+  const result = await bulkDeleteCategories(ids);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 async function handleBulkDuplicateCategories(session2, ids) {
   const { perm } = await guardBulkCategory(session2, ids, "manage");
   if (perm) return perm;
-  const result = bulkDuplicateCategories(ids);
+  const result = await bulkDuplicateCategories(ids);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 async function handleBulkUpdateCategoryStatus(session2, ids, status2) {
   const action = status2 === "published" ? "publish" : "unpublish";
   const { perm } = await guardBulkCategory(session2, ids, action);
   if (perm) return perm;
-  const result = bulkUpdateCategoryStatus(ids, status2);
+  const result = await bulkUpdateCategoryStatus(ids, status2);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
-const sectionText = z.string().max(1e4).nullable().optional();
-const sectionShortText = z.string().max(512).nullable().optional();
-const sectionLinkSchema = z.object({
-  label: z.string().max(200),
-  url: safeHrefSchema
-});
-const sectionItemSchema = z.object({
-  caption: sectionShortText,
-  title: sectionShortText,
-  text: sectionText,
-  image: safeImageUrlSchema.nullable().optional(),
-  alt_image: sectionShortText,
-  video: z.string().max(2048).nullable().optional(),
-  map: z.string().max(256).nullable().optional(),
-  icon: sectionShortText,
-  form_inquiry: z.boolean().nullable().optional(),
-  embed: z.string().max(4e3).nullable().optional(),
-  bg_color: z.string().max(200).nullable().optional(),
-  bg_image: safeImageUrlSchema.nullable().optional(),
-  links: z.array(sectionLinkSchema).max(20, "Too many section links").nullable().optional(),
-  style_css: z.string().max(1e3).nullable().optional(),
-  style_css_inline: z.string().max(4e3).nullable().optional(),
-  style_id: z.string().max(128).nullable().optional()
-});
-const sectionSchema = z.object({
-  id: z.string().min(1, "Section id is required").max(128),
-  type: z.string().min(1, "Section type is required").max(64),
-  caption: sectionShortText,
-  title: sectionShortText,
-  text: sectionText,
-  image: safeImageUrlSchema.nullable().optional(),
-  alt_image: sectionShortText,
-  bg_color: z.string().max(200).nullable().optional(),
-  bg_image: safeImageUrlSchema.nullable().optional(),
-  style_css: z.string().max(1e3).nullable().optional(),
-  style_css_inline: z.string().max(4e3).nullable().optional(),
-  style_id: z.string().max(128).nullable().optional(),
-  alignment: z.string().max(32).nullable().optional(),
-  limit: z.number().int().min(0).max(100).nullable().optional(),
-  sort: z.number().int().min(0).max(1e6).optional(),
-  sort_by: z.string().max(32).nullable().optional(),
-  sort_order: z.enum(["asc", "desc"]).nullable().optional(),
-  category: z.string().max(128).nullable().optional(),
-  links: z.array(sectionLinkSchema).max(20, "Too many section links").nullable().optional(),
-  item: z.array(sectionItemSchema).max(100, "Too many section items").nullable().optional()
-});
-const tagSchema = z.string().min(1, "Tag must not be empty").max(50, "Tag must be at most 50 characters");
-const createPostSchema = z.object({
-  // Required
-  title: z.string().min(1, "Title is required").max(200, "Title must be at most 200 characters"),
-  // Optional with validation
-  slug: z.string().max(100, "Slug must be at most 100 characters").regex(slugRegex, "Slug must contain only lowercase alphanumeric characters and hyphens").optional(),
-  type: z.string().min(1).max(64).regex(slugRegex, "Type must contain only lowercase alphanumeric characters and hyphens").default("post"),
-  status: publishStatusEnum.default("draft"),
-  publishedAt: z.number().int().positive().nullable().optional(),
-  // Optional string fields with empty-to-null transform (Req 9.9)
-  excerpt: emptyToNull,
-  description: z.string().max(1e5, "Description must be at most 100000 characters").optional(),
-  // Tags: array of strings, max 30 items (Req 20.1)
-  tags: z.array(tagSchema).max(30, "Tags must contain at most 30 items").optional(),
-  // Sections: array of objects, max 50 items (Req 20.2)
-  sections: z.array(sectionSchema).max(50, "Sections must contain at most 50 items").optional(),
-  // SEO fields (Req 9.6)
-  metaTitle: z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(
-    z.string().max(60, "Meta title must be at most 60 characters").nullable().optional()
-  ),
-  metaDescription: z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(
-    z.string().max(160, "Meta description must be at most 160 characters").nullable().optional()
-  ),
-  // Featured image (Req 17.4)
-  featuredImage: featuredImageSchema,
-  // Gallery images stored as JSON array of URLs
-  gallery: z.array(galleryImageSchema).max(20, "Gallery must contain at most 20 images").optional(),
-  // Category IDs: array of ULIDs (Req 9.7)
-  categoryIds: z.array(z.string().regex(ulidRegex, "Invalid category ID format")).max(100, "Too many categories").optional(),
-  // Custom field values: record of arbitrary values (Req 20.3)
-  customFieldValues: z.record(z.string().max(64), z.unknown()).refine((value) => Object.keys(value).length <= 100, "Too many custom fields").optional()
-});
-const updatePostSchema = createPostSchema.partial();
 const INSUFFICIENT = "Insufficient permissions.";
 async function canPost(userId, type, action) {
   return isKnownContentType(type) && can(userId, contentPermission(type, action));
 }
-async function canEditPost(userId, id) {
-  const result = getPost(id);
+async function canEditPost(userId, id2) {
+  const result = await getPost(id2);
   if (!result.success) return false;
   if (await canPost(userId, result.data.type, "edit")) return true;
   return await canPost(userId, result.data.type, "edit-own") && result.data.authorId === userId;
@@ -3241,8 +4418,8 @@ async function guardBulkPost(session2, ids, action) {
   const parsedIds = parseBulkIds(ids);
   if (!parsedIds.success) return adminError(parsedIds.message, 400);
   const allowed = await Promise.all(
-    parsedIds.ids.map(async (id) => {
-      const post = getPost(id);
+    parsedIds.ids.map(async (id2) => {
+      const post = await getPost(id2);
       return post.success && canPost(session2.user.id, post.data.type, action);
     })
   );
@@ -3253,7 +4430,7 @@ async function handleListPosts(session2, filters) {
   if (unauth) return unauth;
   const type = filters.type ?? "post";
   if (!await canPost(session2.user.id, type, "view")) return adminError(INSUFFICIENT, 403);
-  const result = listPosts({ ...filters, type });
+  const result = await listPosts({ ...filters, type });
   return result.success ? adminSuccess(result.data) : mapServiceError(result);
 }
 async function handleCreatePost(session2, body) {
@@ -3261,22 +4438,22 @@ async function handleCreatePost(session2, body) {
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
   const perm = await guardPost(session2, parsed.data.type, "create");
   if (perm) return perm;
-  const result = createPost(parsed.data, session2.user.id);
+  const result = await createPost(parsed.data, session2.user.id);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
-async function handleGetPost(session2, id) {
+async function handleGetPost(session2, id2) {
   const unauth = requireAuth(session2);
   if (unauth) return unauth;
-  const result = getPost(id);
+  const result = await getPost(id2);
   if (!result.success) return adminError(result.error.message, 404);
   if (!await canPost(session2.user.id, result.data.type, "view")) return adminError(INSUFFICIENT, 403);
   return adminSuccess(result.data);
 }
-async function handleUpdatePost(session2, id, body) {
-  if (!await canEditPost(session2?.user?.id ?? "", id)) return adminError(INSUFFICIENT, 403);
+async function handleUpdatePost(session2, id2, body) {
+  if (!await canEditPost(session2?.user?.id ?? "", id2)) return adminError(INSUFFICIENT, 403);
   const parsed = parseWithSchema(updatePostSchema, body);
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const existing = getPost(id);
+  const existing = await getPost(id2);
   if (!existing.success) return adminError(existing.error.message, 404);
   if (parsed.data.type !== void 0 && parsed.data.type !== existing.data.type)
     return adminError("Content type cannot be changed.", 422);
@@ -3284,44 +4461,44 @@ async function handleUpdatePost(session2, id, body) {
     return adminError(INSUFFICIENT, 403);
   if (parsed.data.status === "draft" && existing.data.status === "published" && !await canPost(session2.user.id, existing.data.type, "unpublish"))
     return adminError(INSUFFICIENT, 403);
-  const result = updatePost(id, parsed.data);
+  const result = await updatePost(id2, parsed.data);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
-async function handleDuplicatePost(session2, id) {
+async function handleDuplicatePost(session2, id2) {
   const unauth = requireAuth(session2);
   if (unauth) return unauth;
-  const existing = getPost(id);
-  if (!existing.success || !await canPost(session2.user.id, existing.data.type, "create") || !await canEditPost(session2.user.id, id)) {
+  const existing = await getPost(id2);
+  if (!existing.success || !await canPost(session2.user.id, existing.data.type, "create") || !await canEditPost(session2.user.id, id2)) {
     return adminError(INSUFFICIENT, 403);
   }
-  const result = duplicatePost(id, session2.user.id);
+  const result = await duplicatePost(id2, session2.user.id);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
-async function handleDeletePost(session2, id) {
+async function handleDeletePost(session2, id2) {
   const unauth = requireAuth(session2);
   if (unauth) return unauth;
-  const existing = getPost(id);
+  const existing = await getPost(id2);
   if (!existing.success) return adminError(existing.error.message, 404);
   if (!await canPost(session2.user.id, existing.data.type, "delete")) return adminError(INSUFFICIENT, 403);
-  const result = deletePost(id);
+  const result = await deletePost(id2);
   return result.success ? adminSuccess(null, result.message) : mapServiceError(result);
 }
 async function handleBulkDeletePosts(session2, ids) {
   const perm = await guardBulkPost(session2, ids, "delete");
   if (perm) return perm;
-  const result = bulkDeletePosts(ids);
+  const result = await bulkDeletePosts(ids);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 async function handleBulkPublishPosts(session2, ids) {
   const perm = await guardBulkPost(session2, ids, "publish");
   if (perm) return perm;
-  const result = bulkPublishPosts(ids);
+  const result = await bulkPublishPosts(ids);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 async function handleBulkUnpublishPosts(session2, ids) {
   const perm = await guardBulkPost(session2, ids, "unpublish");
   if (perm) return perm;
-  const result = bulkUnpublishPosts(ids);
+  const result = await bulkUnpublishPosts(ids);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 async function handleBulkDuplicatePosts(session2, ids) {
@@ -3330,13 +4507,13 @@ async function handleBulkDuplicatePosts(session2, ids) {
   const parsedIds = parseBulkIds(ids);
   if (!parsedIds.success) return adminError(parsedIds.message, 400);
   const allowed = await Promise.all(
-    parsedIds.ids.map(async (id) => {
-      const post = getPost(id);
-      return post.success && await canPost(session2.user.id, post.data.type, "create") && await canEditPost(session2.user.id, id);
+    parsedIds.ids.map(async (id2) => {
+      const post = await getPost(id2);
+      return post.success && await canPost(session2.user.id, post.data.type, "create") && await canEditPost(session2.user.id, id2);
     })
   );
   if (!allowed.every(Boolean)) return adminError(INSUFFICIENT, 403);
-  const result = bulkDuplicatePosts(parsedIds.ids, session2.user.id);
+  const result = await bulkDuplicatePosts(parsedIds.ids, session2.user.id);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 const createUserSchema = z.object({
@@ -3356,7 +4533,7 @@ const USER_EDIT_PERMS = ["users.edit", "users.manage"];
 async function handleListUsers(session2, filters) {
   const perm = await requirePermission(session2, "users.view");
   if (perm) return perm;
-  const result = listUsersPaginated(filters ?? {});
+  const result = await listUsersPaginated(filters ?? {});
   return result.success ? adminSuccess(result.data) : adminError(result.error.message, 500);
 }
 async function handleCreateUser(session2, body) {
@@ -3367,30 +4544,30 @@ async function handleCreateUser(session2, body) {
   const result = await createUser(parsed.data, session2.user.id);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
-async function handleGetUser(session2, id) {
+async function handleGetUser(session2, id2) {
   const perm = await requirePermission(session2, "users.view");
   if (perm) return perm;
-  const result = getUser(id);
+  const result = await getUser(id2);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 404);
 }
-async function handleUpdateUser(session2, id, body) {
+async function handleUpdateUser(session2, id2, body) {
   const perm = await requireAnyPermission(session2, USER_EDIT_PERMS);
   if (perm) return perm;
   const parsed = parseWithSchema(updateUserSchema, body);
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const result = await updateUser(id, parsed.data, session2.user.id);
+  const result = await updateUser(id2, parsed.data, session2.user.id);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
-async function handleDuplicateUser(session2, id) {
+async function handleDuplicateUser(session2, id2) {
   const perm = await requireAnyPermission(session2, USER_CREATE_PERMS);
   if (perm) return perm;
-  const result = await duplicateUser(id, session2.user.id);
+  const result = await duplicateUser(id2, session2.user.id);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
-async function handleDeleteUser(session2, id) {
+async function handleDeleteUser(session2, id2) {
   const perm = await requireAnyPermission(session2, ["users.delete", "users.manage"]);
   if (perm) return perm;
-  const result = await deleteUser(id, session2.user.id);
+  const result = await deleteUser(id2, session2.user.id);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
 async function handleBulkDeleteUsers(session2, ids) {
@@ -3412,36 +4589,36 @@ async function handleBulkDuplicateUsers(session2, ids) {
 function generateRoleSlug(name) {
   return slugify(name) || "role";
 }
-function listRolesService(filters) {
-  const rolesWithCount = listRolesWithUserCountRecords(filters);
-  const enriched = rolesWithCount.map((role) => ({
+async function listRolesService(filters) {
+  const rolesWithCount = await listRolesWithUserCountRecords(filters);
+  const enriched = await Promise.all(rolesWithCount.map(async (role) => ({
     ...role,
-    permissionIds: getRolePermissionIdsRecord(role.id)
-  }));
+    permissionIds: await getRolePermissionIdsRecord(role.id)
+  })));
   return serviceSuccess(enriched, "Roles retrieved.");
 }
-function getRole(id) {
-  const role = findRoleByIdRecord(id);
+async function getRole(id2) {
+  const role = await findRoleByIdRecord(id2);
   if (!role) return serviceNotFound("Role");
-  return serviceSuccess({ ...role, permissionIds: getRolePermissionIdsRecord(id) }, "Role retrieved.");
+  return serviceSuccess({ ...role, permissionIds: await getRolePermissionIdsRecord(id2) }, "Role retrieved.");
 }
 async function syncPermissions$1(actorId) {
   const actor = await loadAdminActor(actorId);
   if (!actor || !hasAnyAdminPermission(actor, ["roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  const result = syncPermissionRecords(getPermissionDefinitions());
+  const result = await syncPermissionRecords(getPermissionDefinitions());
   return serviceSuccess(result, "Permissions synced.");
 }
 async function createRole(data, actorId) {
   const actor = await loadAdminActor(actorId);
   if (!actor || !hasAnyAdminPermission(actor, ["roles.create", "roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  if (!canAssignPermissionIds(actor, data.permissionIds)) return serviceForbidden("You cannot assign these permissions.");
+  if (!await canAssignPermissionIds(actor, data.permissionIds)) return serviceForbidden("You cannot assign these permissions.");
   const slug = data.slug ?? generateRoleSlug(data.name);
-  const existing = findRoleBySlugRecord(slug);
+  const existing = await findRoleBySlugRecord(slug);
   if (existing) return serviceConflict("slug", "A role with this slug already exists.");
-  const id = generateId();
+  const id2 = generateId();
   const now = getCurrentTimestamp();
-  const created = createRoleRecord({
-    id,
+  const created = await createRoleRecord({
+    id: id2,
     name: data.name,
     slug,
     description: data.description ?? null,
@@ -3451,20 +4628,20 @@ async function createRole(data, actorId) {
   });
   return serviceSuccess(created, "Role created.");
 }
-async function updateRole(id, data, actorId) {
+async function updateRole(id2, data, actorId) {
   const actor = await loadAdminActor(actorId);
   if (!actor || !hasAnyAdminPermission(actor, ["roles.edit", "roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  const existing = findRoleByIdRecord(id);
+  const existing = await findRoleByIdRecord(id2);
   if (!existing) return serviceNotFound("Role");
   if (existing.isSystem === 1) return serviceForbidden("System roles cannot be modified.");
-  if (!canManageExistingRole(actor, id)) return serviceForbidden("You cannot manage this role.");
-  if (data.permissionIds !== void 0 && !canAssignPermissionIds(actor, data.permissionIds)) {
+  if (!await canManageExistingRole(actor, id2)) return serviceForbidden("You cannot manage this role.");
+  if (data.permissionIds !== void 0 && !await canAssignPermissionIds(actor, data.permissionIds)) {
     return serviceForbidden("You cannot assign these permissions.");
   }
   if (data.name !== void 0) {
     const newSlug = generateRoleSlug(data.name);
-    const conflict = findRoleBySlugRecord(newSlug);
-    if (conflict && conflict.id !== id) return serviceConflict("slug", "A role with this slug already exists.");
+    const conflict = await findRoleBySlugRecord(newSlug);
+    if (conflict && conflict.id !== id2) return serviceConflict("slug", "A role with this slug already exists.");
   }
   const now = getCurrentTimestamp();
   const updateData = { updatedAt: now };
@@ -3474,44 +4651,44 @@ async function updateRole(id, data, actorId) {
   }
   if (data.description !== void 0) updateData.description = data.description;
   if (data.permissionIds !== void 0) updateData.permissionIds = [...new Set(data.permissionIds)];
-  const updated = updateRoleRecord(id, updateData);
+  const updated = await updateRoleRecord(id2, updateData);
   if (!updated) return serviceNotFound("Role");
-  deleteRefreshSessionsForRole(id);
+  await deleteRefreshSessionsForRole(id2);
   return serviceSuccess(updated, "Role updated.");
 }
-async function deleteRole(id, actorId) {
+async function deleteRole(id2, actorId) {
   const actor = await loadAdminActor(actorId);
   if (!actor || !hasAnyAdminPermission(actor, ["roles.delete", "roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  const existing = findRoleByIdRecord(id);
+  const existing = await findRoleByIdRecord(id2);
   if (!existing) return serviceNotFound("Role");
   if (existing.isSystem === 1) return serviceForbidden("System roles cannot be deleted.");
-  if (actor.roleId === id) return serviceForbidden("You cannot delete your own role.");
-  if (!canManageExistingRole(actor, id)) return serviceForbidden("You cannot manage this role.");
-  deleteRefreshSessionsForRole(id);
-  deleteRoleRecord(id);
+  if (actor.roleId === id2) return serviceForbidden("You cannot delete your own role.");
+  if (!await canManageExistingRole(actor, id2)) return serviceForbidden("You cannot manage this role.");
+  await deleteRefreshSessionsForRole(id2);
+  await deleteRoleRecord(id2);
   return serviceSuccess(null, "Role deleted.");
 }
-async function duplicateRole(id, actorId) {
+async function duplicateRole(id2, actorId) {
   const actor = await loadAdminActor(actorId);
   if (!actor || !hasAnyAdminPermission(actor, ["roles.create", "roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  const existing = findRoleByIdRecord(id);
+  const existing = await findRoleByIdRecord(id2);
   if (!existing) return serviceNotFound("Role");
-  if (!canManageExistingRole(actor, id)) return serviceForbidden("You cannot duplicate this role.");
+  if (!await canManageExistingRole(actor, id2)) return serviceForbidden("You cannot duplicate this role.");
   const newId = generateId();
   const now = getCurrentTimestamp();
   let newSlug = `${existing.slug}-copy`;
   let counter = 1;
-  while (findRoleBySlugRecord(newSlug)) {
+  while (await findRoleBySlugRecord(newSlug)) {
     newSlug = `${existing.slug}-copy-${counter}`;
     counter++;
   }
   try {
-    const created = createRoleRecord({
+    const created = await createRoleRecord({
       id: newId,
       name: `${existing.name} (Copy)`,
       slug: newSlug,
       description: existing.description ? `${existing.description} (Copy)` : null,
-      permissionIds: getRolePermissionIdsRecord(existing.id),
+      permissionIds: await getRolePermissionIdsRecord(existing.id),
       createdAt: now,
       updatedAt: now
     });
@@ -3522,20 +4699,20 @@ async function duplicateRole(id, actorId) {
 }
 async function bulkDeleteRoles(ids, actorId) {
   const results = [];
-  for (const id of ids) {
-    const result = await deleteRole(id, actorId);
-    results.push({ id, success: result.success, error: !result.success ? result.error.message : void 0 });
+  for (const id2 of ids) {
+    const result = await deleteRole(id2, actorId);
+    results.push({ id: id2, success: result.success, error: !result.success ? result.error.message : void 0 });
   }
   return serviceSuccess(results, "Bulk delete completed.");
 }
 async function bulkDuplicateRoles(ids, actorId) {
   const results = [];
-  for (const id of ids) {
-    const result = await duplicateRole(id, actorId);
+  for (const id2 of ids) {
+    const result = await duplicateRole(id2, actorId);
     if (result.success) {
-      results.push({ id, success: true, newId: result.data.id });
+      results.push({ id: id2, success: true, newId: result.data.id });
     } else {
-      results.push({ id, success: false });
+      results.push({ id: id2, success: false });
     }
   }
   return serviceSuccess(results, "Bulk duplicate completed.");
@@ -3562,10 +4739,11 @@ const ROLE_EDIT_PERMS = ["roles.edit", "roles.manage"];
 async function handleListRoles(session2, filters) {
   const perm = await requirePermission(session2, "roles.view");
   if (perm) return perm;
-  const rolesResult = listRolesService(filters);
+  const rolesResult = await listRolesService(filters);
+  const permissions2 = await listAllPermissionRecords();
   return adminSuccess({
     roles: rolesResult.success ? rolesResult.data : [],
-    permissions: listAllPermissionRecords()
+    permissions: permissions2
   });
 }
 async function handleSyncPermissions(session2) {
@@ -3582,31 +4760,31 @@ async function handleCreateRole(session2, body) {
   const result = await createRole(parsed.data, session2.user.id);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
-async function handleGetRole(session2, id) {
+async function handleGetRole(session2, id2) {
   const perm = await requirePermission(session2, "roles.view");
   if (perm) return perm;
-  const result = getRole(id);
+  const result = await getRole(id2);
   if (!result.success) return adminError(result.error.message, 404);
-  return adminSuccess({ role: result.data, permissions: listAllPermissionRecords() });
+  return adminSuccess({ role: result.data, permissions: await listAllPermissionRecords() });
 }
-async function handleUpdateRole(session2, id, body) {
+async function handleUpdateRole(session2, id2, body) {
   const perm = await requireAnyPermission(session2, ROLE_EDIT_PERMS);
   if (perm) return perm;
   const parsed = parseWithSchema(updateRoleSchema, body);
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const result = await updateRole(id, parsed.data, session2.user.id);
+  const result = await updateRole(id2, parsed.data, session2.user.id);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
-async function handleDuplicateRole(session2, id) {
+async function handleDuplicateRole(session2, id2) {
   const perm = await requireAnyPermission(session2, ["roles.create", "roles.manage"]);
   if (perm) return perm;
-  const result = await duplicateRole(id, session2.user.id);
+  const result = await duplicateRole(id2, session2.user.id);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
-async function handleDeleteRole(session2, id) {
+async function handleDeleteRole(session2, id2) {
   const perm = await requireAnyPermission(session2, ["roles.delete", "roles.manage"]);
   if (perm) return perm;
-  const result = await deleteRole(id, session2.user.id);
+  const result = await deleteRole(id2, session2.user.id);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
 async function handleBulkDeleteRoles(session2, ids) {
@@ -3661,21 +4839,21 @@ const updateSettingsSchema = z.object({
 async function handleGetSettings(session2) {
   const perm = await requirePermission(session2, "settings.manage");
   if (perm) return perm;
-  return adminSuccess(getSiteSettings());
+  return adminSuccess(await getSiteSettings());
 }
 async function handleUpdateSettings(session2, body) {
   const perm = await requirePermission(session2, "settings.manage");
   if (perm) return perm;
   const parsed = parseWithSchema(updateSettingsSchema, body);
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const result = updateSiteSettings(parsed.data);
+  const result = await updateSiteSettings(parsed.data);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
 async function updateProfile(userId, data) {
-  const existing = findUserByIdRecord(userId);
+  const existing = await findUserByIdRecord(userId);
   if (!existing) return serviceNotFound("User");
   if (data.email !== void 0 && data.email !== existing.email) {
-    const conflict = findUserByEmailRecord(data.email);
+    const conflict = await findUserByEmailRecord(data.email);
     if (conflict) return serviceConflict("email", "A user with this email already exists.");
   }
   const now = getCurrentTimestamp();
@@ -3683,10 +4861,10 @@ async function updateProfile(userId, data) {
   if (data.name !== void 0) updateData.name = data.name;
   if (data.email !== void 0) updateData.email = data.email;
   if (data.password !== void 0) updateData.passwordHash = await hashPassword(data.password);
-  const updated = updateUserRecord(userId, updateData);
+  const updated = await updateUserRecord(userId, updateData);
   if (!updated) return serviceNotFound("User");
   if (data.email !== void 0 || data.password !== void 0) {
-    deleteRefreshSessionsForUser(userId);
+    await deleteRefreshSessionsForUser(userId);
   }
   return serviceSuccess(updated, "Profile updated.");
 }
@@ -3706,64 +4884,11 @@ async function handleUpdateProfile(session2, body) {
   const result = await updateProfile(session2.user.id, parsed.data);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
-const menuTypeEnum = z.enum(["navbar", "footer", "sidebar"]);
-const createMenuSchema = z.object({
-  // Required: 1-100 characters (Req 7.1)
-  title: z.string().min(1, "Title is required").max(100, "Title must be at most 100 characters"),
-  // Required: URL string
-  url: safeHrefSchema,
-  // Required: menu type (Req 7.1)
-  type: menuTypeEnum,
-  // Optional: non-negative integer, defaults to 0 (Req 7.1)
-  position: z.number().int().min(0, "Position must be a non-negative integer").default(0),
-  // Optional: parent menu item ID (ULID)
-  parentId: z.string().regex(ulidRegex, "Parent ID must be a valid ULID").nullable().optional(),
-  // Optional: empty → null (Req 9.9)
-  cssClass: emptyToNull,
-  // Optional: empty → null (Req 9.9)
-  target: z.preprocess(
-    (value) => value === "" ? null : value,
-    z.enum(["_self", "_blank", "_parent", "_top"]).nullable().optional()
-  ),
-  image: imageUrlSimpleSchema,
-  status: publishStatusEnum.default("published")
-});
-const updateMenuSchema = createMenuSchema.partial();
-const MAX_MENU_DEPTH = 20;
-const MAX_MENU_CHILDREN = 100;
-const MAX_MENU_NODES = 1e3;
-function menuTreeItemSchemaAtDepth(depth) {
-  const children = depth >= MAX_MENU_DEPTH ? z.array(z.never()).max(0) : z.array(menuTreeItemSchemaAtDepth(depth + 1)).max(MAX_MENU_CHILDREN);
-  return z.object({
-    id: z.string().regex(ulidRegex, "Menu item ID must be a valid ULID"),
-    parentId: z.string().regex(ulidRegex, "Parent ID must be a valid ULID").nullable(),
-    position: z.number().int().min(0, "Position must be a non-negative integer"),
-    children
-  });
-}
-const menuTreeItemSchema = menuTreeItemSchemaAtDepth(0);
-const reorderMenusSchema = z.object({
-  type: menuTypeEnum,
-  tree: z.array(menuTreeItemSchema).max(MAX_MENU_CHILDREN, "Too many top-level menu items")
-}).superRefine((value, context) => {
-  let count2 = 0;
-  const visit = (nodes) => {
-    for (const node of nodes) {
-      count2 += 1;
-      if (count2 > MAX_MENU_NODES) return true;
-      if (visit(node.children)) return true;
-    }
-    return false;
-  };
-  if (visit(value.tree)) {
-    context.addIssue({ code: "custom", message: `At most ${MAX_MENU_NODES} menu items may be reordered.` });
-  }
-});
 const MENU_EDIT_PERMS = ["menus.edit", "menus.manage"];
 async function handleListMenus(session2) {
   const perm = await requirePermission(session2, "menus.view");
   if (perm) return perm;
-  const result = listMenus();
+  const result = await listMenus();
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 async function handleCreateMenu(session2, body) {
@@ -3772,31 +4897,31 @@ async function handleCreateMenu(session2, body) {
   const parsed = parseWithSchema(createMenuSchema, body);
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
   if (parsed.data.status === "published" && !await can(session2.user.id, "menus.publish")) return adminError("Insufficient permissions.", 403);
-  const result = createMenu(parsed.data);
+  const result = await createMenu(parsed.data);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
-async function handleGetMenu(session2, id) {
+async function handleGetMenu(session2, id2) {
   const perm = await requirePermission(session2, "menus.view");
   if (perm) return perm;
-  const result = getMenu(id);
+  const result = await getMenu(id2);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 404);
 }
-async function handleUpdateMenu(session2, id, body) {
+async function handleUpdateMenu(session2, id2, body) {
   const perm = await requireAnyPermission(session2, MENU_EDIT_PERMS);
   if (perm) return perm;
   const parsed = parseWithSchema(updateMenuSchema, body);
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const existing = getMenu(id);
+  const existing = await getMenu(id2);
   if (!existing.success) return adminError(existing.error.message, 404);
   if (parsed.data.status === "published" && existing.data.status !== "published" && !await can(session2.user.id, "menus.publish")) return adminError("Insufficient permissions.", 403);
   if (parsed.data.status === "draft" && existing.data.status === "published" && !await can(session2.user.id, "menus.unpublish")) return adminError("Insufficient permissions.", 403);
-  const result = updateMenu(id, parsed.data);
+  const result = await updateMenu(id2, parsed.data);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
-async function handleDeleteMenu(session2, id) {
+async function handleDeleteMenu(session2, id2) {
   const perm = await requirePermission(session2, "menus.delete");
   if (perm) return perm;
-  const result = deleteMenu(id);
+  const result = await deleteMenu(id2);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
 async function handleReorderMenus(session2, body) {
@@ -3804,8 +4929,62 @@ async function handleReorderMenus(session2, body) {
   if (perm) return perm;
   const parsed = parseWithSchema(reorderMenusSchema, body, "Invalid reorder data.");
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const result = reorderMenus(parsed.data);
+  const result = await reorderMenus(parsed.data);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
+}
+const MAX_FILTER_TEXT_LENGTH = 100;
+async function findMediaByIdRecord(id2) {
+  const rows = await db.select().from(media).where(eq(media.id, id2)).limit(1).execute();
+  return rows[0];
+}
+async function listMediaRecords(filters) {
+  const { page, perPage, offset } = clampPagination(filters);
+  const conditions = [];
+  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH);
+  const folder = filters.folder === null ? null : filters.folder?.slice(0, 255);
+  const mimeType = filters.mimeType?.slice(0, 100);
+  if (search2) {
+    conditions.push(like(media.name, `%${search2}%`));
+  }
+  if (filters.folder !== void 0) {
+    if (folder === null) conditions.push(eq(media.folder, null));
+    else if (folder !== void 0) conditions.push(eq(media.folder, folder));
+  }
+  if (mimeType && mimeType !== "all") {
+    conditions.push(
+      mimeType.endsWith("/*") ? like(media.mimeType, mimeType.replace("*", "%")) : eq(media.mimeType, mimeType)
+    );
+  }
+  const whereClause = conditions.length > 0 ? and(...conditions) : void 0;
+  let query = db.select().from(media);
+  if (whereClause) query = query.where(whereClause);
+  const totalQuery = db.select({ value: count() }).from(media);
+  const totalRows = whereClause ? await totalQuery.where(whereClause).execute() : await totalQuery.execute();
+  const total = totalRows[0]?.value ?? 0;
+  const data = await query.orderBy(desc(media.createdAt)).limit(perPage).offset(offset).execute();
+  return {
+    data,
+    meta: {
+      currentPage: page,
+      perPage,
+      total,
+      lastPage: Math.max(1, Math.ceil(total / perPage)),
+      from: total === 0 ? 0 : offset + 1,
+      to: Math.min(offset + perPage, total)
+    }
+  };
+}
+async function createMediaRecord$1(input) {
+  await db.insert(media).values(input).execute();
+  return await findMediaByIdRecord(input.id);
+}
+async function updateMediaRecord(id2, input) {
+  await db.update(media).set(input).where(eq(media.id, id2)).execute();
+  return await findMediaByIdRecord(id2) ?? null;
+}
+async function deleteMediaRecord(id2) {
+  const result = await db.delete(media).where(eq(media.id, id2)).execute();
+  return affectedRows(result) > 0;
 }
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_IMAGE_PIXELS = 4e7;
@@ -3831,69 +5010,14 @@ const MIME_TO_EXTENSION = {
 function isImageMimeType(mimeType) {
   return mimeType.startsWith("image/");
 }
-function generateMediaPath(id, extension) {
-  return `storage/${id}.${extension}`;
+function generateMediaPath(id2, extension) {
+  return `storage/${id2}.${extension}`;
 }
-function generateThumbnailPath(id) {
-  return `storage/${id}_thumb.webp`;
+function generateThumbnailPath(id2) {
+  return `storage/${id2}_thumb.webp`;
 }
 function getExtensionFromMimeType(mimeType) {
   return MIME_TO_EXTENSION[mimeType] ?? "";
-}
-function getUploadDir() {
-  return process.env.UPLOAD_DIR || "./public";
-}
-const MAX_FILTER_TEXT_LENGTH = 100;
-function findMediaByIdRecord(id) {
-  return db.select().from(media).where(eq(media.id, id)).get();
-}
-function listMediaRecords(filters) {
-  const { page, perPage, offset } = clampPagination(filters);
-  const conditions = [];
-  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH);
-  const folder = filters.folder === null ? null : filters.folder?.slice(0, 255);
-  const mimeType = filters.mimeType?.slice(0, 100);
-  if (search2) {
-    conditions.push(like(media.name, `%${search2}%`));
-  }
-  if (filters.folder !== void 0) {
-    if (folder === null) conditions.push(eq(media.folder, null));
-    else if (folder !== void 0) conditions.push(eq(media.folder, folder));
-  }
-  if (mimeType && mimeType !== "all") {
-    conditions.push(
-      mimeType.endsWith("/*") ? like(media.mimeType, mimeType.replace("*", "%")) : eq(media.mimeType, mimeType)
-    );
-  }
-  const whereClause = conditions.length > 0 ? and(...conditions) : void 0;
-  let query = db.select().from(media);
-  if (whereClause) query = query.where(whereClause);
-  const totalQuery = db.select({ value: count() }).from(media);
-  const totalRows = whereClause ? totalQuery.where(whereClause).all() : totalQuery.all();
-  const total = totalRows[0]?.value ?? 0;
-  const data = query.orderBy(desc(media.createdAt)).limit(perPage).offset(offset).all();
-  return {
-    data,
-    meta: {
-      currentPage: page,
-      perPage,
-      total,
-      lastPage: Math.max(1, Math.ceil(total / perPage)),
-      from: total === 0 ? 0 : offset + 1,
-      to: Math.min(offset + perPage, total)
-    }
-  };
-}
-function createMediaRecord$1(input) {
-  db.insert(media).values(input).run();
-  return findMediaByIdRecord(input.id);
-}
-function updateMediaRecord(id, input) {
-  db.update(media).set(input).where(eq(media.id, id)).run();
-  return findMediaByIdRecord(id) ?? null;
-}
-function deleteMediaRecord(id) {
-  return db.delete(media).where(eq(media.id, id)).run().changes > 0;
 }
 function validateFile(file) {
   if (file.size > MAX_FILE_SIZE) {
@@ -3921,12 +5045,12 @@ async function validateFileContents(buffer, mimeType) {
   }
   return { valid: true };
 }
-function listMediaService(filters = {}) {
-  const result = listMediaRecords(filters);
+async function listMediaService(filters = {}) {
+  const result = await listMediaRecords(filters);
   return serviceSuccess(result, "OK");
 }
-function getMedia(id) {
-  const item = findMediaByIdRecord(id);
+async function getMedia(id2) {
+  const item = await findMediaByIdRecord(id2);
   if (!item) return serviceNotFound("Media");
   return serviceSuccess(item, "OK");
 }
@@ -3951,7 +5075,7 @@ async function uploadMediaForUser(formData, userId, metadata) {
     buffer,
     file.type
   );
-  return createMediaRecord({
+  return await createMediaRecord({
     id: fileResult.id,
     userId,
     name: metadata.name ?? file.name,
@@ -3967,11 +5091,11 @@ async function uploadMediaForUser(formData, userId, metadata) {
     folder: metadata.folder ?? null
   });
 }
-function createMediaRecord(params) {
-  const id = params.id ?? generateId();
+async function createMediaRecord(params) {
+  const id2 = params.id ?? generateId();
   const now = getCurrentTimestamp();
-  const record = createMediaRecord$1({
-    id,
+  const record = await createMediaRecord$1({
+    id: id2,
     userId: params.userId,
     name: params.name || params.fileName,
     fileName: params.fileName,
@@ -3989,8 +5113,8 @@ function createMediaRecord(params) {
   });
   return serviceSuccess(record, "Media uploaded.");
 }
-function updateMedia(id, data) {
-  const existing = findMediaByIdRecord(id);
+async function updateMedia(id2, data) {
+  const existing = await findMediaByIdRecord(id2);
   if (!existing) return serviceNotFound("Media");
   const now = getCurrentTimestamp();
   const updateData = { updatedAt: now };
@@ -3998,25 +5122,21 @@ function updateMedia(id, data) {
   if (data.alt !== void 0) updateData.alt = data.alt;
   if (data.caption !== void 0) updateData.caption = data.caption;
   if (data.folder !== void 0) updateData.folder = data.folder;
-  const updated = updateMediaRecord(id, updateData);
+  const updated = await updateMediaRecord(id2, updateData);
   if (!updated) return serviceNotFound("Media");
   return serviceSuccess(updated, "Media updated.");
 }
-function deleteMedia(id) {
-  const existing = findMediaByIdRecord(id);
+async function deleteMedia(id2) {
+  const existing = await findMediaByIdRecord(id2);
   if (!existing) return serviceNotFound("Media");
-  deleteMediaRecord(id);
+  await deleteMediaRecord(id2);
   return serviceSuccess(null, "Media deleted.");
 }
-async function processUploadedFile(buffer, mimeType, id) {
-  const fileId = id ?? generateId();
+async function processUploadedFile(buffer, mimeType, id2) {
+  const fileId = id2 ?? generateId();
   const extension = getExtensionFromMimeType(mimeType);
   const relativePath = generateMediaPath(fileId, extension);
-  const uploadDir = getUploadDir();
-  const absolutePath = path.resolve(uploadDir, relativePath);
-  const dir = path.dirname(absolutePath);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(absolutePath, buffer);
+  await writeStorageFile(relativePath, buffer);
   let width = null;
   let height = null;
   let thumbnailUrl = null;
@@ -4026,11 +5146,14 @@ async function processUploadedFile(buffer, mimeType, id) {
       width = metadata.width ?? null;
       height = metadata.height ?? null;
       const thumbRelativePath = generateThumbnailPath(fileId);
-      const thumbAbsolutePath = path.resolve(uploadDir, thumbRelativePath);
-      await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS }).resize(300, 300, { fit: "cover" }).webp({ quality: 80 }).toFile(thumbAbsolutePath);
+      const thumbnail = await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS }).resize(300, 300, { fit: "cover" }).webp({ quality: 80 }).toBuffer();
+      await writeStorageFile(thumbRelativePath, thumbnail);
       if (mimeType !== "image/gif") {
         await Promise.all(
-          [640, 1280].filter((responsiveWidth) => width !== null && width > responsiveWidth).map((responsiveWidth) => sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS }).resize({ width: responsiveWidth, withoutEnlargement: true }).webp({ quality: 82 }).toFile(path.resolve(uploadDir, relativePath.replace(/\.[^.]+$/, `_w${responsiveWidth}.webp`))))
+          [640, 1280].filter((responsiveWidth) => width !== null && width > responsiveWidth).map(async (responsiveWidth) => {
+            const variant = await sharp(buffer, { limitInputPixels: MAX_IMAGE_PIXELS }).resize({ width: responsiveWidth, withoutEnlargement: true }).webp({ quality: 82 }).toBuffer();
+            await writeStorageFile(relativePath.replace(/\.[^.]+$/, `_w${responsiveWidth}.webp`), variant);
+          })
         );
       }
       thumbnailUrl = `/${thumbRelativePath}`;
@@ -4071,7 +5194,6 @@ async function deleteFileIfExists(fileUrl) {
     const relativePath = fileUrl.replace(/^\/+/, "");
     const match = relativePath.match(/^storage\/([A-Za-z0-9_-]+?)(?:_(thumb|w640|w1280))?\.[A-Za-z0-9]+$/);
     if (!match) return;
-    const uploadRoot = path.resolve(getUploadDir());
     const fileId = match[1];
     const candidates = /* @__PURE__ */ new Set([
       relativePath,
@@ -4080,12 +5202,7 @@ async function deleteFileIfExists(fileUrl) {
       `storage/${fileId}_w1280.webp`
     ]);
     for (const candidate of candidates) {
-      const filePath = path.resolve(uploadRoot, candidate);
-      if (filePath === uploadRoot || !filePath.startsWith(`${uploadRoot}${path.sep}`)) continue;
-      try {
-        await unlink(filePath);
-      } catch {
-      }
+      await deleteStorageFile(candidate);
     }
   } catch {
   }
@@ -4093,32 +5210,32 @@ async function deleteFileIfExists(fileUrl) {
 async function handleListMedia(session2, filters) {
   const perm = await requirePermission(session2, "media.view");
   if (perm) return perm;
-  const result = listMediaService(filters);
+  const result = await listMediaService(filters);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
-async function handleGetMedia(session2, id) {
+async function handleGetMedia(session2, id2) {
   const perm = await requirePermission(session2, "media.view");
   if (perm) return perm;
-  if (!id) return adminError("Media id is required.", 400);
-  const result = getMedia(id);
+  if (!id2) return adminError("Media id is required.", 400);
+  const result = await getMedia(id2);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 404);
 }
-async function handleUpdateMedia(session2, id, body) {
-  if (!id) return adminError("Media id is required.", 400);
+async function handleUpdateMedia(session2, id2, body) {
+  if (!id2) return adminError("Media id is required.", 400);
   const perm = await requirePermission(session2, "media.edit");
   if (perm) return perm;
   const parsed = parseWithSchema(updateMediaSchema, body);
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const result = updateMedia(id, parsed.data);
+  const result = await updateMedia(id2, parsed.data);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
-async function handleDeleteMedia(session2, id) {
-  if (!id) return adminError("Media id is required.", 400);
+async function handleDeleteMedia(session2, id2) {
+  if (!id2) return adminError("Media id is required.", 400);
   const perm = await requirePermission(session2, "media.delete");
   if (perm) return perm;
-  const mediaResult = getMedia(id);
+  const mediaResult = await getMedia(id2);
   if (!mediaResult.success) return adminError(mediaResult.error.message, 404);
-  const result = deleteMedia(id);
+  const result = await deleteMedia(id2);
   if (!result.success) return mapServiceError(result);
   await deleteFileIfExists(mediaResult.data.url);
   await deleteFileIfExists(mediaResult.data.thumbnailUrl);
@@ -4130,14 +5247,14 @@ async function handleBulkDeleteMedia(session2, ids) {
   const parsedIds = parseBulkIds(ids);
   if (!parsedIds.success) return adminError(parsedIds.message, 400);
   const results = [];
-  for (const id of parsedIds.ids) {
-    const mediaResult = getMedia(id);
+  for (const id2 of parsedIds.ids) {
+    const mediaResult = await getMedia(id2);
     if (!mediaResult.success) {
-      results.push({ id, success: false });
+      results.push({ id: id2, success: false });
       continue;
     }
-    const deleteResult = deleteMedia(id);
-    results.push({ id, success: deleteResult.success });
+    const deleteResult = await deleteMedia(id2);
+    results.push({ id: id2, success: deleteResult.success });
     if (deleteResult.success) {
       await deleteFileIfExists(mediaResult.data.url);
       await deleteFileIfExists(mediaResult.data.thumbnailUrl);
@@ -4284,7 +5401,7 @@ const duplicate$7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineP
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$o = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return await handleBulkDeleteCategories(locals.session, ids);
 };
 const _delete$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4293,7 +5410,7 @@ const _delete$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePro
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$n = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return await handleBulkDuplicateCategories(locals.session, ids);
 };
 const duplicate$6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4302,7 +5419,7 @@ const duplicate$6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineP
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$m = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   const status2 = body?.status === "published" || body?.status === "draft" ? body.status : null;
   if (!status2) return Response.json({ success: false, message: "Invalid category status." }, { status: 422 });
   return handleBulkUpdateCategoryStatus(locals.session, ids, status2);
@@ -4360,7 +5477,7 @@ const _id_$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$k = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return handleBulkDeleteMedia(locals.session, ids);
 };
 const _delete$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4474,7 +5591,7 @@ const duplicate$5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineP
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$e = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return await handleBulkDeletePosts(locals.session, ids);
 };
 const _delete$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4483,7 +5600,7 @@ const _delete$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePro
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$d = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return await handleBulkDuplicatePosts(locals.session, ids);
 };
 const duplicate$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4492,7 +5609,7 @@ const duplicate$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineP
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$c = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return await handleBulkPublishPosts(locals.session, ids);
 };
 const publish = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4501,7 +5618,7 @@ const publish = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$b = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return await handleBulkUnpublishPosts(locals.session, ids);
 };
 const unpublish = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4565,7 +5682,7 @@ const duplicate$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineP
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$8 = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return await handleBulkDeleteRoles(locals.session, ids);
 };
 const _delete$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4574,7 +5691,7 @@ const _delete$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePro
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$7 = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return await handleBulkDuplicateRoles(locals.session, ids);
 };
 const duplicate$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4651,7 +5768,7 @@ const duplicate$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineP
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$3 = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return handleBulkDeleteUsers(locals.session, ids);
 };
 const _delete = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4660,7 +5777,7 @@ const _delete = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$2 = async ({ request, locals }) => {
   const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id) => typeof id === "string") : [];
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return handleBulkDuplicateUsers(locals.session, ids);
 };
 const duplicate = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4688,7 +5805,7 @@ const index = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePropert
   GET: GET$2,
   POST: POST$1
 }, Symbol.toStringTag, { value: "Module" }));
-const GET$1 = ({ params, request }) => {
+const GET$1 = async ({ params, request }) => {
   const registry = getServerContentTypeRegistry();
   const type = params.type;
   if (!type || !registry.contentTypes.some((contentType) => contentType.slug === type)) {
@@ -4697,7 +5814,7 @@ const GET$1 = ({ params, request }) => {
   const url = new URL(request.url);
   const requestedPage = Number(url.searchParams.get("page") ?? 1);
   const page = Number.isInteger(requestedPage) ? Math.max(1, requestedPage) : 1;
-  const result = listPublishedPostsByType(type, page, 24, {
+  const result = await listPublishedPostsByType(type, page, 24, {
     search: url.searchParams.get("search") ?? void 0,
     category: url.searchParams.get("category") ?? void 0,
     tag: url.searchParams.get("tag") ?? void 0,
@@ -4760,7 +5877,7 @@ const POST = async ({ request }) => {
   const user = process.env.SMTP_USER;
   const password = process.env.SMTP_PASSWORD;
   const from = process.env.SMTP_FROM;
-  const recipients = getSiteSettings().email_notifications;
+  const recipients = (await getSiteSettings()).email_notifications;
   if (!host || !Number.isInteger(port) || port < 1 || port > 65535 || !from || recipients.length === 0 || Boolean(user) !== Boolean(password)) {
     return Response.json({ success: false, message: "Contact email is not configured." }, { status: 503 });
   }
@@ -4788,10 +5905,10 @@ const contact = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
   __proto__: null,
   POST
 }, Symbol.toStringTag, { value: "Module" }));
-const GET = ({ request }) => {
+const GET = async ({ request }) => {
   const query = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? "";
   if (query.length < 2) return Response.json({ data: [] });
-  const result = searchPublishedPosts(query, 1, 6);
+  const result = await searchPublishedPosts(query, 1, 6);
   return Response.json({ data: result.success ? result.data.data : [] });
 };
 const search = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -4804,12 +5921,18 @@ export {
   apiApp,
   categories,
   categoriesRelations,
+  closeDatabase,
+  databaseDialect,
   beaver as default,
+  deleteStorageFile,
+  formatSeedDataSummary,
   getMenuTree,
   getPublicCustomFieldFiltersFromSearchParams,
   getPublishedArchiveFilterOptions,
   getPublishedPostByType,
   getSiteSettings,
+  getStorageDir,
+  getStorageType,
   listPublishedPostsByTag,
   listPublishedPostsByType,
   media,
@@ -4817,22 +5940,29 @@ export {
   menus,
   menusRelations,
   migrate,
+  migrateData,
+  parseSeedData,
+  passwordResetTokens,
   permissions,
   permissionsRelations,
   postCategories,
   postCategoriesRelations,
   posts,
   postsRelations,
+  readStorageFile,
+  resetDatabase,
   resetSuperAdminPassword,
   rolePermissions,
   rolePermissionsRelations,
   roles,
   rolesRelations,
   sanitizeHtml,
+  schema,
   searchPublishedPosts,
   seed,
   seedTemplate,
   settings$1 as settings,
   users,
-  usersRelations
+  usersRelations,
+  writeStorageFile
 };

@@ -5,20 +5,23 @@ import { permissions as permissionsTable, rolePermissions, roles, users } from "
 import type { RoleRecord } from "@zbeaver/beaver/app/models/role"
 import { sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
 import { generateId } from "@zbeaver/beaver/pkg/utils/index"
+import { affectedRows } from "@zbeaver/beaver/app/db/query"
 
 export type RoleRow = RoleRecord
 type PermissionRow = typeof permissionsTable.$inferSelect
 const MAX_ROLE_ROWS = 1_000
 
-export function findRoleByIdRecord(id: string) {
-  return db.select().from(roles).where(eq(roles.id, id)).get() as RoleRow | undefined
+export async function findRoleByIdRecord(id: string) {
+  const rows = await db.select().from(roles).where(eq(roles.id, id)).limit(1).execute()
+  return rows[0] as RoleRow | undefined
 }
 
-export function findRoleBySlugRecord(slug: string) {
-  return db.select().from(roles).where(eq(roles.slug, slug)).get() as RoleRow | undefined
+export async function findRoleBySlugRecord(slug: string) {
+  const rows = await db.select().from(roles).where(eq(roles.slug, slug)).limit(1).execute()
+  return rows[0] as RoleRow | undefined
 }
 
-export function listRolesWithUserCountRecords(filters?: { search?: string; sortBy?: string; sortOrder?: string }) {
+export async function listRolesWithUserCountRecords(filters?: { search?: string; sortBy?: string; sortOrder?: string }) {
   const conditions: SQL<unknown>[] = []
   const search = filters?.search?.slice(0, 100)
   if (search) {
@@ -42,29 +45,30 @@ export function listRolesWithUserCountRecords(filters?: { search?: string; sortB
 
   const baseQuery = db.select().from(roles).orderBy(orderColumn)
   const roleRows = conditions.length > 0
-    ? (baseQuery.where(and(...conditions)).limit(MAX_ROLE_ROWS).all() as RoleRow[])
-    : (baseQuery.limit(MAX_ROLE_ROWS).all() as RoleRow[])
+    ? await baseQuery.where(and(...conditions)).limit(MAX_ROLE_ROWS).execute() as RoleRow[]
+    : await baseQuery.limit(MAX_ROLE_ROWS).execute() as RoleRow[]
 
-  return roleRows.map((role) => {
-    const countResult = db
+  return await Promise.all(roleRows.map(async (role) => {
+    const countRows = await db
       .select({ value: count() })
       .from(users)
       .where(eq(users.roleId, role.id))
-      .get() as { value: number } | undefined
-    return { ...role, userCount: countResult?.value ?? 0 }
-  })
+      .limit(1)
+      .execute() as { value: number }[]
+    return { ...role, userCount: countRows[0]?.value ?? 0 }
+  }))
 }
 
-export function getRoleNameRecord(roleId: string) {
-  const row = db.select({ name: roles.name }).from(roles).where(eq(roles.id, roleId)).get() as { name: string } | undefined
-  return row?.name ?? null
+export async function getRoleNameRecord(roleId: string) {
+  const rows = await db.select({ name: roles.name }).from(roles).where(eq(roles.id, roleId)).limit(1).execute() as { name: string }[]
+  return rows[0]?.name ?? null
 }
 
-export function listAllPermissionRecords() {
-  return db.select().from(permissionsTable).all() as PermissionRow[]
+export async function listAllPermissionRecords() {
+  return await db.select().from(permissionsTable).execute() as PermissionRow[]
 }
 
-export function createRoleRecord(input: {
+export async function createRoleRecord(input: {
   id: string
   name: string
   slug: string
@@ -73,7 +77,7 @@ export function createRoleRecord(input: {
   createdAt: number
   updatedAt: number
 }) {
-  db.insert(roles).values({
+  await db.insert(roles).values({
     id: input.id,
     name: sanitizeText(input.name),
     slug: input.slug.toLowerCase(),
@@ -81,21 +85,21 @@ export function createRoleRecord(input: {
     isSystem: 0,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt,
-  }).run()
+  }).execute()
 
   for (const permissionId of input.permissionIds) {
-    db.insert(rolePermissions).values({
+    await db.insert(rolePermissions).values({
       id: generateId(),
       roleId: input.id,
       permissionId,
       createdAt: input.createdAt,
-    }).run()
+    }).execute()
   }
 
-  return findRoleByIdRecord(input.id)!
+  return (await findRoleByIdRecord(input.id))!
 }
 
-export function updateRoleRecord(id: string, input: {
+export async function updateRoleRecord(id: string, input: {
   name?: string
   slug?: string
   description?: string | null
@@ -107,53 +111,53 @@ export function updateRoleRecord(id: string, input: {
   if (input.slug !== undefined) updates.slug = input.slug.toLowerCase()
   if (input.description !== undefined) updates.description = input.description ? sanitizeText(input.description) : null
 
-  db.update(roles).set(updates).where(eq(roles.id, id)).run()
+  await db.update(roles).set(updates).where(eq(roles.id, id)).execute()
 
   if (input.permissionIds !== undefined) {
-    db.delete(rolePermissions).where(eq(rolePermissions.roleId, id)).run()
+    await db.delete(rolePermissions).where(eq(rolePermissions.roleId, id)).execute()
     for (const permissionId of input.permissionIds) {
-      db.insert(rolePermissions).values({
+      await db.insert(rolePermissions).values({
         id: generateId(),
         roleId: id,
         permissionId,
         createdAt: input.updatedAt,
-      }).run()
+      }).execute()
     }
   }
 
-  return findRoleByIdRecord(id) ?? null
+  return await findRoleByIdRecord(id) ?? null
 }
 
-export function deleteRoleRecord(id: string) {
-  db.delete(rolePermissions).where(eq(rolePermissions.roleId, id)).run()
-  return db.delete(roles).where(eq(roles.id, id)).run().changes > 0
+export async function deleteRoleRecord(id: string) {
+  await db.delete(rolePermissions).where(eq(rolePermissions.roleId, id)).execute()
+  const result = await db.delete(roles).where(eq(roles.id, id)).execute()
+  return affectedRows(result) > 0
 }
 
-export function getRolePermissionIdsRecord(roleId: string) {
-  return (
-    db
+export async function getRolePermissionIdsRecord(roleId: string) {
+  const rows = await db
       .select({ permissionId: rolePermissions.permissionId })
       .from(rolePermissions)
       .where(eq(rolePermissions.roleId, roleId))
-      .all() as { permissionId: string }[]
-  ).map((row) => row.permissionId)
+      .execute() as { permissionId: string }[]
+  return rows.map((row) => row.permissionId)
 }
 
-export function getRolePermissionSlugsRecord(roleId: string) {
-  return db
+export async function getRolePermissionSlugsRecord(roleId: string) {
+  const rows = await db
     .select({ slug: permissionsTable.slug })
     .from(rolePermissions)
     .innerJoin(permissionsTable, eq(rolePermissions.permissionId, permissionsTable.id))
     .where(eq(rolePermissions.roleId, roleId))
-    .all()
-    .map((row) => row.slug)
+    .execute()
+  return rows.map((row: { slug: string }) => row.slug)
 }
 
-export function getPermissionSlugsRecord(permissionIds: string[]) {
+export async function getPermissionSlugsRecord(permissionIds: string[]) {
   if (permissionIds.length === 0) return []
-  return db
+  return await db
     .select({ id: permissionsTable.id, slug: permissionsTable.slug })
     .from(permissionsTable)
     .where(inArray(permissionsTable.id, [...new Set(permissionIds)]))
-    .all()
+    .execute()
 }

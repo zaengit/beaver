@@ -1,34 +1,33 @@
-import { createHash } from "node:crypto"
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { db } from "./index"
+import { join } from "node:path"
+import { migrate as migrateSqlite } from "drizzle-orm/sqlite-proxy/migrator"
+import { migrate as migrateMysql } from "drizzle-orm/mysql2/migrator"
+import { migrate as migratePgsql } from "drizzle-orm/node-postgres/migrator"
 
-const migrationsFolder = fileURLToPath(new URL("./migrations/", import.meta.url))
+import { databaseConfig } from "@zbeaver/beaver/app/config/database"
+import { db, executeSqliteMigrations } from "./index"
 
-export function migrate() {
-  const sqlite = db.$client
-  const journal = JSON.parse(readFileSync(join(migrationsFolder, "meta", "_journal.json"), "utf8"))
-  const migrationTable = "__drizzle_migrations"
+function resolveMigrationsFolder() {
+  const dialect = databaseConfig.connection
+  const packaged = fileURLToPath(new URL(`./migrations/${dialect}/`, import.meta.url))
+  const source = fileURLToPath(new URL(`../../../migrations/${dialect}/`, import.meta.url))
+  const legacySqlite = fileURLToPath(new URL("../../../migrations/", import.meta.url))
+  const candidates = dialect === "sqlite" ? [packaged, source, legacySqlite] : [packaged, source]
+  const folder = candidates.find((candidate) => existsSync(join(candidate, "meta", "_journal.json")))
+  if (!folder) throw new Error(`No ${dialect} database migrations were packaged.`)
+  return folder
+}
 
-  sqlite.exec(`CREATE TABLE IF NOT EXISTS ${migrationTable} (id INTEGER PRIMARY KEY, hash text NOT NULL, created_at numeric)`)
-  const lastMigration = sqlite
-    .prepare(`SELECT created_at FROM ${migrationTable} ORDER BY created_at DESC LIMIT 1`)
-    .get() as { created_at?: number | null } | undefined
-  const lastCreatedAt = Number(lastMigration?.created_at ?? -1)
-  const recordMigration = sqlite.prepare(`INSERT INTO ${migrationTable} (hash, created_at) VALUES (?, ?)`)
+export async function migrate() {
+  const migrationsFolder = resolveMigrationsFolder()
+  const config = { migrationsFolder }
 
-  sqlite.exec("BEGIN")
-  try {
-    for (const entry of journal.entries) {
-      if (entry.when <= lastCreatedAt) continue
-      const sql = readFileSync(join(migrationsFolder, `${entry.tag}.sql`), "utf8")
-      sqlite.exec(sql)
-      recordMigration.run(createHash("sha256").update(sql).digest("hex"), entry.when)
-    }
-    sqlite.exec("COMMIT")
-  } catch (error) {
-    sqlite.exec("ROLLBACK")
-    throw error
+  if (databaseConfig.connection === "sqlite") {
+    await migrateSqlite(db, executeSqliteMigrations, config)
+  } else if (databaseConfig.connection === "mysql") {
+    await migrateMysql(db as unknown as Parameters<typeof migrateMysql>[0], config)
+  } else {
+    await migratePgsql(db as unknown as Parameters<typeof migratePgsql>[0], config)
   }
 }

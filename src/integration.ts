@@ -96,6 +96,7 @@ export default function beaver(options: BeaverOptions = {}): AstroIntegration {
         })
         injectRoute({ pattern: "/__cms/control-panel", entrypoint: new URL("./astro/admin.astro", import.meta.url), prerender: false })
         injectRoute({ pattern: "/__cms/http", entrypoint: new URL("./astro/http.js", import.meta.url), prerender: false })
+        injectRoute({ pattern: "/storage/[...path]", entrypoint: new URL("./astro/storage.js", import.meta.url), prerender: false })
         addMiddleware({ entrypoint: new URL("./astro/middleware.js", import.meta.url), order: "pre" })
       },
     },

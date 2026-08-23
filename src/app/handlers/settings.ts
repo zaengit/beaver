@@ -14,7 +14,7 @@ export async function handleGetSettings(session: Session) {
   const perm = await requirePermission(session, "settings.manage")
   if (perm) return perm
 
-  return adminSuccess(getSiteSettings())
+  return adminSuccess(await getSiteSettings())
 }
 
 export async function handleUpdateSettings(session: Session, body: unknown) {
@@ -24,6 +24,6 @@ export async function handleUpdateSettings(session: Session, body: unknown) {
   const parsed = parseWithSchema(updateSettingsSchema, body)
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors)
 
-  const result = updateSiteSettings(parsed.data)
+  const result = await updateSiteSettings(parsed.data)
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result)
 }

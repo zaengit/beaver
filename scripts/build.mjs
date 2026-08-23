@@ -94,6 +94,7 @@ await Promise.all([
     resolve(distRoot, "astro/admin.astro"),
   ),
   cp(resolve(sourceRoot, "astro/http.js"), resolve(distRoot, "astro/http.js")),
+  cp(resolve(sourceRoot, "astro/storage.js"), resolve(distRoot, "astro/storage.js")),
   cp(
     resolve(sourceRoot, "astro/middleware.js"),
     resolve(distRoot, "astro/middleware.js"),
@@ -117,28 +118,12 @@ await cp(resolve(sourceRoot, "compat"), resolve(distRoot, "compat"), {
 
 await bundleAdminCss();
 
-const migrations = [{ tag: "0000_db", when: 1770000000000 }];
-const migrationJournal = {
-  version: "7",
-  dialect: "sqlite",
-  entries: migrations.map(({ tag, when }, idx) => ({
-    idx,
-    version: "7",
-    when,
-    tag,
-    breakpoints: false,
-  })),
-};
-await mkdir(resolve(distRoot, "migrations/meta"), { recursive: true });
-await writeFile(
-  resolve(distRoot, "migrations/meta/_journal.json"),
-  `${JSON.stringify(migrationJournal, null, 2)}\n`,
-);
 await Promise.all(
-  migrations.map(({ tag }) =>
+  ["sqlite", "mysql", "pgsql"].map((dialect) =>
     cp(
-      resolve(packageRoot, "migrations", `${tag}.sql`),
-      resolve(distRoot, "migrations", `${tag}.sql`),
+      resolve(packageRoot, "migrations", dialect),
+      resolve(distRoot, "migrations", dialect),
+      { recursive: true },
     ),
   ),
 );
@@ -216,13 +201,13 @@ const serverDeclaration = [
   "  tags: string[]",
   '  customFields: { name: string; label: string; type: "text" | "number" | "boolean" | "select" | "date"; options: string[] }[]',
   "}",
-  "export declare const getPublishedPostByType: (type: string, slug: string) => BeaverServiceResult<BeaverPost & { authorName: string | null }>",
-  "export declare const getPublishedArchiveFilterOptions: (type: string) => BeaverServiceResult<BeaverArchiveFilterOptions>",
+  "export declare const getPublishedPostByType: (type: string, slug: string) => Promise<BeaverServiceResult<BeaverPost & { authorName: string | null }>>",
+  "export declare const getPublishedArchiveFilterOptions: (type: string) => Promise<BeaverServiceResult<BeaverArchiveFilterOptions>>",
   "export declare const getPublicCustomFieldFiltersFromSearchParams: (type: string, searchParams: URLSearchParams) => Record<string, string>",
-  "export declare const listPublishedPostsByType: (type: string, page?: number, perPage?: number, filters?: BeaverArchiveFilters) => BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>",
-  "export declare const listPublishedPostsByTag: (tag: string, page?: number, perPage?: number) => BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>",
-  "export declare const searchPublishedPosts: (query: string, page?: number, perPage?: number) => BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>",
-  "export declare const getMenuTree: (type?: string) => BeaverServiceResult<MenuTree[]>",
+  "export declare const listPublishedPostsByType: (type: string, page?: number, perPage?: number, filters?: BeaverArchiveFilters) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>",
+  "export declare const listPublishedPostsByTag: (tag: string, page?: number, perPage?: number) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>",
+  "export declare const searchPublishedPosts: (query: string, page?: number, perPage?: number) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>",
+  "export declare const getMenuTree: (type?: string) => Promise<BeaverServiceResult<MenuTree[]>>",
   "interface BeaverSocialLink { platform: string; url: string; icon?: string }",
   "interface BeaverOpenHours { day: string; open: string; close: string }",
   "interface BeaverSiteSettings {",
@@ -241,8 +226,30 @@ const serverDeclaration = [
   "  translate_countries: string[]",
   "  email_notifications: string[]",
   "}",
-  "export declare const getSiteSettings: () => BeaverSiteSettings",
+  "export declare const getSiteSettings: () => Promise<BeaverSiteSettings>",
   "export declare const seed: () => Promise<void>",
+  "export interface SeedDataOptions { filePath?: string; template?: string; dryRun?: boolean; overwrite?: boolean }",
+  "export interface SeedEntitySummary { created: number; updated: number; skipped: number }",
+  "export interface SeedDataSummary {",
+  "  source: string",
+  "  dryRun: boolean",
+  "  settings: SeedEntitySummary",
+  "  categories: SeedEntitySummary",
+  "  posts: SeedEntitySummary",
+  "  pages: SeedEntitySummary",
+  "  menus: SeedEntitySummary",
+  "}",
+  "export declare const migrateData: (options: SeedDataOptions) => Promise<SeedDataSummary>",
+  "export declare const formatSeedDataSummary: (result: SeedDataSummary) => string",
+  "export declare const parseSeedData: (input: unknown, source?: string) => unknown",
+  "export declare const closeDatabase: () => Promise<void>",
+  "export declare const resetDatabase: () => Promise<void>",
+  "export declare const getStorageDir: () => string",
+  "export declare const getStorageType: () => \"local\" | \"s3\"",
+  "export declare const writeStorageFile: (filePath: string, data: Uint8Array | string) => Promise<void>",
+  "export declare const readStorageFile: (filePath: string) => Promise<Uint8Array | null>",
+  "export declare const deleteStorageFile: (filePath: string) => Promise<boolean>",
+  "export type StorageType = \"local\" | \"s3\"",
   "export interface MenuTree {",
   "  id: string",
   "  title: string",
@@ -261,7 +268,7 @@ await writeFile(
 );
 await appendFile(
   resolve(distRoot, "server.d.ts"),
-  "export declare const migrate: () => void\n",
+  "export declare const migrate: () => Promise<void>\n",
 );
 await appendFile(
   resolve(distRoot, "server.d.ts"),
@@ -269,7 +276,7 @@ await appendFile(
 );
 await appendFile(
   resolve(distRoot, "server.d.ts"),
-  "export declare const resetSuperAdminPassword: () => { email: string }\n",
+  "export declare const resetSuperAdminPassword: () => Promise<{ email: string }>\n",
 );
 await writeFile(
   resolve(distRoot, "ui.d.ts"),

@@ -11,9 +11,8 @@ interface Props {
 }
 
 const { title = "CMS", description } = Astro.props
-const settings = getSiteSettings()
-const navbarResult = getMenuTree("navbar")
-const footerResult = getMenuTree("footer")
+const settings = await getSiteSettings()
+const [navbarResult, footerResult] = await Promise.all([getMenuTree("navbar"), getMenuTree("footer")])
 const navbarItems = navbarResult.success ? navbarResult.data : []
 const footerItems = footerResult.success ? footerResult.data : []
 const favicon = safeImageSrc(settings.favicon)

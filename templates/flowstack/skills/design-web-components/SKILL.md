@@ -25,7 +25,9 @@ surface.
 - Do not query SQLite or Admin-only endpoints directly from public pages or
   components.
 - Do not change `astro.config.mjs`, middleware, `.env`, or seed data unless the
-  request requires that specific change.
+  request requires that specific change. If content/demo data is explicitly in
+  scope, update the authorized `data/seed.json` source instead of adding public
+  fallback content.
 - If a design needs a new CMS field, query, route behavior, or persistence
   rule, explain the required Beaver-side change and stop instead of inventing a
   parallel contract.
@@ -46,6 +48,38 @@ surface.
   interaction or accessibility; visitor-facing editorial and commercial copy
   must come from supported CMS fields.
 
+## Seed CMS data only when authorized
+
+When the request explicitly includes demo, sample, or initial CMS content, use
+the template seed contract rather than hard-coding visitor-facing values in
+`src/`:
+
+- The canonical Flowstack example is
+  `packages/beaver/templates/flowstack/data/seed.json`. A consuming project
+  may provide a custom `data/seed.json` file when that data scope is
+  authorized.
+- The supported top-level collections are `settings`, `categories`, `posts`,
+  `pages`, and `menus`.
+- Use `slug` as the stable key for categories and posts/pages. Posts and pages
+  may reference categories with `categorySlugs`.
+- Use `type` and `url` as the stable menu key. Use `parentUrl` for a portable
+  nested menu relationship instead of database IDs.
+- Keep page `sections` compatible with the current section registry and the
+  stored section/item field contract. Do not introduce seed fields that the
+  Admin editor and public renderer cannot consume.
+- Import a packaged template with
+  `npx @zbeaver/beaver migrate:data --template flowstack`; import a custom file
+  with `npx @zbeaver/beaver migrate:data --file ./data/seed.json`.
+- Run `--dry-run` after changing seed data. Existing records are skipped by
+  default; use `--overwrite` only when replacing matching seeded records is
+  explicitly intended.
+- `migrate:data:fresh ... --force` resets the Beaver schema and is destructive;
+  use it only against an isolated or intentionally reset database.
+
+Seed data is an import/deployment input, not a public rendering fallback. The
+public site must still omit absent records rather than recreating them in
+components.
+
 ## Inspect before designing
 
 1. Read the project README and the relevant route, layout, or renderer.
@@ -61,7 +95,10 @@ surface.
    adding a section, content type, template, or editable field. If it differs
    from the project README or live registry, follow the current project
    contract and preserve the narrower existing behavior.
-5. Identify the correct target:
+5. When seed data is explicitly in scope, read the relevant `data/seed.json`
+   and verify every referenced slug, menu relationship, and section field
+   against the current registry before editing it.
+6. Identify the correct target:
    - page: `src/pages/**`;
    - shared shell: `src/layouts/**`;
    - section or public component: `src/components/web/**`;
@@ -172,6 +209,8 @@ list, stop and request the CMS contract change.
 2. Confirm every field read by a renderer is supported and belongs to the
    correct section, item, or `fieldSlots` schema.
 3. Validate the changed JSON and run the most focused available project check.
-4. Run `npm run build` from the consuming Astro project when practical.
-5. Report the files changed and distinguish completed checks from checks that
+4. If seed data changed, run `npx @zbeaver/beaver migrate:data --file
+   ./data/seed.json --dry-run` or the packaged-template equivalent.
+5. Run `npm run build` from the consuming Astro project when practical.
+6. Report the files changed and distinguish completed checks from checks that
    were not run.

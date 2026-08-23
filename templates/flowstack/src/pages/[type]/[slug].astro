@@ -11,7 +11,7 @@ if (!contentType || !slug) {
   return new Response("Content type not found", { status: 404 })
 }
 
-const postResult = getPublishedPostByType(contentType.slug, slug)
+const postResult = await getPublishedPostByType(contentType.slug, slug)
 if (!postResult.success) {
   return new Response("Post not found", { status: 404 })
 }

@@ -6,38 +6,40 @@ import type { SettingRow } from "@zbeaver/beaver/app/models/setting"
 
 // ─── Get All Settings ────────────────────────────────────────────────────────
 
-export function getAllSettingsRecords(): SettingRow[] {
-  return db.select().from(settings).all()
+export async function getAllSettingsRecords(): Promise<SettingRow[]> {
+  return await db.select().from(settings).execute()
 }
 
 // ─── Get Single Setting ──────────────────────────────────────────────────────
 
-function getSettingRecord(key: string): SettingRow | undefined {
-  return db
+async function getSettingRecord(key: string): Promise<SettingRow | undefined> {
+  const rows = await db
     .select()
     .from(settings)
     .where(eq(settings.key, key))
-    .get()
+    .limit(1)
+    .execute()
+  return rows[0]
 }
 
 // ─── Upsert Setting (insert or update) ───────────────────────────────────────
 
-export function upsertSettingRecord(key: string, value: string): SettingRow {
+export async function upsertSettingRecord(key: string, value: string): Promise<SettingRow> {
   const now = getCurrentTimestamp()
-  const existing = getSettingRecord(key)
+  const existing = await getSettingRecord(key)
 
   if (existing) {
-    db.update(settings)
+    await db.update(settings)
       .set({ value, updatedAt: now })
       .where(eq(settings.key, key))
-      .run()
+      .execute()
 
     return { key, value, createdAt: existing.createdAt, updatedAt: now }
   }
 
-  db.insert(settings)
+  await db.insert(settings)
     .values({ key, value, createdAt: now, updatedAt: now })
-    .run()
+    .execute()
 
   return { key, value, createdAt: now, updatedAt: now }
 }

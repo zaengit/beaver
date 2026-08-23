@@ -502,7 +502,7 @@ export async function main(argv = process.argv.slice(2)) {
 
     const { migrate, seed, seedTemplate } = await import(`${BEAVER_PACKAGE}/server`)
     console.log(`\n${colorize("cyan", "◇")} Running database migration...`)
-    migrate()
+    await migrate()
     console.log(colorize("green", "✔ Database migrated"))
     console.log(`\n${colorize("cyan", "◇")} Creating Super Admin and seeding Beaver...`)
     await seed()
