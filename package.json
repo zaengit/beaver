@@ -1,6 +1,6 @@
 {
   "name": "@zbeaver/beaver",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "description": "CMS admin panel, API, and middleware for Astro SSR projects.",
   "license": "MIT",
   "keywords": [
