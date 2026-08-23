@@ -803,7 +803,7 @@ function Zt() {
   const t = globalThis.__CMS_CONTENT_TYPE_REGISTRY__;
   return Qr(t) ? t : Xr;
 }
-const Zr = "0.1.17", ei = {
+const Zr = "0.1.18", ei = {
   version: Zr
 }, Za = {
   FileText: Bt,
