@@ -11,8 +11,19 @@ export interface BeaverOptions {
   menuGroupRegistry?: string | URL
 }
 
+function stripBoundarySlashes(value: string | undefined) {
+  const trimmed = value?.trim() ?? ""
+  let start = 0
+  let end = trimmed.length
+
+  while (start < end && trimmed[start] === "/") start += 1
+  while (end > start && trimmed[end - 1] === "/") end -= 1
+
+  return trimmed.slice(start, end)
+}
+
 function normalizePath(value: string | undefined) {
-  const segment = value?.trim().replace(/^\/+|\/+$/g, "") || process.env.ADMIN_PATH?.trim().replace(/^\/+|\/+$/g, "") || "admin"
+  const segment = stripBoundarySlashes(value) || stripBoundarySlashes(process.env.ADMIN_PATH) || "admin"
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(segment)) {
     throw new Error("beaver adminPath must be a single URL segment, such as panel-rahasia.")
   }

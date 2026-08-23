@@ -44,8 +44,16 @@ function getContentTypeRegistry() {
   const browserRegistry = globalThis.__CMS_CONTENT_TYPE_REGISTRY__;
   return isRegistry(browserRegistry) ? browserRegistry : configuredRegistry;
 }
+function stripBoundarySlashes(value) {
+  const trimmed = value?.trim() ?? "";
+  let start = 0;
+  let end = trimmed.length;
+  while (start < end && trimmed[start] === "/") start += 1;
+  while (end > start && trimmed[end - 1] === "/") end -= 1;
+  return trimmed.slice(start, end);
+}
 function normalizePath(value) {
-  const segment = value?.trim().replace(/^\/+|\/+$/g, "") || process.env.ADMIN_PATH?.trim().replace(/^\/+|\/+$/g, "") || "admin";
+  const segment = stripBoundarySlashes(value) || stripBoundarySlashes(process.env.ADMIN_PATH) || "admin";
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(segment)) {
     throw new Error("beaver adminPath must be a single URL segment, such as panel-rahasia.");
   }
@@ -4952,7 +4960,7 @@ async function listMediaRecords(filters) {
   }
   if (mimeType && mimeType !== "all") {
     conditions.push(
-      mimeType.endsWith("/*") ? like(media.mimeType, mimeType.replace("*", "%")) : eq(media.mimeType, mimeType)
+      mimeType.endsWith("/*") ? like(media.mimeType, `${mimeType.slice(0, -1)}%`) : eq(media.mimeType, mimeType)
     );
   }
   const whereClause = conditions.length > 0 ? and(...conditions) : void 0;

@@ -37,7 +37,7 @@ export async function listMediaRecords(filters: {
   if (mimeType && mimeType !== "all") {
     conditions.push(
       mimeType.endsWith("/*")
-        ? like(media.mimeType, mimeType.replace("*", "%"))
+        ? like(media.mimeType, `${mimeType.slice(0, -1)}%`)
         : eq(media.mimeType, mimeType),
     )
   }

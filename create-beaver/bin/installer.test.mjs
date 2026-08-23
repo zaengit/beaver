@@ -55,6 +55,7 @@ test("listTemplates excludes the internal config directory", () => {
 
 test("sanitizePackageName creates a valid package name", () => {
   assert.equal(sanitizePackageName("My Marketing Site"), "my-marketing-site")
+  assert.equal(sanitizePackageName("---My Marketing Site---"), "my-marketing-site")
   assert.equal(sanitizePackageName("..."), "beaver-site")
 })
 
@@ -78,4 +79,15 @@ test("validateAnswers accepts the installer contract", () => {
     adminEmail: "admin@example.com",
     adminPassword: "a-secure-admin-password",
   }))
+})
+
+test("validateAnswers rejects oversized admin emails", () => {
+  assert.throws(() => validateAnswers({
+    projectName: "demo-site",
+    templateName: "flowstack",
+    packageManager: "npm",
+    adminName: "Super Admin",
+    adminEmail: `${"a".repeat(250)}@example.com`,
+    adminPassword: "a-secure-admin-password",
+  }), /valid email address/)
 })

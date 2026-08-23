@@ -19,6 +19,7 @@ const BEAVER_PACKAGE = "@zbeaver/beaver"
 const DEFAULT_TEMPLATE = "flowstack"
 const DEFAULT_PROJECT_NAME = "my-beaver-site"
 const DEFAULT_ADMIN_NAME = "Super Admin"
+const MAX_ADMIN_EMAIL_LENGTH = 254
 const PACKAGE_MANAGERS = ["npm", "pnpm", "yarn", "bun"]
 const INSTALL_DEPENDENCIES = [
   "astro",
@@ -121,8 +122,13 @@ export function sanitizePackageName(value) {
   const name = basename(value)
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/^[._-]+|[._-]+$/g, "")
-  return name || "beaver-site"
+  let start = 0
+  let end = name.length
+
+  while (start < end && "._-".includes(name[start])) start += 1
+  while (end > start && "._-".includes(name[end - 1])) end -= 1
+
+  return name.slice(start, end) || "beaver-site"
 }
 
 export function generatedCredentials() {
@@ -132,12 +138,23 @@ export function generatedCredentials() {
   }
 }
 
+function isValidAdminEmail(value) {
+  if (typeof value !== "string" || value.length > MAX_ADMIN_EMAIL_LENGTH || /\s/.test(value)) return false
+
+  const atIndex = value.indexOf("@")
+  if (atIndex <= 0 || atIndex !== value.lastIndexOf("@")) return false
+
+  const domain = value.slice(atIndex + 1)
+  const dotIndex = domain.indexOf(".")
+  return dotIndex > 0 && dotIndex < domain.length - 1
+}
+
 export function validateAnswers(answers, templateNames = [DEFAULT_TEMPLATE]) {
   if (!answers.projectName?.trim()) throw new Error("Project name is required.")
   if (!templateNames.includes(answers.templateName)) throw new Error(`Template "${answers.templateName}" was not found.`)
   if (!PACKAGE_MANAGERS.includes(answers.packageManager)) throw new Error(`Unsupported package manager: ${answers.packageManager}.`)
   if (!answers.adminName?.trim() || answers.adminName.length > 100) throw new Error("Admin name must be between 1 and 100 characters.")
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.adminEmail ?? "")) throw new Error("Admin email must be a valid email address.")
+  if (!isValidAdminEmail(answers.adminEmail ?? "")) throw new Error("Admin email must be a valid email address.")
   if (!answers.adminPassword || answers.adminPassword.length < 12 || answers.adminPassword.length > 128) {
     throw new Error("Admin password must be between 12 and 128 characters.")
   }
@@ -258,7 +275,7 @@ function createInitialEnv(source, destination, answers) {
 
   writeFileSync(destination, contents, { mode: 0o600, flag: "wx" })
   chmodSync(destination, 0o600)
-  return { created: true, credentialsShown: true, credentials }
+  return { created: true, credentialsShown: true }
 }
 
 function loadDotEnv(directory) {
@@ -290,6 +307,17 @@ function projectLabel(projectDirectory, currentDirectory = process.cwd()) {
   if (!displayed) return "."
   if (displayed === ".." || displayed.startsWith(`..${sep}`)) return projectDirectory
   return displayed
+}
+
+function stripBoundarySlashes(value) {
+  const trimmed = value?.trim() ?? ""
+  let start = 0
+  let end = trimmed.length
+
+  while (start < end && trimmed[start] === "/") start += 1
+  while (end > start && trimmed[end - 1] === "/") end -= 1
+
+  return trimmed.slice(start, end)
 }
 
 function askText(readline, label, defaultValue = "") {
@@ -395,7 +423,7 @@ async function promptAnswers(options, templateNames) {
     const templateName = options.templateName ?? await askChoice(readline, "Choose a starter template", templateNames, templateDefault)
     const packageManager = options.packageManager ?? await askChoice(readline, "Which package manager do you want to use?", PACKAGE_MANAGERS, packageManagerDefault)
     const adminName = options.adminName ?? await askRequiredText(readline, "Admin name", DEFAULT_ADMIN_NAME, (value) => value.length <= 100 ? null : "Admin name must be at most 100 characters.")
-    const adminEmail = options.adminEmail ?? await askRequiredText(readline, "Admin email", generated.email, (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? null : "Enter a valid email address.")
+    const adminEmail = options.adminEmail ?? await askRequiredText(readline, "Admin email", generated.email, (value) => isValidAdminEmail(value) ? null : "Enter a valid email address.")
     readline.close()
     const enteredPassword = options.adminPassword ?? await promptSecret("Admin password", stdin, stdout)
     const adminPassword = enteredPassword || generated.password
@@ -425,7 +453,7 @@ function installDependencies(projectDirectory, packageManager) {
 
 function printSummary(projectDirectory, currentDirectory, answers, envResult) {
   const port = process.env.PORT?.trim() || "4321"
-  const adminPath = (process.env.ADMIN_PATH?.trim() || "admin").replace(/^\/+|\/+$/g, "")
+  const adminPath = stripBoundarySlashes(process.env.ADMIN_PATH) || "admin"
   const projectLabelValue = projectLabel(projectDirectory, currentDirectory)
   const packageManagerRun = answers.packageManager === "npm" ? "npm" : answers.packageManager
 
@@ -440,8 +468,8 @@ function printSummary(projectDirectory, currentDirectory, answers, envResult) {
   console.log(`  Name:  ${answers.adminName}`)
   console.log(`  Email: ${answers.adminEmail}`)
   if (envResult.credentialsShown && answers.generatedPassword) {
-    console.log(`  Password: ${answers.adminPassword}`)
-    console.log(colorize("yellow", "  Save this password now; it is only shown once."))
+    console.log("  Password: generated and saved in .env")
+    console.log(colorize("yellow", "  Read the password from .env before logging in."))
   } else {
     console.log("  Password: saved in .env")
   }
