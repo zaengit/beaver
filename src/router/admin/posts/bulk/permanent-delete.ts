@@ -1,9 +1,9 @@
 import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
-import { handleBulkDeleteRoles } from "@zbeaver/beaver/app/handlers"
+import { handleBulkPermanentlyDeletePosts } from "@zbeaver/beaver/app/handlers"
 
 export const POST: AdminRoute = async ({ request, locals }) => {
   const body = await request.json()
   const ids = Array.isArray(body?.ids) ? body.ids.filter((id: unknown): id is string => typeof id === "string") : []
-  return await handleBulkDeleteRoles(locals.session as { user: { id: string } } | null, ids)
+  return handleBulkPermanentlyDeletePosts(locals.session as { user: { id: string } } | null, ids)
 }

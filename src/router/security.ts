@@ -75,5 +75,10 @@ export function clientAddress(request: Request) {
       if (candidate && isIP(candidate) !== 0) return candidate
     }
   }
+
+  const hostname = new URL(request.url).hostname.replace(/^\[|\]$/g, "")
+  if (hostname === "localhost" || hostname === "127.0.0.1") return "127.0.0.1"
+  if (hostname === "::1") return "::1"
+
   return "unknown"
 }

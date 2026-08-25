@@ -1,11 +1,18 @@
 import { and, asc, count, desc, eq, like, or } from "drizzle-orm"
 
 import { db } from "@zbeaver/beaver/app/db"
-import { roles, users } from "@zbeaver/beaver/app/db/schema"
+import { users } from "@zbeaver/beaver/app/db/schema"
 import { sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
 import type { UserRecord } from "@zbeaver/beaver/app/models/user"
+import { getStaticRoleName, type StaticRole } from "@zbeaver/beaver/pkg/types/roles"
 import { clampPagination } from "@zbeaver/beaver/pkg/utils/pagination"
 import { affectedRows } from "@zbeaver/beaver/app/db/query"
+import {
+  getSafeSuperAdminUser,
+  getSuperAdminUser,
+  isConfiguredSuperAdminEmail,
+  isSuperAdminUserId,
+} from "@zbeaver/beaver/app/admin/super-admin"
 
 export type UserSafe = Omit<UserRecord, "password">
 export type UserListItem = UserSafe & { roleName: string | null }
@@ -18,11 +25,15 @@ function toSafe(user: UserRecord): UserSafe {
 }
 
 export async function findUserByIdRecord(id: string) {
+  if (isSuperAdminUserId(id)) return getSuperAdminUser()
+
   const rows = await db.select().from(users).where(eq(users.id, id)).limit(1).execute()
   return rows[0] as UserRecord | undefined
 }
 
 export async function findUserByEmailRecord(email: string) {
+  if (isConfiguredSuperAdminEmail(email)) return getSuperAdminUser()
+
   const rows = await db
     .select()
     .from(users)
@@ -36,7 +47,7 @@ export async function listUsersPaginatedRecord(filters: {
   page?: number
   perPage?: number
   search?: string
-  roleId?: string
+  role?: StaticRole
   sortBy?: string
   sortOrder?: string
 }) {
@@ -44,14 +55,14 @@ export async function listUsersPaginatedRecord(filters: {
 
   const conditions: ReturnType<typeof eq>[] = []
   const search = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH)
-  const roleId = filters.roleId?.slice(0, 128)
+  const role = filters.role
   if (search) {
     conditions.push(
       or(like(users.name, `%${search}%`), like(users.email, `%${search}%`)) as ReturnType<typeof eq>,
     )
   }
-  if (roleId) {
-    conditions.push(eq(users.roleId, roleId))
+  if (role) {
+    conditions.push(eq(users.role, role))
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
@@ -82,20 +93,19 @@ export async function listUsersPaginatedRecord(filters: {
     id: users.id,
     name: users.name,
     email: users.email,
-    roleId: users.roleId,
+    role: users.role,
     emailVerified: users.emailVerified,
     createdAt: users.createdAt,
     updatedAt: users.updatedAt,
-    roleName: roles.name,
-  }).from(users).leftJoin(roles, eq(users.roleId, roles.id))
+  }).from(users)
   const paged = await (whereClause ? dataQuery.where(whereClause) : dataQuery)
     .orderBy(orderColumn)
     .limit(perPage)
     .offset(offset)
-    .execute() as UserListItem[]
+    .execute() as UserSafe[]
 
   return {
-    data: paged,
+    data: paged.map((user) => ({ ...user, roleName: getStaticRoleName(user.role) })),
     meta: {
       currentPage: page,
       perPage,
@@ -112,7 +122,7 @@ export async function createUserRecord(input: {
   name: string
   email: string
   passwordHash: string
-  roleId: string | null
+  role: StaticRole
   createdAt: number
   updatedAt: number
 }) {
@@ -121,7 +131,7 @@ export async function createUserRecord(input: {
     name: sanitizeText(input.name),
     email: input.email.toLowerCase().trim(),
     password: input.passwordHash,
-    roleId: input.roleId,
+    role: input.role,
     emailVerified: 0,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt,
@@ -134,14 +144,14 @@ export async function updateUserRecord(id: string, input: {
   name?: string
   email?: string
   passwordHash?: string
-  roleId?: string | null
+  role?: StaticRole
   updatedAt: number
 }) {
   const updates: Record<string, unknown> = { updatedAt: input.updatedAt }
   if (input.name !== undefined) updates.name = sanitizeText(input.name)
   if (input.email !== undefined) updates.email = input.email.toLowerCase().trim()
   if (input.passwordHash !== undefined) updates.password = input.passwordHash
-  if (input.roleId !== undefined) updates.roleId = input.roleId
+  if (input.role !== undefined) updates.role = input.role
 
   await db.update(users).set(updates).where(eq(users.id, id)).execute()
   return await findSafeUserByIdRecord(id) ?? null
@@ -153,6 +163,8 @@ export async function deleteUserRecord(id: string) {
 }
 
 export async function findSafeUserByIdRecord(id: string) {
+  if (isSuperAdminUserId(id)) return getSafeSuperAdminUser()
+
   const user = await findUserByIdRecord(id)
   return user ? toSafe(user) : null
 }

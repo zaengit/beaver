@@ -19,6 +19,7 @@ export interface Post {
   publishedAt: number | null
   createdAt: number
   updatedAt: number
+  deletedAt?: number | null
 }
 
 /** Fields safe for unauthenticated consumers. */
@@ -60,6 +61,8 @@ export interface PostFilters extends PaginationInput {
   status?: string
   authorId?: string
   categoryId?: string
+  types?: string[]
+  trash?: boolean
   sortBy?: string
   sortOrder?: "asc" | "desc"
 }

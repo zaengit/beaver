@@ -8,7 +8,13 @@ export type AdminApiEnvironment = {
   Variables: { session: { user: { id: string } } }
 }
 
-const PUBLIC_PATHS = new Set(["/api/admin/auth/login", "/api/admin/auth/refresh", "/api/admin/auth/session", "/api/admin/auth/logout"])
+const PUBLIC_PATHS = new Set([
+  "/api/admin/auth/login",
+  "/api/admin/auth/refresh",
+  "/api/admin/auth/session",
+  "/api/admin/auth/logout",
+  "/api/admin/auth/2fa/verify",
+])
 
 function readCookie(request: Request, name: string) {
   const value = request.headers.get("cookie")
@@ -24,18 +30,13 @@ function requiredPermissions(pathname: string, method: string) {
   const read = method === "GET" || method === "HEAD"
   if (rest.startsWith("/users")) {
     if (read) return ["users.view"]
+    if (rest.includes("/2fa/disable") && method === "POST") return ["users.manage"]
     if (rest.includes("/bulk/delete") || method === "DELETE") return ["users.delete", "users.manage"]
     if (rest.includes("duplicate") || method === "POST") return ["users.create", "users.manage"]
     return ["users.edit", "users.manage"]
   }
-  if (rest.startsWith("/roles")) {
-    if (rest === "/roles/sync-permissions" && method === "POST") return ["roles.manage"]
-    if (read) return ["roles.view"]
-    if (rest.includes("/bulk/delete") || method === "DELETE") return ["roles.delete", "roles.manage"]
-    if (rest.includes("duplicate") || method === "POST") return ["roles.create", "roles.manage"]
-    return ["roles.edit", "roles.manage"]
-  }
   if (rest === "/dashboard") return ["dashboard.view"]
+  if (rest.startsWith("/activity-logs")) return ["activity-log.view"]
   // Post and category permissions depend on their content type. Their handlers
   // resolve the type from the request or stored record before authorizing.
   if (rest.startsWith("/categories") || rest.startsWith("/posts")) return null
@@ -58,14 +59,30 @@ export const adminSecurity: MiddlewareHandler<AdminApiEnvironment> = async (cont
   const pathname = context.req.path
   const method = request.method
 
-  if (pathname === "/api/admin/auth/login" && method === "POST") {
+  if (pathname === "/api/admin/auth/2fa/verify" && method === "POST") {
     const client = clientAddress(request)
     const key = client === "unknown" ? `${pathname}:global` : `${pathname}:${client}`
     const limit = client === "unknown" ? 60 : 10
     if (!isWithinRateLimit(key, limit, 15 * 60 * 1000)) return context.json({ success: false, message: "Too many requests. Please try again later." }, 429)
   }
 
-  if (PUBLIC_PATHS.has(pathname)) return next()
+  if ((pathname === "/api/admin/auth/2fa/enable" || pathname === "/api/admin/auth/2fa/disable") && method === "POST") {
+    const client = clientAddress(request)
+    const key = client === "unknown" ? `${pathname}:global` : `${pathname}:${client}`
+    const limit = client === "unknown" ? 60 : 10
+    if (!isWithinRateLimit(key, limit, 15 * 60 * 1000)) return context.json({ success: false, message: "Too many requests. Please try again later." }, 429)
+  }
+
+  if (PUBLIC_PATHS.has(pathname)) {
+    // Logout remains publicly reachable so an expired access token can still
+    // clear cookies, but preserve the actor when the access token is valid so
+    // the activity log can attribute the logout event.
+    if (pathname === "/api/admin/auth/logout") {
+      const session = await getAdminSession({ get: (name: string) => readCookie(request, name), set: () => undefined })
+      if (session) context.set("session", { user: session.user })
+    }
+    return next()
+  }
 
   const session = await getAdminSession({ get: (name: string) => readCookie(request, name), set: () => undefined })
   if (!session) return context.json({ success: false, message: "Unauthorized." }, 401)

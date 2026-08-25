@@ -53,7 +53,7 @@ export async function findCategoryBySlugRecord(slug: string) {
   return rows[0] as CategoryRow | undefined
 }
 
-export async function listCategoryRecords(filters?: { type?: string; search?: string; sortBy?: string; sortOrder?: string }) {
+export async function listCategoryRecords(filters?: { type?: string; search?: string; status?: "draft" | "published"; sortBy?: string; sortOrder?: string }) {
   const conditions: SQL<unknown>[] = []
   const type = filters?.type?.slice(0, 64)
   const search = filters?.search?.slice(0, 100)
@@ -63,6 +63,9 @@ export async function listCategoryRecords(filters?: { type?: string; search?: st
   }
   if (search) {
     conditions.push(like(categories.name, `%${search}%`))
+  }
+  if (filters?.status) {
+    conditions.push(eq(categories.status, filters.status))
   }
 
   // Build sort

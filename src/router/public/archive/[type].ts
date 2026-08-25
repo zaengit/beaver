@@ -13,7 +13,7 @@ export const GET: AdminRoute = async ({ params, request }) => {
   const url = new URL(request.url)
   const requestedPage = Number(url.searchParams.get("page") ?? 1)
   const page = Number.isInteger(requestedPage) ? Math.max(1, requestedPage) : 1
-  const result = await listPublishedPostsByType(type, page, 24, {
+  const result = await listPublishedPostsByType(type, page, 10, {
     search: url.searchParams.get("search") ?? undefined,
     category: url.searchParams.get("category") ?? undefined,
     tag: url.searchParams.get("tag") ?? undefined,

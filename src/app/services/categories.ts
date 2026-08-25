@@ -177,7 +177,7 @@ export async function bulkUpdateCategoryStatus(ids: string[], status: "draft" | 
 
 // ─── List ─────────────────────────────────────────────────────────────────────
 
-export async function listCategories(filters?: { type?: string; search?: string; sortBy?: string; sortOrder?: string }): Promise<ServiceResult<CategoryRow[]>> {
+export async function listCategories(filters?: { type?: string; search?: string; status?: "draft" | "published"; sortBy?: string; sortOrder?: string }): Promise<ServiceResult<CategoryRow[]>> {
   const items = await listCategoryRecords(filters)
   return serviceSuccess(items, "Categories retrieved.")
 }

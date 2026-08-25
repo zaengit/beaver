@@ -15,12 +15,14 @@ export const GET: AdminRoute = async ({ request, locals }) => {
   const type = url.searchParams.get("type")
   const sortBy = url.searchParams.get("sortBy")
   const sortOrder = url.searchParams.get("sortOrder")
+  const trash = url.searchParams.get("trash")
 
   if (search) filters.search = search
   if (status) filters.status = status
   if (type) filters.type = type
   if (sortBy && VALID_SORT_BY.has(sortBy)) filters.sortBy = sortBy
   if (sortOrder && VALID_SORT_ORDER.has(sortOrder as "asc" | "desc")) filters.sortOrder = sortOrder as "asc" | "desc"
+  if (trash === "1" || trash === "true") filters.trash = true
 
   return handleListPosts(locals.session as { user: { id: string } } | null, filters)
 }

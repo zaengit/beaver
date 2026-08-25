@@ -1,7 +1,7 @@
-import { eq, and, gt, inArray, lt, or } from "drizzle-orm"
+import { eq, and, gt, lt, or } from "drizzle-orm"
 import { db } from "@zbeaver/beaver/app/db"
 import { databaseConfig } from "@zbeaver/beaver/app/config/database"
-import { adminRefreshSessions, users } from "@zbeaver/beaver/app/db/schema"
+import { adminRefreshSessions } from "@zbeaver/beaver/app/db/schema"
 import { getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
 
 const REFRESH_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60
@@ -45,19 +45,6 @@ export async function deleteRefreshSession(sessionId: string) {
 export async function deleteRefreshSessionsForUser(userId: string) {
   await db.delete(adminRefreshSessions)
     .where(eq(adminRefreshSessions.userId, userId))
-    .execute()
-}
-
-export async function deleteRefreshSessionsForRole(roleId: string) {
-  const roleUsers = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.roleId, roleId))
-    .execute()
-  if (roleUsers.length === 0) return
-
-  await db.delete(adminRefreshSessions)
-    .where(inArray(adminRefreshSessions.userId, roleUsers.map((user: { id: string }) => user.id)))
     .execute()
 }
 

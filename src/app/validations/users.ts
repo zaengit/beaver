@@ -1,5 +1,7 @@
 import { z } from "zod"
-import { ulidRegex } from "@zbeaver/beaver/app/validations/shared"
+
+// Super Admin is environment-managed and must never be persisted in users.
+const roleSchema = z.enum(["admin", "editor", "author"], { error: "Invalid role." })
 
 export const createUserSchema = z.object({
   name: z
@@ -11,10 +13,7 @@ export const createUserSchema = z.object({
     .string()
     .min(12, "Password must be at least 12 characters")
     .max(128, "Password must be at most 128 characters"),
-  roleId: z
-    .string()
-    .regex(ulidRegex, "Invalid role ID format")
-    .optional(),
+  role: roleSchema.default("author"),
 })
 
 export const updateUserSchema = z.object({
@@ -29,11 +28,7 @@ export const updateUserSchema = z.object({
     .min(12, "Password must be at least 12 characters")
     .max(128, "Password must be at most 128 characters")
     .optional(),
-  roleId: z
-    .string()
-    .regex(ulidRegex, "Invalid role ID format")
-    .nullable()
-    .optional(),
+  role: roleSchema.optional(),
 })
 
 // Inferred types

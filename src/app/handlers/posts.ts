@@ -4,22 +4,29 @@ import { mapServiceError } from "@zbeaver/beaver/app/handlers/error-mapper"
 import { parseBulkIds, parseWithSchema } from "@zbeaver/beaver/app/handlers/utils"
 import type { Session } from "@zbeaver/beaver/app/handlers/types"
 import { can } from "@zbeaver/beaver/app/admin/permissions"
+import { findUserByIdRecord } from "@zbeaver/beaver/app/repositories/users"
 import {
   bulkDeletePosts,
   bulkDuplicatePosts,
+  bulkPermanentlyDeletePosts,
   bulkPublishPosts,
+  bulkRestorePosts,
   bulkUnpublishPosts,
   createPost,
   deletePost,
   duplicatePost,
   getPost,
+  getTrashedPost,
   listPosts,
+  permanentlyDeletePost,
+  restorePost,
   updatePost,
 } from "@zbeaver/beaver/app/services/posts"
 import { createPostSchema, updatePostSchema } from "@zbeaver/beaver/app/validations/posts"
 import type { PostFilters } from "@zbeaver/beaver/pkg/types/posts"
 import {
   contentPermission,
+  getKnownContentTypes,
   isKnownContentType,
   type ContentAction,
 } from "@zbeaver/beaver/app/admin/content-permissions"
@@ -32,6 +39,25 @@ const INSUFFICIENT = "Insufficient permissions."
 
 async function canPost(userId: string, type: string, action: ContentAction) {
   return isKnownContentType(type) && can(userId, contentPermission(type, action))
+}
+
+async function canManageContent(userId: string, type: string) {
+  return canPost(userId, type, "delete") || canPost(userId, type, "delete-own")
+}
+
+type OwnPostAction = "delete" | "publish" | "unpublish"
+
+function ownPostAction(action: OwnPostAction): ContentAction {
+  return `${action}-own` as ContentAction
+}
+
+async function canManagePost(
+  userId: string,
+  post: { type: string; authorId: string },
+  action: OwnPostAction,
+) {
+  if (await canPost(userId, post.type, action)) return true
+  return post.authorId === userId && await canPost(userId, post.type, ownPostAction(action))
 }
 
 async function canEditPost(userId: string, id: string) {
@@ -50,7 +76,7 @@ async function guardPost(session: Session, type: string, action: ContentAction) 
 }
 
 /** Runs a bulk permission check: every ID must have a post with the required action. */
-async function guardBulkPost(session: Session, ids: string[], action: ContentAction) {
+async function guardBulkPost(session: Session, ids: string[], action: OwnPostAction) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
   const parsedIds = parseBulkIds(ids)
@@ -58,7 +84,21 @@ async function guardBulkPost(session: Session, ids: string[], action: ContentAct
   const allowed = await Promise.all(
     parsedIds.ids.map(async (id) => {
       const post = await getPost(id)
-      return post.success && canPost(session!.user.id, post.data.type, action)
+      return post.success && canManagePost(session!.user.id, post.data, action)
+    }),
+  )
+  return allowed.every(Boolean) ? null : adminError(INSUFFICIENT, 403)
+}
+
+async function guardBulkTrashedPost(session: Session, ids: string[]) {
+  const unauth = requireAuth(session)
+  if (unauth) return unauth
+  const parsedIds = parseBulkIds(ids)
+  if (!parsedIds.success) return adminError(parsedIds.message, 400)
+  const allowed = await Promise.all(
+    parsedIds.ids.map(async (id) => {
+      const post = await getTrashedPost(id)
+      return post.success && await canManagePost(session!.user.id, post.data, "delete")
     }),
   )
   return allowed.every(Boolean) ? null : adminError(INSUFFICIENT, 403)
@@ -72,10 +112,31 @@ export async function handleListPosts(session: Session, filters: PostFilters) {
   const unauth = requireAuth(session)
   if (unauth) return unauth
 
-  const type = filters.type ?? "post"
-  if (!(await canPost(session!.user.id, type, "view"))) return adminError(INSUFFICIENT, 403)
+  const isTrash = filters.trash === true
+  const type = filters.type ?? (isTrash ? undefined : "post")
+  let allowedTypes: string[] | undefined
 
-  const result = await listPosts({ ...filters, type })
+  if (type) {
+    const allowed = isTrash
+      ? await canManageContent(session!.user.id, type)
+      : await canPost(session!.user.id, type, "view")
+    if (!allowed) return adminError(INSUFFICIENT, 403)
+  } else if (isTrash) {
+    const knownTypes = getKnownContentTypes()
+    allowedTypes = []
+    for (const knownType of knownTypes) {
+      if (await canManageContent(session!.user.id, knownType)) allowedTypes.push(knownType)
+    }
+    if (allowedTypes.length === 0) return adminError(INSUFFICIENT, 403)
+  } else {
+    return adminError(INSUFFICIENT, 403)
+  }
+
+  const user = await findUserByIdRecord(session!.user.id)
+  const scopedFilters = user?.role === "author"
+    ? { ...filters, ...(type ? { type } : {}), ...(allowedTypes ? { types: allowedTypes } : {}), authorId: session!.user.id }
+    : { ...filters, ...(type ? { type } : {}), ...(allowedTypes ? { types: allowedTypes } : {}) }
+  const result = await listPosts(scopedFilters)
   return result.success ? adminSuccess(result.data) : mapServiceError(result)
 }
 
@@ -85,6 +146,13 @@ export async function handleCreatePost(session: Session, body: unknown) {
 
   const perm = await guardPost(session, parsed.data.type, "create")
   if (perm) return perm
+  if (
+    parsed.data.status === "published" &&
+    !(await canPost(session!.user.id, parsed.data.type, "publish")) &&
+    !(await canPost(session!.user.id, parsed.data.type, "publish-own"))
+  ) {
+    return adminError(INSUFFICIENT, 403)
+  }
 
   const result = await createPost(parsed.data, session!.user.id)
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result)
@@ -98,6 +166,10 @@ export async function handleGetPost(session: Session, id: string) {
   if (!result.success) return adminError(result.error.message, 404)
 
   if (!(await canPost(session!.user.id, result.data.type, "view"))) return adminError(INSUFFICIENT, 403)
+  const user = await findUserByIdRecord(session!.user.id)
+  if (user?.role === "author" && result.data.authorId !== session!.user.id) {
+    return adminError(INSUFFICIENT, 403)
+  }
 
   return adminSuccess(result.data)
 }
@@ -115,13 +187,13 @@ export async function handleUpdatePost(session: Session, id: string, body: unkno
   if (
     parsed.data.status === "published" &&
     existing.data.status !== "published" &&
-    !(await canPost(session!.user.id, existing.data.type, "publish"))
+    !(await canManagePost(session!.user.id, existing.data, "publish"))
   )
     return adminError(INSUFFICIENT, 403)
   if (
     parsed.data.status === "draft" &&
-    existing.data.status === "published" &&
-    !(await canPost(session!.user.id, existing.data.type, "unpublish"))
+    (existing.data.status === "published" || existing.data.status === "scheduled") &&
+    !(await canManagePost(session!.user.id, existing.data, "unpublish"))
   )
     return adminError(INSUFFICIENT, 403)
 
@@ -152,9 +224,33 @@ export async function handleDeletePost(session: Session, id: string) {
 
   const existing = await getPost(id)
   if (!existing.success) return adminError(existing.error.message, 404)
-  if (!(await canPost(session!.user.id, existing.data.type, "delete"))) return adminError(INSUFFICIENT, 403)
+  if (!(await canManagePost(session!.user.id, existing.data, "delete"))) return adminError(INSUFFICIENT, 403)
 
   const result = await deletePost(id)
+  return result.success ? adminSuccess(null, result.message) : mapServiceError(result)
+}
+
+export async function handleRestorePost(session: Session, id: string) {
+  const unauth = requireAuth(session)
+  if (unauth) return unauth
+
+  const existing = await getTrashedPost(id)
+  if (!existing.success) return adminError(existing.error.message, 404)
+  if (!(await canManagePost(session!.user.id, existing.data, "delete"))) return adminError(INSUFFICIENT, 403)
+
+  const result = await restorePost(id)
+  return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result)
+}
+
+export async function handlePermanentlyDeletePost(session: Session, id: string) {
+  const unauth = requireAuth(session)
+  if (unauth) return unauth
+
+  const existing = await getTrashedPost(id)
+  if (!existing.success) return adminError(existing.error.message, 404)
+  if (!(await canManagePost(session!.user.id, existing.data, "delete"))) return adminError(INSUFFICIENT, 403)
+
+  const result = await permanentlyDeletePost(id)
   return result.success ? adminSuccess(null, result.message) : mapServiceError(result)
 }
 
@@ -166,6 +262,24 @@ export async function handleBulkDeletePosts(session: Session, ids: string[]) {
   const perm = await guardBulkPost(session, ids, "delete")
   if (perm) return perm
   const result = await bulkDeletePosts(ids)
+  return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
+}
+
+export async function handleBulkRestorePosts(session: Session, ids: string[]) {
+  const perm = await guardBulkTrashedPost(session, ids)
+  if (perm) return perm
+  const parsedIds = parseBulkIds(ids)
+  if (!parsedIds.success) return adminError(parsedIds.message, 400)
+  const result = await bulkRestorePosts(parsedIds.ids)
+  return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
+}
+
+export async function handleBulkPermanentlyDeletePosts(session: Session, ids: string[]) {
+  const perm = await guardBulkTrashedPost(session, ids)
+  if (perm) return perm
+  const parsedIds = parseBulkIds(ids)
+  if (!parsedIds.success) return adminError(parsedIds.message, 400)
+  const result = await bulkPermanentlyDeletePosts(parsedIds.ids)
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500)
 }
 

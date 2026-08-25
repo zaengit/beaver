@@ -3,8 +3,9 @@ import { getCurrentTimestamp } from "@zbeaver/beaver/pkg/utils/index"
 import { findUserByIdRecord, updateUserRecord, type UserSafe } from "@zbeaver/beaver/app/repositories/users"
 import { findUserByEmailRecord } from "@zbeaver/beaver/app/repositories/users"
 import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
-import { serviceSuccess, serviceNotFound, serviceConflict } from "@zbeaver/beaver/app/services/utils"
+import { serviceSuccess, serviceNotFound, serviceConflict, serviceForbidden } from "@zbeaver/beaver/app/services/utils"
 import { deleteRefreshSessionsForUser } from "@zbeaver/beaver/app/admin/session-store"
+import { isSuperAdminUserId } from "@zbeaver/beaver/app/admin/super-admin"
 
 interface UpdateProfileInput {
   name?: string
@@ -16,6 +17,10 @@ export async function updateProfile(
   userId: string,
   data: UpdateProfileInput,
 ): Promise<ServiceResult<UserSafe>> {
+  if (isSuperAdminUserId(userId)) {
+    return serviceForbidden("Super Admin profile is managed by ADMIN_* environment variables.")
+  }
+
   const existing = await findUserByIdRecord(userId)
   if (!existing) return serviceNotFound("User")
 

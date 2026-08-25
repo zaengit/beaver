@@ -14,51 +14,42 @@ const activeSchema = databaseConfig.connection === "mysql"
 // the same application-level values; db/index.ts supplies the dialect-specific
 // Drizzle client at runtime.
 export const users = activeSchema.users as typeof sqliteSchema.users
+export const adminTwoFactor = activeSchema.adminTwoFactor as typeof sqliteSchema.adminTwoFactor
 export const adminRefreshSessions = activeSchema.adminRefreshSessions as typeof sqliteSchema.adminRefreshSessions
 export const passwordResetTokens = activeSchema.passwordResetTokens as typeof sqliteSchema.passwordResetTokens
 export const posts = activeSchema.posts as typeof sqliteSchema.posts
 export const menus = activeSchema.menus as typeof sqliteSchema.menus
 export const categories = activeSchema.categories as typeof sqliteSchema.categories
 export const postCategories = activeSchema.postCategories as typeof sqliteSchema.postCategories
-export const roles = activeSchema.roles as typeof sqliteSchema.roles
-export const permissions = activeSchema.permissions as typeof sqliteSchema.permissions
-export const rolePermissions = activeSchema.rolePermissions as typeof sqliteSchema.rolePermissions
 export const media = activeSchema.media as typeof sqliteSchema.media
 export const settings = activeSchema.settings as typeof sqliteSchema.settings
+export const activityLogs = activeSchema.activityLogs as typeof sqliteSchema.activityLogs
 
 export const usersRelations = activeSchema.usersRelations
 export const postsRelations = activeSchema.postsRelations
 export const categoriesRelations = activeSchema.categoriesRelations
 export const postCategoriesRelations = activeSchema.postCategoriesRelations
-export const rolesRelations = activeSchema.rolesRelations
-export const permissionsRelations = activeSchema.permissionsRelations
-export const rolePermissionsRelations = activeSchema.rolePermissionsRelations
 export const mediaRelations = activeSchema.mediaRelations
 export const menusRelations = activeSchema.menusRelations
 
 export const schema = {
   users,
+  adminTwoFactor,
   adminRefreshSessions,
   passwordResetTokens,
   posts,
   menus,
   categories,
   postCategories,
-  roles,
-  permissions,
-  rolePermissions,
   media,
   settings,
+  activityLogs,
   usersRelations,
   postsRelations,
   categoriesRelations,
   postCategoriesRelations,
-  rolesRelations,
-  permissionsRelations,
-  rolePermissionsRelations,
   mediaRelations,
   menusRelations,
 }
 
 export const databaseDialect = databaseConfig.connection
-

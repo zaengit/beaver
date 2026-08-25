@@ -42,15 +42,18 @@ const pgClient = databaseConfig.connection === "pgsql"
   : null
 
 const databaseTables = [
+  "admin_two_factor",
   "admin_refresh_sessions",
   "password_reset_tokens",
   "post_categories",
+  // Legacy tables retained so migrate:fresh can remove pre-static-role schemas.
   "role_permissions",
   "posts",
   "menus",
   "categories",
   "media",
   "settings",
+  "activity_logs",
   "users",
   "permissions",
   "roles",
@@ -150,7 +153,14 @@ const executeSqlite: AsyncRemoteCallback = async (sql, params, method) => {
 }
 
 export async function executeSqliteMigrations(queries: string[]) {
-  if (queries.length > 0) sqliteClient!.exec(queries.join("\n"))
+  // The proxy migrator also passes its journal INSERT statements in this
+  // array. Executing each item separately prevents a migration ending in a
+  // statement without a semicolon from being concatenated with the next
+  // migration's first statement (for example, `INSERT ...` followed by
+  // `PRAGMA foreign_keys = OFF`).
+  for (const query of queries) {
+    if (query.trim()) sqliteClient!.exec(query)
+  }
 }
 
 // Drizzle's dialect-specific database types are intentionally hidden behind

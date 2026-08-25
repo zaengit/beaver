@@ -13,21 +13,58 @@ import {
   type UserSafe,
 } from "@zbeaver/beaver/app/repositories/users"
 import type { ServiceResult } from "@zbeaver/beaver/pkg/types"
-import { serviceSuccess, serviceNotFound, serviceConflict, serviceForbidden } from "@zbeaver/beaver/app/services/utils"
-import { canAssignRole, canManageSensitiveUserFields, hasAnyAdminPermission, loadAdminActor } from "@zbeaver/beaver/app/admin/authorization"
+import { serviceSuccess, serviceNotFound, serviceConflict, serviceForbidden, serviceValidation } from "@zbeaver/beaver/app/services/utils"
+import { canAssignRole, canManageSensitiveUserFields, hasAdminPermission, hasAnyAdminPermission, loadAdminActor } from "@zbeaver/beaver/app/admin/authorization"
 import { deleteRefreshSessionsForUser } from "@zbeaver/beaver/app/admin/session-store"
+import type { StaticRole } from "@zbeaver/beaver/pkg/types/roles"
+import type { UserRecord } from "@zbeaver/beaver/app/models/user"
+import { isSuperAdminUserId } from "@zbeaver/beaver/app/admin/super-admin"
+import { deleteTwoFactorRecord, findTwoFactorRecord } from "@zbeaver/beaver/app/repositories/two-factor"
+import { isTwoFactorEnabled } from "@zbeaver/beaver/app/services/two-factor"
 
 // ─── Get User ─────────────────────────────────────────────────────────────────
 
-export async function getUser(id: string): Promise<ServiceResult<UserSafe>> {
+export async function getUser(id: string): Promise<ServiceResult<UserSafe & { twoFactorEnabled: boolean }>> {
   const user = await findSafeUserByIdRecord(id)
   if (!user) return serviceNotFound("User")
-  return serviceSuccess(user, "OK")
+  return serviceSuccess({ ...user, twoFactorEnabled: await isTwoFactorEnabled(id) }, "OK")
+}
+
+// ─── Disable User Two-Factor Authentication ─────────────────────────────────
+
+export async function disableUserTwoFactor(
+  id: string,
+  currentUserId: string,
+): Promise<ServiceResult<{ enabled: false }>> {
+  const actor = await loadAdminActor(currentUserId)
+  if (!actor || !hasAdminPermission(actor, "users.manage")) {
+    return serviceForbidden("Insufficient permissions.")
+  }
+
+  if (isSuperAdminUserId(id)) {
+    return serviceForbidden("Super Admin two-factor authentication is managed by ADMIN_2FA_ENABLED and ADMIN_2FA_SECRET.")
+  }
+
+  if (id === currentUserId) {
+    return serviceForbidden("Use your profile page to disable your own two-factor authentication.")
+  }
+
+  const existing = await findUserByIdRecord(id)
+  if (!existing) return serviceNotFound("User")
+
+  const record = await findTwoFactorRecord(id)
+  if (!record || record.enabled !== 1) {
+    return serviceValidation("Two-factor authentication is not enabled.")
+  }
+
+  await deleteTwoFactorRecord(id)
+  await deleteRefreshSessionsForUser(id)
+  return serviceSuccess({ enabled: false }, "Two-factor authentication disabled.")
 }
 
 // ─── Get User With Email (returns raw user for auth purposes) ─────────────────
 
-export async function getUserByEmail(email: string): Promise<ServiceResult<typeof import("@zbeaver/beaver/app/db/schema").users.$inferSelect>> {
+export async function getUserByEmail(email: string): Promise<ServiceResult<UserRecord>> {
   const user = await findUserByEmailRecord(email)
   if (!user) return serviceNotFound("User")
   return serviceSuccess(user, "OK")
@@ -41,7 +78,7 @@ export async function listUsersPaginated(filters: {
   page?: number
   perPage?: number
   search?: string
-  roleId?: string
+  role?: StaticRole
   sortBy?: string
   sortOrder?: string
 } = {}): Promise<ServiceResult<{
@@ -64,7 +101,7 @@ export async function listUsersPaginated(filters: {
 export async function createUser(data: CreateUserInput, actorId: string): Promise<ServiceResult<UserSafe>> {
   const actor = await loadAdminActor(actorId)
   if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.")
-  if (!await canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.")
+  if (!await canAssignRole(actor, data.role)) return serviceForbidden("You cannot assign this role.")
 
   // Check email uniqueness
   const existing = await findUserByEmailRecord(data.email)
@@ -79,7 +116,7 @@ export async function createUser(data: CreateUserInput, actorId: string): Promis
     name: data.name,
     email: data.email,
     passwordHash,
-    roleId: data.roleId ?? null,
+    role: data.role,
     createdAt: now,
     updatedAt: now,
   })
@@ -94,6 +131,10 @@ export async function updateUser(
   data: UpdateUserInput,
   currentUserId: string,
 ): Promise<ServiceResult<UserSafe>> {
+  if (isSuperAdminUserId(id)) {
+    return serviceForbidden("Super Admin is managed by ADMIN_* environment variables.")
+  }
+
   const actor = await loadAdminActor(currentUserId)
   if (!actor || !hasAnyAdminPermission(actor, ["users.edit", "users.manage"])) return serviceForbidden("Insufficient permissions.")
 
@@ -101,9 +142,9 @@ export async function updateUser(
   if (!existing) return serviceNotFound("User")
 
   const isSelf = id === currentUserId
-  const changesSensitiveFields = data.email !== undefined || data.password !== undefined || data.roleId !== undefined
+  const changesSensitiveFields = data.email !== undefined || data.password !== undefined || data.role !== undefined
   if (!isSelf && changesSensitiveFields) {
-    if (!canManageSensitiveUserFields(actor, id) || !await canAssignRole(actor, existing.roleId)) {
+    if (!canManageSensitiveUserFields(actor, id) || !await canAssignRole(actor, existing.role)) {
       return serviceForbidden("You cannot manage this user.")
     }
   }
@@ -115,9 +156,9 @@ export async function updateUser(
   }
 
   // Prevent self-role-change
-  if (data.roleId !== undefined) {
+  if (data.role !== undefined) {
     if (isSelf) return serviceForbidden("You cannot change your own role.")
-    if (!await canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.")
+    if (!await canAssignRole(actor, data.role)) return serviceForbidden("You cannot assign this role.")
   }
 
   const now = getCurrentTimestamp()
@@ -125,19 +166,19 @@ export async function updateUser(
     name?: string
     email?: string
     passwordHash?: string
-    roleId?: string | null
+    role?: StaticRole
     updatedAt: number
   } = { updatedAt: now }
 
   if (data.name !== undefined) updateData.name = data.name
   if (data.email !== undefined) updateData.email = data.email
   if (data.password !== undefined) updateData.passwordHash = await hashPassword(data.password)
-  if (data.roleId !== undefined) updateData.roleId = data.roleId
+  if (data.role !== undefined) updateData.role = data.role
 
   const updated = await updateUserRecord(id, updateData)
   if (!updated) return serviceNotFound("User")
 
-  if (data.email !== undefined || data.password !== undefined || data.roleId !== undefined) {
+  if (data.email !== undefined || data.password !== undefined || data.role !== undefined) {
     await deleteRefreshSessionsForUser(id)
   }
 
@@ -150,6 +191,10 @@ export async function deleteUser(
   id: string,
   currentUserId: string,
 ): Promise<ServiceResult<null>> {
+  if (isSuperAdminUserId(id)) {
+    return serviceForbidden("Super Admin is managed by ADMIN_* environment variables.")
+  }
+
   const actor = await loadAdminActor(currentUserId)
   if (!actor || !hasAnyAdminPermission(actor, ["users.delete", "users.manage"])) return serviceForbidden("Insufficient permissions.")
 
@@ -158,21 +203,26 @@ export async function deleteUser(
 
   // Prevent self-deletion
   if (id === currentUserId) return serviceForbidden("You cannot delete your own account.")
-  if (!await canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot manage this user.")
+  if (!await canAssignRole(actor, existing.role)) return serviceForbidden("You cannot manage this user.")
 
   await deleteUserRecord(id)
+  await deleteTwoFactorRecord(id)
   return serviceSuccess(null, "User deleted.")
 }
 
 // ─── Duplicate User ──────────────────────────────────────────────────────────
 
 export async function duplicateUser(id: string, currentUserId: string): Promise<ServiceResult<UserSafe>> {
+  if (isSuperAdminUserId(id)) {
+    return serviceForbidden("Super Admin is managed by ADMIN_* environment variables.")
+  }
+
   const actor = await loadAdminActor(currentUserId)
   if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.")
 
   const existing = await findUserByIdRecord(id)
   if (!existing) return serviceNotFound("User")
-  if (!await canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot assign this role.")
+  if (!await canAssignRole(actor, existing.role)) return serviceForbidden("You cannot assign this role.")
 
   const newId = generateId()
   const now = getCurrentTimestamp()
@@ -190,7 +240,7 @@ export async function duplicateUser(id: string, currentUserId: string): Promise<
       name: `${existing.name} (Copy)`,
       email: newEmail,
       passwordHash: existing.password, // duplicate password hash
-      roleId: existing.roleId,
+      role: existing.role,
       createdAt: now,
       updatedAt: now,
     })

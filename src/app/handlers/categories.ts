@@ -54,7 +54,7 @@ async function guardBulkCategory(session: Session, ids: string[], action: Catego
 
 export async function handleListCategories(
   session: Session,
-  filters?: { type?: string; search?: string; sortBy?: string; sortOrder?: string },
+  filters?: { type?: string; search?: string; status?: "draft" | "published"; sortBy?: string; sortOrder?: string },
 ) {
   const unauth = requireAuth(session)
   if (unauth) return unauth

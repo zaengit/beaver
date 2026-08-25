@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, like, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, like, lte, or, sql, type SQL } from "drizzle-orm"
 
 import { db } from "@zbeaver/beaver/app/db"
 import { affectedRows } from "@zbeaver/beaver/app/db/query"
@@ -8,6 +8,7 @@ import type { PaginatedResult } from "@zbeaver/beaver/pkg/types"
 import type { Post, PostFilters, PostWithRelations, PublicArchiveFilterOptions, PublicArchiveFilters, PublicPost } from "@zbeaver/beaver/pkg/types/posts"
 import { generateId } from "@zbeaver/beaver/pkg/utils/id"
 import { clampPage, clampPagination, clampPerPage } from "@zbeaver/beaver/pkg/utils/pagination"
+import { getSuperAdminUser, SUPER_ADMIN_USER_ID } from "@zbeaver/beaver/app/admin/super-admin"
 
 type UserAuthor = { id: string; name: string; email: string }
 type CategoryRef = { id: string; name: string; slug: string }
@@ -23,6 +24,26 @@ export type DashboardStats = {
 }
 
 const MAX_FILTER_TEXT_LENGTH = 100
+
+function publicPublishedCondition(now = Date.now()) {
+  return and(
+    isNull(posts.deletedAt),
+    eq(posts.status, "published"),
+    or(isNull(posts.publishedAt), lte(posts.publishedAt, now))!,
+  )!
+}
+
+function activePostCondition() {
+  return isNull(posts.deletedAt)
+}
+
+function trashedPostCondition() {
+  return isNotNull(posts.deletedAt)
+}
+
+function authorNameExpression() {
+  return sql<string | null>`CASE WHEN ${posts.authorId} = ${SUPER_ADMIN_USER_ID} THEN ${getSuperAdminUser().name} ELSE ${users.name} END`
+}
 
 function buildPaginationMeta(
   page: number,
@@ -86,7 +107,12 @@ export async function findPostByIdRecord(id: string) {
 
   return {
     ...row,
-    author: authorRows[0] ?? null,
+    author: authorRows[0] ?? (row.authorId === SUPER_ADMIN_USER_ID
+      ? (() => {
+          const user = getSuperAdminUser()
+          return { id: user.id, name: user.name, email: user.email }
+        })()
+      : null),
     categories: postCategoriesRows,
   } as PostWithRelations
 }
@@ -117,11 +143,11 @@ export async function findPublishedByTypeAndSlugRecord(type: string, slug: strin
       publishedAt: posts.publishedAt,
       createdAt: posts.createdAt,
       updatedAt: posts.updatedAt,
-      authorName: users.name,
+      authorName: authorNameExpression(),
     })
     .from(posts)
     .leftJoin(users, eq(posts.authorId, users.id))
-    .where(and(eq(posts.type, type), eq(posts.slug, slug), eq(posts.status, "published")))
+    .where(and(eq(posts.type, type), eq(posts.slug, slug), publicPublishedCondition()))
     .limit(1)
     .execute()
   return rows[0] as (Post & { authorName: string | null }) | undefined
@@ -136,8 +162,16 @@ export async function listPostRecords(filters: PostFilters = {}) {
   const authorId = filters.authorId?.slice(0, 128)
   const categoryId = filters.categoryId?.slice(0, 128)
 
+  conditions.push(filters.trash ? trashedPostCondition() : activePostCondition())
+
   if (search) conditions.push(like(posts.title, `%${search}%`))
   if (type) conditions.push(eq(posts.type, type))
+  if (filters.types) {
+    if (filters.types.length === 0) {
+      return { data: [], meta: buildPaginationMeta(page, perPage, 0, offset) }
+    }
+    conditions.push(inArray(posts.type, filters.types.slice(0, 100)))
+  }
   if (status) conditions.push(eq(posts.status, status))
   if (authorId) conditions.push(eq(posts.authorId, authorId))
   if (categoryId) {
@@ -174,7 +208,8 @@ export async function listPostRecords(filters: PostFilters = {}) {
     publishedAt: posts.publishedAt,
     createdAt: posts.createdAt,
     updatedAt: posts.updatedAt,
-    authorName: users.name,
+    deletedAt: posts.deletedAt,
+    authorName: authorNameExpression(),
   }).from(posts).leftJoin(users, eq(posts.authorId, users.id))
 
   const orderColumn = filters.sortBy === "title"
@@ -192,11 +227,11 @@ export async function listPostRecords(filters: PostFilters = {}) {
   return { data, meta: buildPaginationMeta(page, perPage, total, offset) }
 }
 
-export async function listPublishedPostRecordsByType(type: string, page = 1, perPage = 12, filters: PublicArchiveFilters = {}) {
+export async function listPublishedPostRecordsByType(type: string, page = 1, perPage = 10, filters: PublicArchiveFilters = {}) {
   const clampedPage = clampPage(page)
-  const clampedPerPage = clampPerPage(perPage, 12)
+  const clampedPerPage = clampPerPage(perPage, 10)
   const offset = (clampedPage - 1) * clampedPerPage
-  const conditions: SQL<unknown>[] = [eq(posts.type, type), eq(posts.status, "published")]
+  const conditions: SQL<unknown>[] = [eq(posts.type, type), publicPublishedCondition()]
 
   const search = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH)
   if (search) {
@@ -230,7 +265,7 @@ export async function listPublishedPostRecordsByType(type: string, page = 1, per
       featuredImage: posts.featuredImage,
       gallery: posts.gallery,
       publishedAt: posts.publishedAt,
-      authorName: users.name,
+      authorName: authorNameExpression(),
       tags: posts.tags,
       customFieldValues: posts.customFieldValues,
       createdAt: posts.createdAt,
@@ -260,7 +295,7 @@ export async function listPublishedArchiveFilterOptionsByType(type: string): Pro
     .from(categories)
     .innerJoin(postCategories, eq(categories.id, postCategories.categoryId))
     .innerJoin(posts, eq(postCategories.postId, posts.id))
-    .where(and(eq(posts.type, type), eq(posts.status, "published"), eq(categories.status, "published")))
+    .where(and(eq(posts.type, type), publicPublishedCondition(), eq(categories.status, "published")))
     .orderBy(asc(categories.name))
     .limit(5_000)
     .execute()
@@ -268,7 +303,7 @@ export async function listPublishedArchiveFilterOptionsByType(type: string): Pro
   const tagRows = await db
     .select({ tags: posts.tags })
     .from(posts)
-    .where(and(eq(posts.type, type), eq(posts.status, "published")))
+    .where(and(eq(posts.type, type), publicPublishedCondition()))
     .limit(5_000)
     .execute()
   const tags: string[] = [...new Set((tagRows as Array<{ tags: string | null }>).flatMap(({ tags }) => {
@@ -281,13 +316,13 @@ export async function listPublishedArchiveFilterOptionsByType(type: string): Pro
   return { categories: categoryOptions, tags, customFields: [] }
 }
 
-export async function searchPublishedPostRecords(query: string, page = 1, perPage = 12) {
+export async function searchPublishedPostRecords(query: string, page = 1, perPage = 10) {
   const clampedPage = clampPage(page)
-  const clampedPerPage = clampPerPage(perPage, 12)
+  const clampedPerPage = clampPerPage(perPage, 10)
   const offset = (clampedPage - 1) * clampedPerPage
   const pattern = `%${query}%`
   const condition = and(
-    eq(posts.status, "published"),
+    publicPublishedCondition(),
     or(like(posts.title, pattern), like(posts.excerpt, pattern), like(posts.description, pattern)),
   )
 
@@ -301,7 +336,7 @@ export async function searchPublishedPostRecords(query: string, page = 1, perPag
       featuredImage: posts.featuredImage,
       gallery: posts.gallery,
       publishedAt: posts.publishedAt,
-      authorName: users.name,
+      authorName: authorNameExpression(),
     })
     .from(posts)
     .leftJoin(users, eq(posts.authorId, users.id))
@@ -315,9 +350,9 @@ export async function searchPublishedPostRecords(query: string, page = 1, perPag
   return { data, meta: buildPaginationMeta(clampedPage, clampedPerPage, Number(totalRows[0]?.value ?? 0), offset) }
 }
 
-export async function listPublishedPostRecordsByTag(tag: string, page = 1, perPage = 12) {
+export async function listPublishedPostRecordsByTag(tag: string, page = 1, perPage = 10) {
   const clampedPage = clampPage(page)
-  const clampedPerPage = clampPerPage(perPage, 12)
+  const clampedPerPage = clampPerPage(perPage, 10)
   const offset = (clampedPage - 1) * clampedPerPage
   const rows = await db
     .select({
@@ -329,14 +364,14 @@ export async function listPublishedPostRecordsByTag(tag: string, page = 1, perPa
       featuredImage: posts.featuredImage,
       gallery: posts.gallery,
       publishedAt: posts.publishedAt,
-      authorName: users.name,
+      authorName: authorNameExpression(),
       tags: posts.tags,
       customFieldValues: posts.customFieldValues,
       createdAt: posts.createdAt,
     })
     .from(posts)
     .leftJoin(users, eq(posts.authorId, users.id))
-    .where(eq(posts.status, "published"))
+    .where(publicPublishedCondition())
     .orderBy(desc(posts.publishedAt))
     .execute() as FilterablePublicPost[]
   const filtered = rows.filter((row) => hasTag(row.tags, tag))
@@ -346,14 +381,31 @@ export async function listPublishedPostRecordsByTag(tag: string, page = 1, perPa
   }
 }
 
-export async function getDashboardStatsRecord(): Promise<DashboardStats> {
+export async function getDashboardStatsRecord(authorId?: string): Promise<DashboardStats> {
+  const postOwner = authorId ? eq(posts.authorId, authorId) : undefined
+  const postScope = authorId
+    ? and(postOwner!, activePostCondition())
+    : activePostCondition()
+  const publishedCondition = authorId
+    ? and(postOwner!, publicPublishedCondition())
+    : publicPublishedCondition()
+  const draftCondition = authorId
+    ? and(postOwner!, activePostCondition(), eq(posts.status, "draft"))
+    : and(activePostCondition(), eq(posts.status, "draft"))
+
   const [totalPosts, publishedPosts, draftPosts, totalMedia, totalUsers, totalCategories] = await Promise.all([
-    db.select({ value: count() }).from(posts).execute(),
-    db.select({ value: count() }).from(posts).where(eq(posts.status, "published")).execute(),
-    db.select({ value: count() }).from(posts).where(eq(posts.status, "draft")).execute(),
-    db.select({ value: count() }).from(media).execute(),
-    db.select({ value: count() }).from(users).execute(),
-    db.select({ value: count() }).from(categories).execute(),
+    db.select({ value: count() }).from(posts).where(postScope).execute(),
+    db.select({ value: count() }).from(posts).where(publishedCondition).execute(),
+    db.select({ value: count() }).from(posts).where(draftCondition).execute(),
+    authorId
+      ? db.select({ value: count() }).from(media).where(eq(media.userId, authorId)).execute()
+      : db.select({ value: count() }).from(media).execute(),
+    authorId
+      ? Promise.resolve([{ value: 0 }])
+      : db.select({ value: count() }).from(users).execute(),
+    authorId
+      ? Promise.resolve([{ value: 0 }])
+      : db.select({ value: count() }).from(categories).execute(),
   ])
   return {
     totalPosts: Number(totalPosts[0]?.value ?? 0),
@@ -415,10 +467,66 @@ export async function updatePostRecord(
   return rows[0] as PostRecord
 }
 
-export async function deletePostRecord(id: string) {
-  const result = await db.delete(posts).where(eq(posts.id, id)).execute()
+/** Convert legacy future `published` rows to the worker-owned `scheduled` state. */
+export async function normalizeLegacyScheduledPostRecords(now: number) {
+  const result = await db
+    .update(posts)
+    .set({ status: "scheduled" })
+    .where(and(activePostCondition(), eq(posts.status, "published"), gt(posts.publishedAt, now)))
+    .execute()
+  return affectedRows(result)
+}
+
+export async function listDueScheduledPostRecords(now: number, limit = 100) {
+  return await db
+    .select({ id: posts.id, publishedAt: posts.publishedAt })
+    .from(posts)
+    .where(and(activePostCondition(), eq(posts.status, "scheduled"), lte(posts.publishedAt, now)))
+    .orderBy(asc(posts.publishedAt), asc(posts.id))
+    .limit(limit)
+    .execute() as Array<{ id: string; publishedAt: number | null }>
+}
+
+/** Publish only if this worker still owns the due scheduled row. */
+export async function publishScheduledPostRecord(id: string, now: number) {
+  const result = await db
+    .update(posts)
+    .set({ status: "published", updatedAt: now })
+    .where(and(
+      eq(posts.id, id),
+      activePostCondition(),
+      eq(posts.status, "scheduled"),
+      lte(posts.publishedAt, now),
+    ))
+    .execute()
   return affectedRows(result) > 0
 }
+
+export async function trashPostRecord(id: string, deletedAt: number) {
+  const result = await db
+    .update(posts)
+    .set({ deletedAt, updatedAt: deletedAt })
+    .where(and(eq(posts.id, id), activePostCondition()))
+    .execute()
+  return affectedRows(result) > 0
+}
+
+export async function restorePostRecord(id: string, updatedAt: number) {
+  const result = await db
+    .update(posts)
+    .set({ deletedAt: null, updatedAt })
+    .where(and(eq(posts.id, id), trashedPostCondition()))
+    .execute()
+  return affectedRows(result) > 0
+}
+
+export async function permanentlyDeletePostRecord(id: string) {
+  const result = await db.delete(posts).where(and(eq(posts.id, id), trashedPostCondition())).execute()
+  return affectedRows(result) > 0
+}
+
+/** @deprecated Use permanentlyDeletePostRecord for an explicit hard delete. */
+export const deletePostRecord = permanentlyDeletePostRecord
 
 export async function syncPostCategoriesRecord(postId: string, categoryIds: string[], now: number) {
   await db.delete(postCategories).where(eq(postCategories.postId, postId)).execute()

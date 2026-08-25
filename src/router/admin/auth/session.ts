@@ -1,7 +1,7 @@
 import type { AdminRoute } from "@zbeaver/beaver/router/route"
 
 import { getAdminSession, refreshAdminSession } from "@zbeaver/beaver/app/admin/api-guard"
-import { getRoleNameRecord } from "@zbeaver/beaver/app/repositories/roles"
+import { getStaticRoleName } from "@zbeaver/beaver/pkg/types/roles"
 
 export const GET: AdminRoute = async ({ cookies }) => {
   // Coba access token dulu — kalau masih valid, langsung return.
@@ -16,7 +16,7 @@ export const GET: AdminRoute = async ({ cookies }) => {
     return Response.json({ success: false, message: "Unauthorized." }, { status: 401 })
   }
 
-  const roleName = session.user.roleId ? await getRoleNameRecord(session.user.roleId) : null
+  const roleName = getStaticRoleName(session.user.role)
 
   return Response.json({
     success: true,
@@ -24,6 +24,7 @@ export const GET: AdminRoute = async ({ cookies }) => {
       user: session.user,
       permissions: session.permissions,
       roleName,
+      twoFactorEnabled: session.twoFactorEnabled,
     },
   })
 }

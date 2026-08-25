@@ -5,6 +5,12 @@
 
 export { handlePasswordLogin } from "./auth"
 export {
+  handleTwoFactorStatus,
+  handleTwoFactorSetup,
+  handleTwoFactorEnable,
+  handleTwoFactorDisable,
+} from "./two-factor"
+export {
   handleListCategories,
   handleCreateCategory,
   handleGetCategory,
@@ -22,7 +28,11 @@ export {
   handleUpdatePost,
   handleDuplicatePost,
   handleDeletePost,
+  handleRestorePost,
+  handlePermanentlyDeletePost,
   handleBulkDeletePosts,
+  handleBulkRestorePosts,
+  handleBulkPermanentlyDeletePosts,
   handleBulkPublishPosts,
   handleBulkUnpublishPosts,
   handleBulkDuplicatePosts,
@@ -34,20 +44,10 @@ export {
   handleUpdateUser,
   handleDuplicateUser,
   handleDeleteUser,
+  handleDisableUserTwoFactor,
   handleBulkDeleteUsers,
   handleBulkDuplicateUsers,
 } from "./users"
-export {
-  handleListRoles,
-  handleSyncPermissions,
-  handleCreateRole,
-  handleGetRole,
-  handleUpdateRole,
-  handleDuplicateRole,
-  handleDeleteRole,
-  handleBulkDeleteRoles,
-  handleBulkDuplicateRoles,
-} from "./roles"
 export { handleGetSettings, handleUpdateSettings } from "./settings"
 export { handleUpdateProfile } from "./profile"
 export {
@@ -66,3 +66,4 @@ export {
   handleBulkDeleteMedia,
   handleUploadMedia,
 } from "./media"
+export { handleListActivityLogs } from "./activity-logs"

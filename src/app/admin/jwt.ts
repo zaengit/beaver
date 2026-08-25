@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose"
 import { createHash } from "node:crypto"
 import { assertSecureSecrets, isTestEnvironment } from "@zbeaver/beaver/app/config/security"
+import type { StaticRole } from "@zbeaver/beaver/pkg/types/roles"
 
 const encoder = new TextEncoder()
 
@@ -41,13 +42,24 @@ type AccessClaims = {
   sub: string
   sessionId: string
   email: string
-  roleId: string | null
+  role: StaticRole | null
   permissions: string[]
+  /** True only when an enabled TOTP challenge was completed for this session. */
+  twoFactorVerified?: boolean
 }
 
 type RefreshClaims = {
   sub: string
   sessionId: string
+  email?: string
+  /** Preserved across refreshes so enabling 2FA invalidates older sessions. */
+  twoFactorVerified?: boolean
+}
+
+type TwoFactorChallengeClaims = {
+  sub: string
+  email: string
+  purpose: "admin-2fa"
 }
 
 export async function signAccessToken(claims: AccessClaims) {
@@ -68,6 +80,15 @@ export async function signRefreshToken(claims: RefreshClaims) {
     .sign(getRefreshSecret())
 }
 
+export async function signTwoFactorChallengeToken(claims: Omit<TwoFactorChallengeClaims, "purpose">) {
+  return new SignJWT({ ...claims, purpose: "admin-2fa" as const })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(claims.sub)
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(getAccessSecret())
+}
+
 export async function verifyAccessToken(token: string) {
   const result = await jwtVerify<AccessClaims>(token, getAccessSecret(), { algorithms: ["HS256"] })
   return result.payload
@@ -75,5 +96,11 @@ export async function verifyAccessToken(token: string) {
 
 export async function verifyRefreshToken(token: string) {
   const result = await jwtVerify<RefreshClaims>(token, getRefreshSecret(), { algorithms: ["HS256"] })
+  return result.payload
+}
+
+export async function verifyTwoFactorChallengeToken(token: string) {
+  const result = await jwtVerify<TwoFactorChallengeClaims>(token, getAccessSecret(), { algorithms: ["HS256"] })
+  if (result.payload.purpose !== "admin-2fa") throw new Error("Invalid two-factor challenge.")
   return result.payload
 }

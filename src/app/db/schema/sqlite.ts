@@ -1,13 +1,23 @@
 import { relations } from "drizzle-orm"
-import { integer, sqliteTable, text, type AnySQLiteColumn } from "drizzle-orm/sqlite-core"
+import { index, integer, sqliteTable, text, type AnySQLiteColumn } from "drizzle-orm/sqlite-core"
 
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  roleId: text("role_id").references(() => roles.id),
+  role: text("role").notNull().default("author"),
   emailVerified: integer("email_verified").notNull().default(0),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+})
+
+// user_id intentionally has no foreign key because the environment-managed
+// Super Admin is represented by the virtual `env-super-admin` id.
+export const adminTwoFactor = sqliteTable("admin_two_factor", {
+  userId: text("user_id").primaryKey(),
+  secret: text("secret").notNull(),
+  enabled: integer("enabled").notNull().default(0),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 })
@@ -47,12 +57,14 @@ export const posts = sqliteTable("posts", {
   featuredImage: text("featured_image"),
   gallery: text("gallery"),
   authorId: text("author_id")
-    .notNull()
-    .references(() => users.id),
+    .notNull(),
   publishedAt: integer("published_at"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
-})
+  deletedAt: integer("deleted_at"),
+}, (table) => ({
+  deletedAtIdx: index("posts_deleted_at_idx").on(table.deletedAt, table.type, table.updatedAt),
+}))
 
 export const menus = sqliteTable("menus", {
   id: text("id").primaryKey(),
@@ -92,42 +104,10 @@ export const postCategories = sqliteTable("post_categories", {
   createdAt: integer("created_at").notNull(),
 })
 
-export const roles = sqliteTable("roles", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
-  isSystem: integer("is_system").notNull().default(0),
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull(),
-})
-
-export const permissions = sqliteTable("permissions", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  group: text("group").notNull(),
-  description: text("description"),
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull(),
-})
-
-export const rolePermissions = sqliteTable("role_permissions", {
-  id: text("id").primaryKey(),
-  roleId: text("role_id")
-    .notNull()
-    .references(() => roles.id, { onDelete: "cascade" }),
-  permissionId: text("permission_id")
-    .notNull()
-    .references(() => permissions.id, { onDelete: "cascade" }),
-  createdAt: integer("created_at").notNull(),
-})
-
 export const media = sqliteTable("media", {
   id: text("id").primaryKey(),
   userId: text("user_id")
-    .notNull()
-    .references(() => users.id),
+    .notNull(),
   name: text("name").notNull(),
   fileName: text("file_name").notNull(),
   mimeType: text("mime_type").notNull(),
@@ -150,8 +130,30 @@ export const settings = sqliteTable("settings", {
   updatedAt: integer("updated_at").notNull(),
 })
 
-export const usersRelations = relations(users, ({ one, many }) => ({
-  role: one(roles, { fields: [users.roleId], references: [roles.id] }),
+// Activity logs intentionally keep an actor snapshot and do not reference
+// users because the environment-managed Super Admin is virtual and database
+// users can be deleted without invalidating historical audit records.
+export const activityLogs = sqliteTable("activity_logs", {
+  id: text("id").primaryKey(),
+  actorId: text("actor_id"),
+  actorName: text("actor_name"),
+  actorEmail: text("actor_email"),
+  action: text("action").notNull(),
+  resource: text("resource").notNull(),
+  resourceId: text("resource_id"),
+  metadata: text("metadata"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  success: integer("success").notNull().default(1),
+  statusCode: integer("status_code").notNull().default(200),
+  createdAt: integer("created_at").notNull(),
+}, (table) => ({
+  createdAtIdx: index("activity_logs_created_at_idx").on(table.createdAt),
+  actorCreatedAtIdx: index("activity_logs_actor_created_at_idx").on(table.actorId, table.createdAt),
+  resourceCreatedAtIdx: index("activity_logs_resource_created_at_idx").on(table.resource, table.resourceId, table.createdAt),
+}))
+
+export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
   media: many(media),
 }))
@@ -166,15 +168,8 @@ export const postCategoriesRelations = relations(postCategories, ({ one }) => ({
   post: one(posts, { fields: [postCategories.postId], references: [posts.id] }),
   category: one(categories, { fields: [postCategories.categoryId], references: [categories.id] }),
 }))
-export const rolesRelations = relations(roles, ({ many }) => ({ users: many(users), rolePermissions: many(rolePermissions) }))
-export const permissionsRelations = relations(permissions, ({ many }) => ({ rolePermissions: many(rolePermissions) }))
-export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => ({
-  role: one(roles, { fields: [rolePermissions.roleId], references: [roles.id] }),
-  permission: one(permissions, { fields: [rolePermissions.permissionId], references: [permissions.id] }),
-}))
 export const mediaRelations = relations(media, ({ one }) => ({ user: one(users, { fields: [media.userId], references: [users.id] }) }))
 export const menusRelations = relations(menus, ({ one, many }) => ({
   parent: one(menus, { fields: [menus.parentId], references: [menus.id], relationName: "menuParentChild" }),
   children: many(menus, { relationName: "menuParentChild" }),
 }))
-

@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs"
-import { dirname, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
+import { resolve } from "node:path"
 
 const CONTENT_TYPE_REGISTRY_PATH = "src/components/web/content-type-templates/registry.json"
 const BUILT_IN_CONTENT_TYPES = [
@@ -28,14 +27,8 @@ function getRegistryPath() {
     || process.env.BEAVER_CONTENT_TYPE_REGISTRY_PATH?.trim()
   if (configuredPath) return resolve(process.cwd(), configuredPath)
 
-  const moduleDir = dirname(fileURLToPath(import.meta.url))
-  const candidates = [
-    resolve(process.cwd(), CONTENT_TYPE_REGISTRY_PATH),
-    resolve(moduleDir, "templates/flowstack/src/components/web/content-type-templates/registry.json"),
-    resolve(moduleDir, "../../../templates/flowstack/src/components/web/content-type-templates/registry.json"),
-  ]
-
-  return candidates.find((candidate) => existsSync(candidate))
+  const hostRegistryPath = resolve(process.cwd(), CONTENT_TYPE_REGISTRY_PATH)
+  return existsSync(hostRegistryPath) ? hostRegistryPath : undefined
 }
 
 function loadRegistryContentTypes(): SeedContentType[] {
@@ -72,8 +65,11 @@ function contentTypePermissions(contentType: SeedContentType): PermissionDefinit
     { slug: `content.${slug}.edit`, name: `Edit any ${name} content`, group: slug },
     { slug: `content.${slug}.edit-own`, name: `Edit own ${name} content`, group: slug },
     { slug: `content.${slug}.delete`, name: `Delete ${name} content`, group: slug },
+    { slug: `content.${slug}.delete-own`, name: `Delete own ${name} content`, group: slug },
     { slug: `content.${slug}.publish`, name: `Publish ${name} content`, group: slug },
+    { slug: `content.${slug}.publish-own`, name: `Publish own ${name} content`, group: slug },
     { slug: `content.${slug}.unpublish`, name: `Unpublish ${name} content`, group: slug },
+    { slug: `content.${slug}.unpublish-own`, name: `Unpublish own ${name} content`, group: slug },
     { slug: `category.${slug}.view`, name: `View ${name} categories`, group: slug },
     { slug: `category.${slug}.manage`, name: `Manage ${name} categories`, group: slug },
     { slug: `category.${slug}.publish`, name: `Publish ${name} categories`, group: slug },
@@ -101,11 +97,7 @@ export function getPermissionDefinitions(): PermissionDefinition[] {
     { slug: "users.edit", name: "Edit user profiles", group: "users" },
     { slug: "users.delete", name: "Delete users", group: "users" },
     { slug: "users.manage", name: "Manage users and credentials", group: "users" },
-    { slug: "roles.view", name: "View roles and permissions", group: "roles" },
-    { slug: "roles.create", name: "Create roles", group: "roles" },
-    { slug: "roles.edit", name: "Edit roles and assign permissions", group: "roles" },
-    { slug: "roles.delete", name: "Delete roles", group: "roles" },
-    { slug: "roles.manage", name: "Manage roles and permissions", group: "roles" },
+    { slug: "activity-log.view", name: "View activity log", group: "activity-log" },
     { slug: "settings.manage", name: "Manage system settings", group: "settings" },
   ]
 }

@@ -9,12 +9,15 @@ import {
   searchPublishedPostRecords,
   createPostRecord,
   updatePostRecord,
-  deletePostRecord,
+  trashPostRecord,
+  restorePostRecord,
+  permanentlyDeletePostRecord,
   syncPostCategoriesRecord,
 } from "@zbeaver/beaver/app/repositories/posts"
 import { getServerContentTypeRegistry } from "@zbeaver/beaver/app/registry/server-content-types"
 import { sanitizeText, sanitizeHtml } from "@zbeaver/beaver/pkg/security/sanitize"
 import { generateId } from "@zbeaver/beaver/pkg/utils/id"
+import { toDateMilliseconds } from "@zbeaver/beaver/pkg/utils/time"
 import { clampPage, clampPerPage } from "@zbeaver/beaver/pkg/utils/pagination"
 import { slugRegex } from "@zbeaver/beaver/app/validations/shared"
 import type { CreatePostInput, UpdatePostInput } from "@zbeaver/beaver/app/validations/posts"
@@ -56,30 +59,35 @@ function jsonOrNull(value: unknown): string | null {
 
 type PostRow = Record<string, unknown>
 
-/** Compute `publishedAt` based on old/new status transition. */
-function computePublishedAt(
+function resolvePublicationState(
+  requestedStatus: string,
   inputPublishedAt: number | null | undefined,
   oldStatus: string | undefined,
-  newStatus: string,
-  existing: PostRow,
+  existingPublishedAt: number | null | undefined,
   now: number,
-): number | null {
-  if (inputPublishedAt !== undefined) return inputPublishedAt
-  if (oldStatus !== "published" && newStatus === "published") return now
-  if (oldStatus === "published" && newStatus === "draft") return null
-  return (existing.publishedAt as number | null) ?? null
+) {
+  if (requestedStatus === "draft") return { status: "draft", publishedAt: null }
+
+  const publishedAt = inputPublishedAt !== undefined
+    ? toDateMilliseconds(inputPublishedAt)
+    : toDateMilliseconds(existingPublishedAt) ?? (oldStatus === "published" || oldStatus === "scheduled" ? null : now)
+
+  return {
+    status: publishedAt !== null && publishedAt > now ? "scheduled" : "published",
+    publishedAt,
+  }
 }
 
 /** Build the payload object for `createPostRecord` / `updatePostRecord`. */
 function buildPostPayload(data: CreatePostInput | UpdatePostInput, userId: string): Record<string, unknown> {
   const now = Date.now()
-  const isPublished = "status" in data ? data.status === "published" : false
+  const publication = resolvePublicationState(data.status ?? "draft", data.publishedAt, undefined, null, now)
   return {
     id: generateId(),
     title: sanitizeText(data.title ?? ""),
     slug: buildSlug(data.slug, data.title ?? ""),
     type: data.type ?? "post",
-    status: data.status ?? "draft",
+    status: publication.status,
     excerpt: data.excerpt ?? null,
     description: data.description ? sanitizeHtml(data.description) : null,
     tags: jsonOrNull(data.tags),
@@ -90,7 +98,7 @@ function buildPostPayload(data: CreatePostInput | UpdatePostInput, userId: strin
     featuredImage: data.featuredImage ?? null,
     gallery: jsonOrNull(data.gallery),
     authorId: userId,
-    publishedAt: isPublished ? (data.publishedAt ?? now) : null,
+    publishedAt: publication.publishedAt,
     createdAt: now,
     updatedAt: now,
   }
@@ -99,20 +107,22 @@ function buildPostPayload(data: CreatePostInput | UpdatePostInput, userId: strin
 /** Build the diff payload for `updatePostRecord` (only set fields that changed). */
 function buildUpdatePayload(data: UpdatePostInput, existing: PostRow, now: number): Record<string, unknown> {
   const oldStatus = existing.status as string | undefined
-  const newStatus = (data.status ?? oldStatus)!
-  const publishedAt = computePublishedAt(
-    (data as Record<string, unknown>).publishedAt as number | null | undefined,
+  const publication = resolvePublicationState(
+    data.status ?? oldStatus ?? "draft",
+    data.publishedAt,
     oldStatus,
-    newStatus,
-    existing,
+    existing.publishedAt as number | null | undefined,
     now,
   )
 
-  const update: Record<string, unknown> = { updatedAt: now }
+  const update: Record<string, unknown> = {
+    updatedAt: now,
+    status: publication.status,
+    publishedAt: publication.publishedAt,
+  }
   if (data.title !== undefined) update.title = sanitizeText(data.title)
   if (data.slug !== undefined) update.slug = data.slug
   if (data.type !== undefined) update.type = data.type
-  if (data.status !== undefined) update.status = data.status
   if (data.excerpt !== undefined) update.excerpt = data.excerpt ?? null
   if (data.description !== undefined) update.description = data.description ? sanitizeHtml(data.description) : null
   if (data.tags !== undefined) update.tags = jsonOrNull(data.tags)
@@ -122,8 +132,6 @@ function buildUpdatePayload(data: UpdatePostInput, existing: PostRow, now: numbe
   if (data.metaDescription !== undefined) update.metaDescription = data.metaDescription ?? null
   if (data.featuredImage !== undefined) update.featuredImage = data.featuredImage ?? null
   if (data.gallery !== undefined) update.gallery = jsonOrNull(data.gallery)
-  update.publishedAt = publishedAt
-
   return update
 }
 
@@ -165,7 +173,7 @@ export async function updatePost(
   data: UpdatePostInput,
 ): Promise<ServiceResult<Post>> {
   const existing = await findPostByIdRecord(id)
-  if (!existing) return serviceNotFound("Post")
+  if (!existing || existing.deletedAt != null) return serviceNotFound("Post")
 
   if (data.slug && data.slug !== existing.slug) {
     const slugConflict = await findPostBySlugRecord(data.slug)
@@ -192,7 +200,7 @@ export async function updatePost(
 
 export async function duplicatePost(id: string, userId: string): Promise<ServiceResult<Post>> {
   const original = await findPostByIdRecord(id)
-  if (!original) return serviceNotFound("Post")
+  if (!original || original.deletedAt != null) return serviceNotFound("Post")
 
   const now = Date.now()
   const newId = generateId()
@@ -250,13 +258,12 @@ export async function bulkDeletePosts(ids: string[]): Promise<ServiceResult<{ id
   const results: { id: string; success: boolean }[] = []
   for (const id of ids) {
     const existing = await findPostByIdRecord(id)
-    if (!existing) {
+    if (!existing || existing.deletedAt != null) {
       results.push({ id, success: false })
       continue
     }
     try {
-      await deletePostRecord(id)
-      results.push({ id, success: true })
+      results.push({ id, success: await trashPostRecord(id, Date.now()) })
     } catch {
       results.push({ id, success: false })
     }
@@ -270,7 +277,7 @@ export async function bulkPublishPosts(ids: string[]): Promise<ServiceResult<{ i
   const results: { id: string; success: boolean }[] = []
   for (const id of ids) {
     const existing = await findPostByIdRecord(id)
-    if (!existing) {
+    if (!existing || existing.deletedAt != null) {
       results.push({ id, success: false })
       continue
     }
@@ -290,7 +297,7 @@ export async function bulkUnpublishPosts(ids: string[]): Promise<ServiceResult<{
   const results: { id: string; success: boolean }[] = []
   for (const id of ids) {
     const existing = await findPostByIdRecord(id)
-    if (!existing) {
+    if (!existing || existing.deletedAt != null) {
       results.push({ id, success: false })
       continue
     }
@@ -322,14 +329,15 @@ export async function bulkDuplicatePosts(ids: string[], userId: string): Promise
 
 export async function deletePost(id: string): Promise<ServiceResult<null>> {
   const existing = await findPostByIdRecord(id)
-  if (!existing) return serviceNotFound("Post")
+  if (!existing || existing.deletedAt != null) return serviceNotFound("Post")
 
   try {
-    await deletePostRecord(id)
+    const moved = await trashPostRecord(id, Date.now())
+    if (!moved) return serviceNotFound("Post")
     invalidatePublicDataCache()
-    return serviceSuccess(null, "Post deleted.")
+    return serviceSuccess(null, "Post moved to trash.")
   } catch {
-    return { success: false, error: { code: "db_error", message: "Failed to delete post." } }
+    return { success: false, error: { code: "db_error", message: "Failed to move post to trash." } }
   }
 }
 
@@ -337,8 +345,80 @@ export async function deletePost(id: string): Promise<ServiceResult<null>> {
 
 export async function getPost(id: string): Promise<ServiceResult<PostWithRelations>> {
   const post = await findPostByIdRecord(id) as PostWithRelations | null
-  if (!post) return serviceNotFound("Post")
+  if (!post || post.deletedAt != null) return serviceNotFound("Post")
   return serviceSuccess(post, "OK")
+}
+
+export async function getTrashedPost(id: string): Promise<ServiceResult<PostWithRelations>> {
+  const post = await findPostByIdRecord(id) as PostWithRelations | null
+  if (!post || post.deletedAt == null) return serviceNotFound("Post")
+  return serviceSuccess(post, "OK")
+}
+
+export async function restorePost(id: string): Promise<ServiceResult<PostWithRelations>> {
+  const existing = await getTrashedPost(id)
+  if (!existing.success) return existing
+
+  try {
+    const restored = await restorePostRecord(id, Date.now())
+    if (!restored) return serviceNotFound("Post")
+    const post = await findPostByIdRecord(id)
+    if (!post) return serviceNotFound("Post")
+    invalidatePublicDataCache()
+    return serviceSuccess(post, "Post restored.")
+  } catch {
+    return { success: false, error: { code: "db_error", message: "Failed to restore post." } }
+  }
+}
+
+export async function permanentlyDeletePost(id: string): Promise<ServiceResult<null>> {
+  const existing = await getTrashedPost(id)
+  if (!existing.success) return { success: false, error: existing.error }
+
+  try {
+    const deleted = await permanentlyDeletePostRecord(id)
+    if (!deleted) return serviceNotFound("Post")
+    invalidatePublicDataCache()
+    return serviceSuccess(null, "Post permanently deleted.")
+  } catch {
+    return { success: false, error: { code: "db_error", message: "Failed to permanently delete post." } }
+  }
+}
+
+export async function bulkRestorePosts(ids: string[]): Promise<ServiceResult<{ id: string; success: boolean }[]>> {
+  const results: { id: string; success: boolean }[] = []
+  for (const id of ids) {
+    const existing = await findPostByIdRecord(id)
+    if (!existing || existing.deletedAt == null) {
+      results.push({ id, success: false })
+      continue
+    }
+    try {
+      results.push({ id, success: await restorePostRecord(id, Date.now()) })
+    } catch {
+      results.push({ id, success: false })
+    }
+  }
+  if (results.some((result) => result.success)) invalidatePublicDataCache()
+  return serviceSuccess(results, "Bulk restore completed.")
+}
+
+export async function bulkPermanentlyDeletePosts(ids: string[]): Promise<ServiceResult<{ id: string; success: boolean }[]>> {
+  const results: { id: string; success: boolean }[] = []
+  for (const id of ids) {
+    const existing = await findPostByIdRecord(id)
+    if (!existing || existing.deletedAt == null) {
+      results.push({ id, success: false })
+      continue
+    }
+    try {
+      results.push({ id, success: await permanentlyDeletePostRecord(id) })
+    } catch {
+      results.push({ id, success: false })
+    }
+  }
+  if (results.some((result) => result.success)) invalidatePublicDataCache()
+  return serviceSuccess(results, "Bulk permanent delete completed.")
 }
 
 export async function listPosts(filters: PostFilters): Promise<ServiceResult<PaginatedResult<Post>>> {
@@ -361,9 +441,9 @@ export async function getPublishedPostByType(type: string, slug: string): Promis
   return serviceSuccess(post, "OK")
 }
 
-export async function listPublishedPostsByType(type: string, page = 1, perPage = 12, filters: PublicArchiveFilters = {}): Promise<ServiceResult<PaginatedResult<PublicPost>>> {
+export async function listPublishedPostsByType(type: string, page = 1, perPage = 10, filters: PublicArchiveFilters = {}): Promise<ServiceResult<PaginatedResult<PublicPost>>> {
   const normalizedPage = clampPage(page)
-  const normalizedPerPage = clampPerPage(perPage, 12)
+  const normalizedPerPage = clampPerPage(perPage, 10)
   const availableCustomFields = getPublicCustomFieldFilters(type)
   const requestedCustomFields = filters.customFields ?? {}
   const customFields = Object.fromEntries(
@@ -426,10 +506,10 @@ function isValidCustomFieldFilterValue(field: ReturnType<typeof getPublicCustomF
   return true
 }
 
-export async function searchPublishedPosts(query: string, page = 1, perPage = 12): Promise<ServiceResult<PaginatedResult<PublicPost>>> {
+export async function searchPublishedPosts(query: string, page = 1, perPage = 10): Promise<ServiceResult<PaginatedResult<PublicPost>>> {
   const normalizedQuery = query.trim().slice(0, 100)
   const normalizedPage = clampPage(page)
-  const normalizedPerPage = clampPerPage(perPage, 12)
+  const normalizedPerPage = clampPerPage(perPage, 10)
   if (!normalizedQuery) {
     return serviceSuccess({ data: [], meta: { currentPage: 1, perPage: normalizedPerPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK")
   }
@@ -441,10 +521,10 @@ export async function searchPublishedPosts(query: string, page = 1, perPage = 12
   return serviceSuccess(result, "OK")
 }
 
-export async function listPublishedPostsByTag(tag: string, page = 1, perPage = 12): Promise<ServiceResult<PaginatedResult<PublicPost>>> {
+export async function listPublishedPostsByTag(tag: string, page = 1, perPage = 10): Promise<ServiceResult<PaginatedResult<PublicPost>>> {
   const normalizedTag = tag.trim().slice(0, 100)
   const normalizedPage = clampPage(page)
-  const normalizedPerPage = clampPerPage(perPage, 12)
+  const normalizedPerPage = clampPerPage(perPage, 10)
   if (!normalizedTag) {
     return serviceSuccess({ data: [], meta: { currentPage: 1, perPage: normalizedPerPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK")
   }

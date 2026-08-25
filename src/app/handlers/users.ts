@@ -8,12 +8,14 @@ import {
   bulkDuplicateUsers,
   createUser,
   deleteUser,
+  disableUserTwoFactor,
   duplicateUser,
   getUser,
   listUsersPaginated,
   updateUser,
 } from "@zbeaver/beaver/app/services/users"
 import { createUserSchema, updateUserSchema } from "@zbeaver/beaver/app/validations/users"
+import type { StaticRole } from "@zbeaver/beaver/pkg/types/roles"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -28,7 +30,7 @@ const USER_EDIT_PERMS = ["users.edit", "users.manage"]
 
 export async function handleListUsers(session: Session, filters?: {
   search?: string
-  roleId?: string
+  role?: StaticRole
   sortBy?: string
   sortOrder?: string
 }) {
@@ -82,6 +84,14 @@ export async function handleDeleteUser(session: Session, id: string) {
   if (perm) return perm
 
   const result = await deleteUser(id, session!.user.id)
+  return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result)
+}
+
+export async function handleDisableUserTwoFactor(session: Session, id: string) {
+  const perm = await requirePermission(session, "users.manage")
+  if (perm) return perm
+
+  const result = await disableUserTwoFactor(id, session!.user.id)
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result)
 }
 

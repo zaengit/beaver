@@ -1,70 +1,69 @@
-import { eq } from "drizzle-orm"
+import { findUserByIdRecord } from "@zbeaver/beaver/app/repositories/users"
+import { getPermissionDefinitions, isContentPermissionSlug } from "@zbeaver/beaver/app/admin/permission-catalog"
+import { isStaticRole, type StaticRole } from "@zbeaver/beaver/pkg/types/roles"
 
-import { db } from "@zbeaver/beaver/app/db"
-import { permissions, rolePermissions, roles, users } from "@zbeaver/beaver/app/db/schema"
+function permissionSlugsForRole(role: StaticRole) {
+  const definitions = getPermissionDefinitions()
 
-type UserRole = {
-  roleId: string
-  isSystem: boolean
+  if (role === "super-admin" || role === "admin") {
+    return definitions.map((permission) => permission.slug)
+  }
+
+  if (role === "editor") {
+    return definitions
+      .filter((permission) =>
+        isContentPermissionSlug(permission.slug)
+        || permission.slug === "dashboard.view"
+        || permission.slug === "media.view"
+        || permission.slug === "media.upload",
+      )
+      .map((permission) => permission.slug)
+  }
+
+  return definitions
+    .filter((permission) => {
+      if (permission.slug === "media.view" || permission.slug === "media.upload") return true
+      if (permission.slug === "dashboard.view") return true
+      if (
+        permission.slug.startsWith("content.page.")
+        || permission.slug.startsWith("category.page.")
+      ) return false
+      if (permission.slug.startsWith("category.")) {
+        return permission.slug.endsWith(".view")
+      }
+      if (!permission.slug.startsWith("content.")) return false
+      const action = permission.slug.slice(permission.slug.lastIndexOf(".") + 1)
+      return action === "view"
+        || action === "create"
+        || action === "edit-own"
+        || action === "delete-own"
+        || action === "publish-own"
+        || action === "unpublish-own"
+    })
+    .map((permission) => permission.slug)
 }
 
-async function getUserRole(userId: string): Promise<UserRole | null> {
-  const userRows = await db
-    .select({ roleId: users.roleId })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
-    .execute()
-  const user = userRows[0]
-
-  if (!user?.roleId) return null
-
-  const roleRows = await db
-    .select({ isSystem: roles.isSystem })
-    .from(roles)
-    .where(eq(roles.id, user.roleId))
-    .limit(1)
-    .execute()
-  const role = roleRows[0]
-
-  if (!role) return null
-  return { roleId: user.roleId, isSystem: role.isSystem === 1 }
+async function getUserRole(userId: string): Promise<StaticRole | null> {
+  const user = await findUserByIdRecord(userId)
+  return user && isStaticRole(user.role) ? user.role : null
 }
 
 /** Read the current permission set for a user. This deliberately does not cache. */
 export async function getUserPermissions(userId: string): Promise<string[]> {
-  const userRole = await getUserRole(userId)
-  if (!userRole) return []
-
-  // A system role is the explicit full-access role. Returning every stored
-  // permission also keeps the admin UI in sync with the API for that role.
-  if (userRole.isSystem) {
-    const allPermissions = await db
-      .select({ slug: permissions.slug })
-      .from(permissions)
-      .execute()
-    return allPermissions.map((permission: { slug: string }) => permission.slug)
-  }
-
-  const rolePerms = await db
-    .select({ slug: permissions.slug })
-    .from(rolePermissions)
-    .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(eq(rolePermissions.roleId, userRole.roleId))
-    .execute()
-
-  return rolePerms.map((rolePermission: { slug: string }) => rolePermission.slug)
+  const role = await getUserRole(userId)
+  return role ? permissionSlugsForRole(role) : []
 }
 
 export async function can(userId: string, permission: string): Promise<boolean> {
-  const userRole = await getUserRole(userId)
-  if (userRole?.isSystem) return true
-  return (await getUserPermissions(userId)).includes(permission)
+  const role = await getUserRole(userId)
+  if (role === "super-admin") return true
+  return role ? permissionSlugsForRole(role).includes(permission) : false
 }
 
 export async function canAny(userId: string, permissions: string[]): Promise<boolean> {
-  const userRole = await getUserRole(userId)
-  if (userRole?.isSystem) return true
-  const userPermissions = await getUserPermissions(userId)
+  const role = await getUserRole(userId)
+  if (role === "super-admin") return true
+  if (!role) return false
+  const userPermissions = permissionSlugsForRole(role)
   return permissions.some((permission) => userPermissions.includes(permission))
 }

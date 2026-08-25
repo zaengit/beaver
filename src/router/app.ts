@@ -1,14 +1,15 @@
 import { Hono } from "hono"
+import { captureActivitySnapshot, recordActivityRequest } from "@zbeaver/beaver/app/services/activity-logs"
 import { adminSecurity, type AdminApiEnvironment } from "@zbeaver/beaver/router/admin/middleware"
 import { createAdminRouteContext, type AdminRoute } from "@zbeaver/beaver/router/route"
-import { applySecurityHeaders, enforceRequestBodyLimit, hasValidSameOrigin, isReadRequest } from "@zbeaver/beaver/router/security"
+import { applySecurityHeaders, clientAddress, enforceRequestBodyLimit, hasValidSameOrigin, isReadRequest } from "@zbeaver/beaver/router/security"
 
 type RouteModule = Partial<Record<"DELETE" | "GET" | "PATCH" | "POST" | "PUT", AdminRoute>>
 type ApiEnvironment = AdminApiEnvironment
 
 const routeModules = {
-  ...import.meta.glob(["./admin/**/*.ts", "!./admin/**/*.test.ts"]),
-  ...import.meta.glob(["./public/**/*.ts", "!./public/**/*.test.ts"]),
+  ...import.meta.glob(["./admin/**/*.ts", "!./admin/**/*.test.ts", "!./admin/**/*.spec.ts"]),
+  ...import.meta.glob(["./public/**/*.ts", "!./public/**/*.test.ts", "!./public/**/*.spec.ts"]),
 }
 
 function toHonoPath(modulePath: string) {
@@ -24,7 +25,7 @@ function toHonoPath(modulePath: string) {
 }
 
 const routes = Object.entries(routeModules)
-  .filter(([modulePath]) => !modulePath.endsWith(".test.ts") && !modulePath.endsWith("/middleware.ts"))
+  .filter(([modulePath]) => !modulePath.endsWith(".test.ts") && !modulePath.endsWith(".spec.ts") && !modulePath.endsWith("/middleware.ts"))
   .map(([modulePath, load]) => ({
     path: toHonoPath(modulePath),
     load: load as () => Promise<RouteModule>,
@@ -76,6 +77,15 @@ function withHonoHeaders(response: Response, context: typeof apiApp extends Hono
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers })
 }
 
+async function readActivityRequestBody(request: Request) {
+  if (!request.headers.get("content-type")?.toLowerCase().includes("application/json")) return undefined
+  try {
+    return await request.clone().json() as unknown
+  } catch {
+    return undefined
+  }
+}
+
 for (const route of routes) {
   apiApp.all(route.path, async (context) => {
     const handler = (await route.load())[context.req.method as keyof RouteModule]
@@ -83,6 +93,25 @@ for (const route of routes) {
       return Response.json({ success: false, message: "Method not allowed." }, { status: 405 })
     }
 
-    return withHonoHeaders(await handler(createAdminRouteContext(context)), context)
+    const pathname = context.req.path
+    const method = context.req.method
+    const shouldCaptureActivity = pathname.startsWith("/api/admin/") && !isReadRequest(method)
+    const session = context.get("session")
+    const requestBody = shouldCaptureActivity ? await readActivityRequestBody(context.req.raw) : undefined
+    const before = shouldCaptureActivity
+      ? await captureActivitySnapshot({ pathname, method, actorId: session?.user.id ?? null, requestBody })
+      : null
+    const response = await handler(createAdminRouteContext(context))
+    await recordActivityRequest({
+      request: context.req.raw,
+      pathname,
+      method,
+      response,
+      actorId: session?.user.id ?? null,
+      ipAddress: clientAddress(context.req.raw),
+      before,
+      requestBody,
+    })
+    return withHonoHeaders(response, context)
   })
 }

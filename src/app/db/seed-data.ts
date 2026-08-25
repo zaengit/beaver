@@ -1,7 +1,6 @@
-import { existsSync, lstatSync } from "node:fs"
+import { lstatSync } from "node:fs"
 import { readFile } from "node:fs/promises"
-import { dirname, isAbsolute, resolve } from "node:path"
-import { fileURLToPath } from "node:url"
+import { isAbsolute, resolve } from "node:path"
 
 import { and, eq } from "drizzle-orm"
 import { z } from "zod"
@@ -20,6 +19,7 @@ import { createMenuSchema } from "@zbeaver/beaver/app/validations/menus"
 import { createPostSchema } from "@zbeaver/beaver/app/validations/posts"
 import { safeHrefSchema, slugRegex } from "@zbeaver/beaver/app/validations/shared"
 import { invalidatePublicDataCache } from "@zbeaver/beaver/app/cache/public-data-cache"
+import { SUPER_ADMIN_USER_ID } from "@zbeaver/beaver/app/admin/super-admin"
 import { sanitizeHtml, sanitizeText } from "@zbeaver/beaver/pkg/security/sanitize"
 import { generateId, getCurrentTimestamp, slugify } from "@zbeaver/beaver/pkg/utils/index"
 
@@ -80,7 +80,6 @@ export type SeedData = z.infer<typeof seedDataSchema>
 
 export interface SeedDataOptions {
   filePath?: string
-  template?: string
   dryRun?: boolean
   overwrite?: boolean
 }
@@ -186,31 +185,8 @@ function assertRegularFile(filePath: string) {
   }
 }
 
-function packagedTemplateSeedPath(name: string): string {
-  if (!/^[a-z0-9-]+$/.test(name)) throw seedError("Invalid template name.")
-
-  const moduleDir = dirname(fileURLToPath(import.meta.url))
-  const packaged = resolve(moduleDir, "templates", name, "data", "seed.json")
-  const source = resolve(moduleDir, "..", "..", "..", "templates", name, "data", "seed.json")
-  const filePath = existsSync(packaged) ? packaged : source
-  assertRegularFile(filePath)
-  return filePath
-}
-
 function resolveSeedPath(options: SeedDataOptions): { filePath: string; source: string } {
-  if (options.filePath && options.template) {
-    throw seedError("Choose either a seed file or a template, not both.")
-  }
-  if (!options.filePath && !options.template) {
-    throw seedError("A seed file or template is required.")
-  }
-
-  if (options.template) {
-    return {
-      filePath: packagedTemplateSeedPath(options.template),
-      source: `template:${options.template}`,
-    }
-  }
+  if (!options.filePath) throw seedError("A seed file is required.")
 
   const filePath = isAbsolute(options.filePath!)
     ? options.filePath!
@@ -392,7 +368,13 @@ function buildContentFields(
   now: number,
   existingPublishedAt?: number | null,
 ) {
-  const status = item.status ?? "published"
+  const requestedStatus = item.status ?? "published"
+  const publishedAt = requestedStatus === "published"
+    ? (item.publishedAt ?? existingPublishedAt ?? now)
+    : null
+  const status = requestedStatus === "published" && publishedAt !== null && publishedAt > now
+    ? "scheduled"
+    : requestedStatus
   return {
     title: sanitizeText(item.title),
     slug: contentSlug(item),
@@ -407,9 +389,7 @@ function buildContentFields(
     metaDescription: item.metaDescription ?? null,
     featuredImage: item.featuredImage ?? null,
     gallery: jsonOrNull(item.gallery),
-    publishedAt: status === "published"
-      ? (item.publishedAt ?? existingPublishedAt ?? now)
-      : null,
+    publishedAt,
   }
 }
 
@@ -663,7 +643,7 @@ function plannedSummary(data: SeedData, source: string): SeedDataSummary {
 }
 
 export function formatSeedDataSummary(result: SeedDataSummary): string {
-  const prefix = result.dryRun ? "Seed data dry-run" : "Seed data migration"
+  const prefix = result.dryRun ? "Seed data dry-run" : "Seed data import"
   const lines = [
     `${prefix} complete: ${result.source}`,
     `  settings: ${result.settings.created} created, ${result.settings.updated} updated, ${result.settings.skipped} skipped`,
@@ -675,14 +655,13 @@ export function formatSeedDataSummary(result: SeedDataSummary): string {
   return lines.join("\n")
 }
 
-export async function migrateData(options: SeedDataOptions): Promise<SeedDataSummary> {
+export async function seedData(options: SeedDataOptions): Promise<SeedDataSummary> {
   const { data, source } = await loadSeedData(options)
   const dryRun = options.dryRun === true
   if (dryRun) return plannedSummary(data, source)
 
   const userRows = await db.select({ id: users.id }).from(users).limit(1).execute()
-  const author = userRows[0]
-  if (!author) throw seedError("Run the base seed before importing content data.")
+  const authorId = userRows[0]?.id ?? SUPER_ADMIN_USER_ID
 
   const result = emptySummary(source, false)
   const overwrite = options.overwrite === true
@@ -691,8 +670,8 @@ export async function migrateData(options: SeedDataOptions): Promise<SeedDataSum
   await db.transaction(async (tx) => {
     await importSettings(tx, data.settings, result.settings, overwrite, now)
     const categoryIds = await importCategories(tx, data.categories, result.categories, overwrite, now)
-    await importContent(tx, data.posts, "post", author.id, categoryIds, result.posts, overwrite, now)
-    await importContent(tx, data.pages, "page", author.id, categoryIds, result.pages, overwrite, now)
+    await importContent(tx, data.posts, "post", authorId, categoryIds, result.posts, overwrite, now)
+    await importContent(tx, data.pages, "page", authorId, categoryIds, result.pages, overwrite, now)
     await importMenus(tx, data.menus, result.menus, overwrite, now)
   })
 
@@ -703,9 +682,4 @@ export async function migrateData(options: SeedDataOptions): Promise<SeedDataSum
   })
   if (changed) invalidatePublicDataCache()
   return result
-}
-
-export async function seedTemplate(name: string): Promise<void> {
-  const result = await migrateData({ template: name })
-  console.log(formatSeedDataSummary(result))
 }
