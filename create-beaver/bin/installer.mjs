@@ -164,7 +164,7 @@ export function validateAnswers(answers, templateNames = [DEFAULT_TEMPLATE]) {
 }
 
 export function listTemplates(templatesDirectory) {
-  if (!existsSync(templatesDirectory)) throw new Error("Beaver templates were not found. Ensure @zbeaver/beaver is built correctly.")
+  if (!existsSync(templatesDirectory)) throw new Error("Beaver templates were not found. Ensure @zbeaver/create-beaver is packaged correctly.")
   return readdirSync(templatesDirectory, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name !== "config" && /^[a-z0-9-]+$/.test(entry.name))
     .map((entry) => entry.name)
@@ -177,6 +177,15 @@ function templateSource(templatesDirectory, templateName) {
   if (!source.startsWith(`${templatesDirectory}${sep}`)) throw new Error("Invalid template path.")
   if (!existsSync(source)) throw new Error(`Template "${templateName}" was not found.`)
   return source
+}
+
+export function templateSeedPath(templatesDirectory, templateName) {
+  const templateDirectory = templateSource(templatesDirectory, templateName)
+  const seedPath = resolve(templateDirectory, "data", "seed.json")
+  if (!existsSync(seedPath)) throw new Error(`Template "${templateName}" is missing data/seed.json.`)
+  const stats = lstatSync(seedPath)
+  if (!stats.isFile() || stats.isSymbolicLink()) throw new Error(`Template "${templateName}" seed data must be a regular file.`)
+  return seedPath
 }
 
 function ensureProjectDirectory(projectDirectory) {
@@ -202,6 +211,12 @@ function copyDirectory(source, destination) {
       cpSync(sourcePath, destinationPath)
     }
   }
+}
+
+function copyDirectoryIfPresent(source, destination) {
+  if (!existsSync(source)) return false
+  copyDirectory(source, destination)
+  return true
 }
 
 function copyFileIfMissing(source, destination) {
@@ -479,8 +494,13 @@ function printSummary(projectDirectory, currentDirectory, answers, envResult) {
 }
 
 export async function resolveBeaverTemplatesDirectory() {
-  const entry = import.meta.resolve(BEAVER_PACKAGE)
-  return resolve(dirname(fileURLToPath(entry)), "templates")
+  const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..")
+  const packagedTemplates = resolve(packageDirectory, "templates")
+  if (existsSync(packagedTemplates)) return packagedTemplates
+
+  // The repository keeps the source template beside both packages. The fallback
+  // keeps the initializer runnable from a checkout before `npm pack` stages it.
+  return resolve(packageDirectory, "..", "templates")
 }
 
 export async function main(argv = process.argv.slice(2)) {
@@ -516,26 +536,28 @@ export async function main(argv = process.argv.slice(2)) {
 
     const configDirectory = resolve(templatesDirectory, "config")
     const templateDirectory = templateSource(templatesDirectory, answers.templateName)
+    const templateSeedFile = templateSeedPath(templatesDirectory, answers.templateName)
     ensureProjectPackage(projectDirectory, answers.projectName)
     const envResult = createInitialEnv(resolve(configDirectory, ".env"), resolve(projectDirectory, ".env"), answers)
     copyFileIfMissing(resolve(configDirectory, "astro.config.mjs"), resolve(projectDirectory, "astro.config.mjs"))
     copyFileIfMissing(resolve(configDirectory, "tsconfig.json"), resolve(projectDirectory, "tsconfig.json"))
     copyDirectory(resolve(templateDirectory, "src"), resolve(projectDirectory, "src"))
-    copyDirectory(resolve(templateDirectory, "skills"), resolve(projectDirectory, "skills"))
+    copyDirectoryIfPresent(resolve(templateDirectory, "skills"), resolve(projectDirectory, "skills"))
     console.log(colorize("green", "✔ Configuration generated"))
 
     installDependencies(projectDirectory, answers.packageManager)
     process.chdir(projectDirectory)
     loadDotEnv(projectDirectory)
 
-    const { migrate, seed, seedTemplate } = await import(`${BEAVER_PACKAGE}/server`)
+    const { formatSeedDataSummary, migrate, seed } = await import(`${BEAVER_PACKAGE}/server`)
     console.log(`\n${colorize("cyan", "◇")} Running database migration...`)
     await migrate()
     console.log(colorize("green", "✔ Database migrated"))
     console.log(`\n${colorize("cyan", "◇")} Creating Super Admin and seeding Beaver...`)
     await seed()
-    await seedTemplate(answers.templateName)
-    console.log(colorize("green", "✔ Flowstack demo content seeded"))
+    const seedResult = await seed({ filePath: templateSeedFile })
+    if (seedResult) console.log(formatSeedDataSummary(seedResult))
+    console.log(colorize("green", `✔ ${answers.templateName} demo content seeded`))
 
     printSummary(projectDirectory, currentDirectory, answers, envResult)
   } catch (error) {

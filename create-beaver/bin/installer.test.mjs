@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { resolve } from "node:path"
 import test from "node:test"
@@ -8,7 +8,9 @@ import {
   detectPackageManager,
   listTemplates,
   parseArgs,
+  resolveBeaverTemplatesDirectory,
   sanitizePackageName,
+  templateSeedPath,
   validateAnswers,
 } from "./installer.mjs"
 
@@ -51,6 +53,28 @@ test("listTemplates excludes the internal config directory", () => {
   mkdirSync(resolve(directory, "flowstack"))
 
   assert.deepEqual(listTemplates(directory), ["flowstack"])
+})
+
+test("resolveBeaverTemplatesDirectory finds the checkout template source", async () => {
+  const directory = await resolveBeaverTemplatesDirectory()
+  assert.equal(directory.endsWith("templates"), true)
+  assert.equal(existsSync(resolve(directory, "flowstack", "data", "seed.json")), true)
+})
+
+test("templateSeedPath resolves a template seed file", () => {
+  const directory = mkdtempSync(resolve(tmpdir(), "create-beaver-template-seed-"))
+  const seedPath = resolve(directory, "flowstack", "data", "seed.json")
+  mkdirSync(resolve(directory, "flowstack", "data"), { recursive: true })
+  writeFileSync(seedPath, "{}")
+
+  assert.equal(templateSeedPath(directory, "flowstack"), seedPath)
+})
+
+test("templateSeedPath rejects templates without seed data", () => {
+  const directory = mkdtempSync(resolve(tmpdir(), "create-beaver-template-seed-"))
+  mkdirSync(resolve(directory, "flowstack"))
+
+  assert.throws(() => templateSeedPath(directory, "flowstack"), /missing data\/seed\.json/)
 })
 
 test("sanitizePackageName creates a valid package name", () => {

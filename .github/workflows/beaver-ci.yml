@@ -43,4 +43,4 @@ jobs:
 
       - name: Verify initializer package contents
         working-directory: create-beaver
-        run: npm pack --dry-run --ignore-scripts
+        run: npm pack --dry-run
