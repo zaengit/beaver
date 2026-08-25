@@ -31,14 +31,12 @@ build:
 
 test:
 	@if [ -f ../../vitest.config.ts ]; then npm --prefix ../.. test; else npx vitest run; fi
-	npm --prefix create-beaver test
 
 pack: build
 	npm pack
 
 check: test build
 	npm pack --dry-run
-	npm --prefix create-beaver pack --dry-run --ignore-scripts
 
 clean:
 	rm -rf dist *.tgz
@@ -75,7 +73,7 @@ release:
 	$(MAKE) sync-version VERSION="$(RELEASE_VERSION)"
 	$(MAKE) verify-version VERSION="$(RELEASE_VERSION)"
 	$(MAKE) check
-	git add package.json create-beaver/package.json
+	git add package.json
 	git add -f dist/ui.js
 	git commit -m "chore(release): bump Beaver version"
 	git tag -a "$(TAG)" -m "Release $(TAG)"

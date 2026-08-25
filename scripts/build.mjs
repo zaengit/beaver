@@ -1,6 +1,6 @@
 import { appendFile, cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve, sep } from "node:path";
+import { dirname, resolve } from "node:path";
 import { build } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 import packageJson from "../package.json" with { type: "json" };
@@ -14,19 +14,13 @@ const externalPackages = [
 ];
 const external = (id) =>
   id.startsWith("node:") ||
-  id.startsWith("astro:") ||
   externalPackages.some(
     (dependency) => id === dependency || id.startsWith(`${dependency}/`),
   );
 
-const templateBuildArtifacts = new Set(["node_modules", ".astro", ".vite"]);
-const templateCopyFilter = (source) =>
-  !source.split(sep).some((segment) => templateBuildArtifacts.has(segment));
-
 const sharedConfig = {
   configFile: false,
   root: packageRoot,
-  define: { __ADMIN_PATH__: "undefined" },
   resolve: {
     alias: {
       "@zbeaver/beaver": sourceRoot,
@@ -58,8 +52,8 @@ async function bundle(name, emptyOutDir) {
   });
 }
 
-async function bundleAdminCss() {
-  const cssBuildRoot = resolve(distRoot, ".admin-css-build");
+async function bundleStyleCss() {
+  const cssBuildRoot = resolve(distRoot, ".style-css-build");
   await build({
     ...sharedConfig,
     plugins: [tailwindcss()],
@@ -67,14 +61,14 @@ async function bundleAdminCss() {
       outDir: cssBuildRoot,
       emptyOutDir: true,
       rollupOptions: {
-        input: resolve(sourceRoot, "ui/admin.css"),
-        output: { assetFileNames: "admin.css" },
+        input: resolve(sourceRoot, "ui/style.css"),
+        output: { assetFileNames: "style.css" },
       },
     },
   });
   await cp(
-    resolve(cssBuildRoot, "admin.css"),
-    resolve(distRoot, "ui/admin.css"),
+    resolve(cssBuildRoot, "style.css"),
+    resolve(distRoot, "ui/style.css"),
   );
   await rm(cssBuildRoot, { recursive: true, force: true });
 }
@@ -84,39 +78,20 @@ await bundle("server", true);
 await bundle("ui", false);
 
 await Promise.all([
-  mkdir(resolve(distRoot, "astro"), { recursive: true }),
   mkdir(resolve(distRoot, "ui"), { recursive: true }),
   mkdir(resolve(distRoot, "compat"), { recursive: true }),
 ]);
 await Promise.all([
-  cp(
-    resolve(sourceRoot, "astro/admin.astro"),
-    resolve(distRoot, "astro/admin.astro"),
-  ),
-  cp(resolve(sourceRoot, "astro/http.js"), resolve(distRoot, "astro/http.js")),
-  cp(resolve(sourceRoot, "astro/storage.js"), resolve(distRoot, "astro/storage.js")),
-  cp(
-    resolve(sourceRoot, "astro/middleware.js"),
-    resolve(distRoot, "astro/middleware.js"),
-  ),
-  cp(
-    resolve(sourceRoot, "ui/admin-layout.astro"),
-    resolve(distRoot, "ui/admin-layout.astro"),
-  ),
   cp(resolve(sourceRoot, "registry"), resolve(distRoot, "registry"), {
     recursive: true,
   }),
-  cp(resolve(packageRoot, "templates"), resolve(distRoot, "templates"), {
-    recursive: true,
-    filter: templateCopyFilter,
-  }),
 ]);
-// Ship ESM compat shim so the integration can alias use-sync-external-store → react
+// Ship ESM compat shim so host bundlers can alias use-sync-external-store → react
 await cp(resolve(sourceRoot, "compat"), resolve(distRoot, "compat"), {
   recursive: true,
 });
 
-await bundleAdminCss();
+await bundleStyleCss();
 
 await Promise.all(
   ["sqlite", "mysql", "pgsql"].map((dialect) =>
@@ -129,19 +104,7 @@ await Promise.all(
 );
 
 const serverDeclaration = [
-  'import type { AstroIntegration } from "astro"',
-  "",
-  "export interface BeaverOptions {",
-  "  adminPath?: string",
-  "  contentTypeRegistry?: string | URL",
-  "  sectionRegistry?: string | URL",
-  "  menuGroupRegistry?: string | URL",
-  "}",
-  "",
-  "declare function beaver(options?: BeaverOptions): AstroIntegration",
-  "export default beaver",
   'export declare const apiApp: import("hono").Hono',
-  "export declare const ADMIN_PATH: string",
   "type BeaverServiceResult<T> =",
   "  | { success: true; data: T; message: string }",
   "  | { success: false; error: { code: string; message: string; fieldErrors?: Record<string, string[]> } }",
@@ -208,6 +171,7 @@ const serverDeclaration = [
   "export declare const listPublishedPostsByTag: (tag: string, page?: number, perPage?: number) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>",
   "export declare const searchPublishedPosts: (query: string, page?: number, perPage?: number) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>",
   "export declare const getMenuTree: (type?: string) => Promise<BeaverServiceResult<MenuTree[]>>",
+  "export declare const sanitizeHtml: (html: string) => string",
   "interface BeaverSocialLink { platform: string; url: string; icon?: string }",
   "interface BeaverOpenHours { day: string; open: string; close: string }",
   "interface BeaverSiteSettings {",
@@ -227,8 +191,7 @@ const serverDeclaration = [
   "  email_notifications: string[]",
   "}",
   "export declare const getSiteSettings: () => Promise<BeaverSiteSettings>",
-  "export declare const seed: () => Promise<void>",
-  "export interface SeedDataOptions { filePath?: string; template?: string; dryRun?: boolean; overwrite?: boolean }",
+  "export interface SeedDataOptions { filePath?: string; dryRun?: boolean; overwrite?: boolean }",
   "export interface SeedEntitySummary { created: number; updated: number; skipped: number }",
   "export interface SeedDataSummary {",
   "  source: string",
@@ -239,7 +202,7 @@ const serverDeclaration = [
   "  pages: SeedEntitySummary",
   "  menus: SeedEntitySummary",
   "}",
-  "export declare const migrateData: (options: SeedDataOptions) => Promise<SeedDataSummary>",
+  "export declare const seed: (options?: SeedDataOptions) => Promise<void | SeedDataSummary>",
   "export declare const formatSeedDataSummary: (result: SeedDataSummary) => string",
   "export declare const parseSeedData: (input: unknown, source?: string) => unknown",
   "export declare const closeDatabase: () => Promise<void>",
@@ -272,7 +235,15 @@ await appendFile(
 );
 await appendFile(
   resolve(distRoot, "server.d.ts"),
-  "export declare const seedTemplate: (name: string) => Promise<void>\n",
+  "export declare const purgeExpiredActivityLogs: () => Promise<number>\n",
+);
+await appendFile(
+  resolve(distRoot, "server.d.ts"),
+  "export declare const runSchedulingWorkerCycle: (now?: number, batchSize?: number) => Promise<{ normalized: number; published: number; activityLogs: number; activityLogFailures: number; purged: number }>\n",
+);
+await appendFile(
+  resolve(distRoot, "server.d.ts"),
+  "export declare const runSchedulingWorker: (options?: { intervalMs?: number; batchSize?: number; signal?: AbortSignal; onCycle?: (result: { normalized: number; published: number; activityLogs: number; activityLogFailures: number; purged: number }) => void | Promise<void> }) => Promise<void>\n",
 );
 await appendFile(
   resolve(distRoot, "server.d.ts"),

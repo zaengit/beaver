@@ -1,19 +1,78 @@
 #!/usr/bin/env node
 
-import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
-import { execSync } from "node:child_process"
 import { randomBytes } from "node:crypto"
-import { resolve, dirname, sep } from "node:path"
-import { fileURLToPath } from "node:url"
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const templatesDir = resolve(__dirname, "..", "dist", "templates")
-const packageName = JSON.parse(readFileSync(resolve(__dirname, "..", "package.json"), "utf8")).name
+import { chmodSync, existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs"
+import { resolve } from "node:path"
 
 const args = process.argv.slice(2)
 const command = args[0]
 const positionalArgs = args.slice(1).filter((arg) => !arg.startsWith("-"))
 const target = positionalArgs[0]
 const force = args.includes("--force")
+const secretNames = ["SESSION_SECRET", "ADMIN_JWT_ACCESS_SECRET", "ADMIN_JWT_REFRESH_SECRET"]
+
+function generateSecret() {
+  return randomBytes(32).toString("base64url")
+}
+
+function parseEnvValue(rawValue) {
+  const value = rawValue.trim()
+  return value.length >= 2 && value[0] === value.at(-1) && ["'", '"'].includes(value[0])
+    ? value.slice(1, -1)
+    : value
+}
+
+function generateEnvironmentSecrets(rotate) {
+  const envPath = resolve(process.cwd(), ".env")
+  let content = ""
+
+  try {
+    const envStat = lstatSync(envPath)
+    if (!envStat.isFile() || envStat.isSymbolicLink()) throw new Error("Refusing to write a non-regular .env path.")
+    chmodSync(envPath, 0o600)
+    content = readFileSync(envPath, "utf8")
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error
+  }
+
+  const newline = content.includes("\r\n") ? "\r\n" : "\n"
+  const lines = content.length === 0 ? [] : content.split(/\r?\n/)
+  if (content.endsWith("\n")) lines.pop()
+
+  const generated = new Map()
+  const changedNames = new Set()
+  const getSecret = (name) => {
+    if (!generated.has(name)) generated.set(name, generateSecret())
+    return generated.get(name)
+  }
+  const secretLinePattern = /^\s*(SESSION_SECRET|ADMIN_JWT_ACCESS_SECRET|ADMIN_JWT_REFRESH_SECRET)\s*=\s*(.*?)\s*$/
+  const foundNames = new Set()
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(secretLinePattern)
+    if (!match) continue
+
+    const [, name, rawValue] = match
+    foundNames.add(name)
+    if (!rotate && parseEnvValue(rawValue)) continue
+
+    lines[index] = `${name}=${getSecret(name)}`
+    changedNames.add(name)
+  }
+
+  for (const name of secretNames) {
+    if (foundNames.has(name)) continue
+    lines.push(`${name}=${getSecret(name)}`)
+    changedNames.add(name)
+  }
+
+  if (changedNames.size > 0) {
+    writeFileSync(envPath, `${lines.join(newline)}${newline}`, { encoding: "utf8", mode: 0o600 })
+    chmodSync(envPath, 0o600)
+  }
+
+  return { changedNames: [...changedNames] }
+}
 
 function optionValue(name) {
   const inline = args.find((arg) => arg.startsWith(`${name}=`))
@@ -30,11 +89,11 @@ function optionValue(name) {
   return value
 }
 
-function dataPositionalTarget() {
+function seedPositionalTarget() {
   const values = []
   for (let index = 1; index < args.length; index += 1) {
     const arg = args[index]
-    if (arg === "--file" || arg === "--template") {
+    if (arg === "--file") {
       index += 1
       continue
     }
@@ -44,38 +103,34 @@ function dataPositionalTarget() {
   return values[0]
 }
 
-function parseDataOptions() {
+function parseSeedOptions() {
   const fileFlag = optionValue("--file")
-  const template = optionValue("--template")
-  const positional = dataPositionalTarget()
+  const positional = seedPositionalTarget()
   if (fileFlag && positional) throw new Error("Use either a positional seed file or --file, not both.")
   const filePath = fileFlag || positional
-  if (!filePath && !template) throw new Error("A seed file or --template is required.")
-  if (filePath && template) throw new Error("Use either a seed file or --template, not both.")
+  if (!filePath) throw new Error("A seed file is required.")
   return {
     filePath,
-    template,
     dryRun: args.includes("--dry-run"),
     overwrite: args.includes("--overwrite"),
   }
 }
 
 const usage = `Usage:
+  beaver key:generate [--force]
   beaver migrate
   beaver migrate:fresh --force
-  beaver migrate:data <seed.json> [--dry-run] [--overwrite]
-  beaver migrate:data --file <seed.json> [--dry-run] [--overwrite]
-  beaver migrate:data --template <template> [--dry-run] [--overwrite]
-  beaver migrate:data:fresh <seed.json> --force
-  beaver seed [template]
-  beaver seed:fresh --force
-  beaver seed:template <template>
-  beaver seed:template:fresh <template> --force
-  beaver reset superadmin
-  beaver config
-  beaver example [template]`
-
-const installDepsList = ["astro", "@astrojs/react", "@astrojs/node", "react", "react-dom", "@tailwindcss/vite"]
+  beaver seed
+  beaver seed <seed.json> [--dry-run] [--overwrite]
+  beaver seed --file <seed.json> [--dry-run] [--overwrite]
+  beaver seed:fresh <seed.json> --force [--overwrite]
+  beaver seed:system
+  beaver seed:system:fresh --force
+  beaver 2fa:setup [--force]
+  beaver worker
+  beaver worker:once
+  beaver activity-log:purge
+  beaver reset superadmin`
 
 function loadDotEnv() {
   const envPath = resolve(process.cwd(), ".env")
@@ -96,158 +151,39 @@ function loadDotEnv() {
   }
 }
 
-function detectPm() {
-  const cwd = process.cwd()
-  if (existsSync(resolve(cwd, "bun.lock"))) return "bun"
-  if (existsSync(resolve(cwd, "pnpm-lock.yaml"))) return "pnpm"
-  if (existsSync(resolve(cwd, "yarn.lock"))) return "yarn"
-  return "npm"
-}
-
-function ensureScripts() {
-  const cwd = process.cwd()
-  const pkgPath = resolve(cwd, "package.json")
-  if (existsSync(pkgPath)) {
-    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"))
-    pkg.scripts = pkg.scripts || {}
-    let updated = false
-    if (!pkg.scripts.dev) { pkg.scripts.dev = "astro dev"; updated = true }
-    if (!pkg.scripts.build) { pkg.scripts.build = "astro build"; updated = true }
-    if (!pkg.scripts.preview) { pkg.scripts.preview = "astro preview"; updated = true }
-    if (updated) {
-      writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
-      console.log("Updated package.json scripts (dev, build, preview).")
-    }
-  }
-}
-
-function installDeps() {
-  const cwd = process.cwd()
-  const pm = detectPm()
-  const installCmd = pm === "npm" ? "install" : "add"
-  const packageDependencies = existsSync(resolve(cwd, "node_modules", "@zbeaver", "beaver", "package.json"))
-    ? installDepsList
-    : [packageName, ...installDepsList]
-  console.log(`Installing dependencies with ${pm}...`)
-  execSync(`${pm} ${installCmd} ${packageDependencies.join(" ")}`, { cwd, stdio: "inherit" })
-  console.log("Dependencies installed.")
-  ensureScripts()
-}
-
-function ensureDir(dirPath) {
-  if (!existsSync(dirPath)) {
-    mkdirSync(dirPath, { recursive: true })
-  }
-}
-
-function copyDir(src, dest) {
-  ensureDir(dest)
-  const entries = readdirSync(src, { withFileTypes: true })
-  for (const entry of entries) {
-    const srcPath = resolve(src, entry.name)
-    const destPath = resolve(dest, entry.name)
-    if (entry.isDirectory()) {
-      copyDir(srcPath, destPath)
-    } else if (entry.isFile()) {
-      if (existsSync(destPath)) {
-        console.warn(`Skipping existing file: ${destPath}`)
-        continue
-      }
-      cpSync(srcPath, destPath)
-      console.log(`Created: ${destPath}`)
-    }
-  }
-}
-
-function copyFileIfMissing(source, destination) {
-  if (existsSync(destination)) {
-    console.warn(`Skipping existing file: ${destination}`)
-    return false
-  }
-  cpSync(source, destination)
-  console.log(`Created: ${destination}`)
-  return true
-}
-
-function createInitialEnv(source, destination) {
-  if (existsSync(destination)) {
-    const existing = lstatSync(destination)
-    if (!existing.isFile() || existing.isSymbolicLink()) {
-      throw new Error("Refusing to use a non-regular .env path.")
-    }
-    chmodSync(destination, 0o600)
-    console.warn(`Skipping existing file: ${destination}`)
-    return null
-  }
-
-  const credentials = {
-    email: `admin-${randomBytes(6).toString("hex")}@cms.local`,
-    password: `cms_${randomBytes(24).toString("base64url")}`,
-    name: "Super Admin",
-    sessionSecret: randomBytes(48).toString("base64url"),
-    accessSecret: randomBytes(48).toString("base64url"),
-    refreshSecret: randomBytes(48).toString("base64url"),
-  }
-  const contents = readFileSync(source, "utf8")
-    .replace(/^SESSION_SECRET=.*$/m, `SESSION_SECRET=${credentials.sessionSecret}`)
-    .replace(/^ADMIN_JWT_ACCESS_SECRET=.*$/m, `ADMIN_JWT_ACCESS_SECRET=${credentials.accessSecret}`)
-    .replace(/^ADMIN_JWT_REFRESH_SECRET=.*$/m, `ADMIN_JWT_REFRESH_SECRET=${credentials.refreshSecret}`)
-    .replace(/^ADMIN_EMAIL=.*$/m, `ADMIN_EMAIL=${credentials.email}`)
-    .replace(/^ADMIN_PASSWORD=.*$/m, `ADMIN_PASSWORD=${credentials.password}`)
-    .replace(/^ADMIN_NAME=.*$/m, `ADMIN_NAME=${credentials.name}`)
-
-  writeFileSync(destination, contents, { mode: 0o600, flag: "wx" })
-  chmodSync(destination, 0o600)
-  console.log(`Created: ${destination}`)
-  console.log("Initial Super Admin credentials (save these now; the password is only shown once):")
-  console.log(`  Email: ${credentials.email}`)
-  console.log(`  Password: ${credentials.password}`)
-}
-
-function generateConfig() {
-  const cwd = process.cwd()
-  const configSrc = resolve(templatesDir, "config")
-  if (!existsSync(configSrc)) throw new Error("Config templates not found. Ensure the package is built correctly.")
-
-  console.log("Generating configuration files...")
-  createInitialEnv(resolve(configSrc, ".env"), resolve(cwd, ".env"))
-  copyFileIfMissing(resolve(configSrc, "astro.config.mjs"), resolve(cwd, "astro.config.mjs"))
-  copyFileIfMissing(resolve(configSrc, "tsconfig.json"), resolve(cwd, "tsconfig.json"))
-}
-
-function templateSource(templateName = "flowstack") {
-  if (!/^[a-z0-9-]+$/.test(templateName)) {
-    throw new Error("Invalid template name.")
-  }
-  const source = resolve(templatesDir, templateName)
-  if (source !== templatesDir && !source.startsWith(`${templatesDir}${sep}`)) {
-    throw new Error("Invalid template path.")
-  }
-  if (!existsSync(source)) throw new Error(`Template "${templateName}" was not found. Ensure the package is built correctly.`)
-  return source
-}
-
-function copyExample(templateName) {
-  const cwd = process.cwd()
-  const exampleSrc = templateSource(templateName)
-
-  console.log(`Copying ${templateName} template files...`)
-  copyDir(resolve(exampleSrc, "src"), resolve(cwd, "src"))
-  copyDir(resolve(exampleSrc, "skills"), resolve(cwd, "skills"))
-}
-
 let closeDb
-try {
+async function run() {
+  if (command === "key:generate") {
+    const extraArgs = args.slice(1).filter((arg) => arg !== "--force")
+    if (extraArgs.length > 0) throw new Error("key:generate only accepts --force.")
+
+    const result = generateEnvironmentSecrets(force)
+    if (result.changedNames.length === 0) {
+      console.log(".env already contains all Beaver secrets. Use --force to rotate them.")
+    } else {
+      console.log(`Generated ${result.changedNames.join(", ")} in .env.`)
+    }
+    return
+  }
+
   loadDotEnv()
   const runtime = await import("../dist/server.js")
   closeDb = runtime.closeDatabase
-  const { migrate, migrateData, formatSeedDataSummary, resetDatabase, seed, seedTemplate, resetSuperAdminPassword } = runtime
+  const {
+    migrate,
+    formatSeedDataSummary,
+    resetDatabase,
+    seed,
+    purgeExpiredActivityLogs,
+    runSchedulingWorker,
+    runSchedulingWorkerCycle,
+    resetSuperAdminPassword,
+    generateSuperAdminTwoFactorSetup,
+  } = runtime
 
   const isFreshCommand = command === "migrate:fresh"
-    || command === "migrate:data:fresh"
     || command === "seed:fresh"
     || command === "seed:system:fresh"
-    || command === "seed:template:fresh"
   if (isFreshCommand && !force) {
     throw new Error(`Command "${command}" is destructive. Re-run it with --force.`)
   }
@@ -259,54 +195,78 @@ try {
     await resetDatabase()
     await migrate()
     console.log("CMS database reset and migrations complete.")
-  } else if (command === "migrate:data" || command === "migrate:data:fresh") {
-    const dataOptions = parseDataOptions()
-    if (dataOptions.template) templateSource(dataOptions.template)
-    if (command === "migrate:data:fresh") {
-      if (dataOptions.dryRun) throw new Error("migrate:data:fresh cannot be combined with --dry-run.")
-      await resetDatabase()
-      await migrate()
-      await seed()
-    }
-    const result = await migrateData(dataOptions)
+  } else if (command === "seed:fresh") {
+    const seedOptions = parseSeedOptions()
+    if (seedOptions.dryRun) throw new Error("seed:fresh cannot be combined with --dry-run.")
+    await resetDatabase()
+    await migrate()
+    const result = await seed(seedOptions)
     console.log(formatSeedDataSummary(result))
-  } else if (command === "seed" || command === "seed:system") {
-    if (target) templateSource(target)
-    await seed()
-    if (target) await seedTemplate(target)
-  } else if (command === "seed:fresh" || command === "seed:system:fresh") {
-    if (target) throw new Error(`${command} does not accept a template. Use seed:template:fresh <template> --force.`)
+  } else if (command === "seed:system:fresh") {
+    if (args.length > 1) throw new Error(`${command} does not accept additional arguments.`)
     await resetDatabase()
     await migrate()
     await seed()
     console.log("Fresh system seed complete.")
-  } else if (command === "seed:template") {
-    if (!target) throw new Error("A template name is required. Example: beaver seed:template flowstack.")
-    templateSource(target)
-    await seedTemplate(target)
-  } else if (command === "seed:template:fresh") {
-    if (!target) throw new Error("A template name is required. Example: beaver seed:template:fresh flowstack --force.")
-    templateSource(target)
-    await resetDatabase()
-    await migrate()
+  } else if (command === "seed") {
+    const hasSeedDataArguments = target !== undefined
+      || args.some((arg) => arg === "--file" || arg.startsWith("--file=") || arg === "--dry-run" || arg === "--overwrite")
+    if (hasSeedDataArguments) {
+      const result = await seed(parseSeedOptions())
+      console.log(formatSeedDataSummary(result))
+    } else if (args.length > 1) {
+      throw new Error("seed does not accept additional arguments without a seed file.")
+    } else {
+      await seed()
+    }
+  } else if (command === "seed:system") {
+    if (args.length > 1) throw new Error(`${command} does not accept additional arguments.`)
     await seed()
-    await seedTemplate(target)
-    console.log(`Fresh system and ${target} template seed complete.`)
+  } else if (command === "2fa:setup") {
+    if (target) throw new Error("2fa:setup does not accept additional arguments.")
+    const setup = generateSuperAdminTwoFactorSetup(force)
+    console.log("Add these values to the application environment, then restart Beaver:")
+    console.log(`ADMIN_2FA_ENABLED=true\nADMIN_2FA_SECRET=${setup.secret}`)
+    console.log(`\notpauth URI (for manual QR generation):\n${setup.otpauthUrl}`)
+  } else if (command === "worker" || command === "worker:once") {
+    if (args.length > 1) throw new Error(`${command} does not accept additional arguments.`)
+
+    if (command === "worker:once") {
+      const result = await runSchedulingWorkerCycle()
+      console.log(`Scheduling worker cycle complete. Normalized ${result.normalized}, published ${result.published}, activity logs ${result.activityLogs}, purged ${result.purged}.`)
+    } else {
+      const controller = new AbortController()
+      const stop = () => controller.abort()
+      process.once("SIGINT", stop)
+      process.once("SIGTERM", stop)
+      console.log("Beaver scheduling worker started. Send SIGTERM or SIGINT to stop.")
+      await runSchedulingWorker({
+        signal: controller.signal,
+        onCycle: (result) => {
+          if (result.normalized || result.published || result.purged || result.activityLogFailures) {
+            console.log(`Scheduling worker cycle: normalized ${result.normalized}, published ${result.published}, activity logs ${result.activityLogs}, log failures ${result.activityLogFailures}, purged ${result.purged}.`)
+          }
+        },
+      })
+      process.removeListener("SIGINT", stop)
+      process.removeListener("SIGTERM", stop)
+      console.log("Beaver scheduling worker stopped.")
+    }
+  } else if (command === "activity-log:purge") {
+    if (args.length > 1) throw new Error(`${command} does not accept additional arguments.`)
+    const deleted = await purgeExpiredActivityLogs()
+    console.log(`Activity log retention purge complete. Removed ${deleted} record(s).`)
   } else if (command === "reset" && target === "superadmin") {
     const result = await resetSuperAdminPassword()
-    console.log(`Super-admin password reset and active sessions revoked (${result.email}).`)
-  } else if (command === "config") {
-    generateConfig()
-    installDeps()
-  } else if (command === "example") {
-    const templateName = target || "flowstack"
-    templateSource(templateName)
-    copyExample(templateName)
-    installDeps()
+    console.log(`Super-admin credentials are managed by ADMIN_* environment variables (${result.email}). Restart the app after changing them.`)
   } else {
     console.error(usage)
     process.exitCode = 1
   }
+}
+
+try {
+  await run()
 } catch (error) {
   console.error(error)
   process.exitCode = 1

@@ -1,15 +1,15 @@
 {
   "name": "@zbeaver/beaver",
-  "version": "0.1.19",
-  "description": "CMS admin panel, API, and middleware for Astro SSR projects.",
+  "version": "0.2",
+  "description": "Framework-neutral CMS server, API, and React admin UI.",
   "license": "MIT",
   "keywords": [
-    "astro-integration",
-    "withastro",
     "cms",
     "content-management",
     "admin-panel",
-    "astro-ssr"
+    "hono",
+    "nextjs",
+    "astro"
   ],
   "type": "module",
   "repository": {
@@ -58,13 +58,9 @@
       "types": "./dist/ui.d.ts",
       "default": "./dist/ui.js"
     },
-    "./ui/admin.css": "./dist/ui/admin.css",
-    "./ui/admin-layout.astro": "./dist/ui/admin-layout.astro",
-    "./astro/admin.astro": "./dist/astro/admin.astro"
+    "./ui/style.css": "./dist/ui/style.css"
   },
   "peerDependencies": {
-    "@astrojs/react": "^6.0.0",
-    "astro": "^7.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -100,7 +96,9 @@
     "mysql2": "^3.14.5",
     "next-themes": "^0.4.6",
     "nodemailer": "^9.0.3",
+    "otplib": "^13.5.0",
     "pg": "^8.16.3",
+    "qrcode.react": "^4.2.0",
     "react-router": "^8.3.0",
     "sanitize-html": "^2.17.0",
     "sharp": "^0.35.3",
@@ -111,7 +109,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.3.0",
     "@types/bcrypt": "^6.0.0",
     "@types/better-sqlite3": "^7.6.13",

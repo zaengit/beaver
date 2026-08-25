@@ -1,16 +1,4 @@
-import type { AstroIntegration } from "astro"
-
-export interface BeaverOptions {
-  adminPath?: string
-  contentTypeRegistry?: string | URL
-  sectionRegistry?: string | URL
-  menuGroupRegistry?: string | URL
-}
-
-declare function beaver(options?: BeaverOptions): AstroIntegration
-export default beaver
 export declare const apiApp: import("hono").Hono
-export declare const ADMIN_PATH: string
 type BeaverServiceResult<T> =
   | { success: true; data: T; message: string }
   | { success: false; error: { code: string; message: string; fieldErrors?: Record<string, string[]> } }
@@ -77,6 +65,7 @@ export declare const listPublishedPostsByType: (type: string, page?: number, per
 export declare const listPublishedPostsByTag: (tag: string, page?: number, perPage?: number) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>
 export declare const searchPublishedPosts: (query: string, page?: number, perPage?: number) => Promise<BeaverServiceResult<BeaverPaginatedResult<BeaverPublicPost>>>
 export declare const getMenuTree: (type?: string) => Promise<BeaverServiceResult<MenuTree[]>>
+export declare const sanitizeHtml: (html: string) => string
 interface BeaverSocialLink { platform: string; url: string; icon?: string }
 interface BeaverOpenHours { day: string; open: string; close: string }
 interface BeaverSiteSettings {
@@ -96,8 +85,7 @@ interface BeaverSiteSettings {
   email_notifications: string[]
 }
 export declare const getSiteSettings: () => Promise<BeaverSiteSettings>
-export declare const seed: () => Promise<void>
-export interface SeedDataOptions { filePath?: string; template?: string; dryRun?: boolean; overwrite?: boolean }
+export interface SeedDataOptions { filePath?: string; dryRun?: boolean; overwrite?: boolean }
 export interface SeedEntitySummary { created: number; updated: number; skipped: number }
 export interface SeedDataSummary {
   source: string
@@ -108,7 +96,7 @@ export interface SeedDataSummary {
   pages: SeedEntitySummary
   menus: SeedEntitySummary
 }
-export declare const migrateData: (options: SeedDataOptions) => Promise<SeedDataSummary>
+export declare const seed: (options?: SeedDataOptions) => Promise<void | SeedDataSummary>
 export declare const formatSeedDataSummary: (result: SeedDataSummary) => string
 export declare const parseSeedData: (input: unknown, source?: string) => unknown
 export declare const closeDatabase: () => Promise<void>
@@ -131,5 +119,7 @@ export interface MenuTree {
   children: MenuTree[]
 }
 export declare const migrate: () => Promise<void>
-export declare const seedTemplate: (name: string) => Promise<void>
+export declare const purgeExpiredActivityLogs: () => Promise<number>
+export declare const runSchedulingWorkerCycle: (now?: number, batchSize?: number) => Promise<{ normalized: number; published: number; activityLogs: number; activityLogFailures: number; purged: number }>
+export declare const runSchedulingWorker: (options?: { intervalMs?: number; batchSize?: number; signal?: AbortSignal; onCycle?: (result: { normalized: number; published: number; activityLogs: number; activityLogFailures: number; purged: number }) => void | Promise<void> }) => Promise<void>
 export declare const resetSuperAdminPassword: () => Promise<{ email: string }>

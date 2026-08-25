@@ -14,7 +14,6 @@ if (!version || !semverPattern.test(version)) {
 
 const packageFiles = [
   resolve("package.json"),
-  resolve("create-beaver/package.json"),
 ]
 
 const packageData = await Promise.all(
@@ -24,20 +23,11 @@ const packageData = await Promise.all(
   })),
 )
 
-const [beaver, initializer] = packageData
-const expectedDependency = `^${version}`
+const [beaver] = packageData
 const errors = []
 
 if (beaver.data.version !== version) {
   errors.push(`package.json version is ${beaver.data.version}, expected ${version}`)
-}
-
-if (initializer.data.version !== version) {
-  errors.push(`create-beaver/package.json version is ${initializer.data.version}, expected ${version}`)
-}
-
-if (initializer.data.dependencies?.["@zbeaver/beaver"] !== expectedDependency) {
-  errors.push(`create-beaver dependency is ${initializer.data.dependencies?.["@zbeaver/beaver"] ?? "missing"}, expected ${expectedDependency}`)
 }
 
 if (checkOnly) {
@@ -51,9 +41,6 @@ if (checkOnly) {
 }
 
 beaver.data.version = version
-initializer.data.version = version
-initializer.data.dependencies ??= {}
-initializer.data.dependencies["@zbeaver/beaver"] = expectedDependency
 
 await Promise.all(
   packageData.map(({ filePath, data }) =>

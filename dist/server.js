@@ -1,21 +1,22 @@
-import { existsSync, readFileSync, mkdirSync, chmodSync, lstatSync, statSync, writeFileSync, renameSync, unlinkSync, readdirSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { resolve, dirname, join, relative, sep, isAbsolute } from "node:path";
 import { Hono } from "hono";
 import { setCookie, getCookie } from "hono/cookie";
+import { existsSync, mkdirSync, chmodSync, lstatSync, statSync, readFileSync, writeFileSync, renameSync, unlinkSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join, resolve, relative, sep, isAbsolute } from "node:path";
 import { migrate as migrate$1 } from "drizzle-orm/sqlite-proxy/migrator";
 import { migrate as migrate$2 } from "drizzle-orm/mysql2/migrator";
 import { migrate as migrate$3 } from "drizzle-orm/node-postgres/migrator";
-import { relations, or, like, eq, and, count, desc, asc, inArray, gt, lt, sql } from "drizzle-orm";
-import bcrypt from "bcrypt";
 import { unlink, mkdir, writeFile, readFile } from "node:fs/promises";
+import { relations, eq, like, desc, asc, and, count, isNull, or, lte, inArray, sql, isNotNull, gt, gte, lt } from "drizzle-orm";
 import { z } from "zod";
+import { verify as verify$1, generateSecret, generateURI } from "otplib";
+import bcrypt from "bcrypt";
 import { ulid } from "ulidx";
 import sanitizeHtmlLibrary from "sanitize-html";
+import { randomUUID, createHash, createDecipheriv, randomBytes, createCipheriv } from "node:crypto";
 import { DeleteObjectCommand, PutObjectCommand, S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 import { jwtVerify, SignJWT } from "jose";
-import { createHash, randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
 import { isIP } from "node:net";
 import Database from "better-sqlite3";
@@ -24,100 +25,36 @@ import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import { drizzle as drizzle$1 } from "drizzle-orm/mysql2";
 import { drizzle as drizzle$2 } from "drizzle-orm/node-postgres";
-import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
-import { mysqlTable, int, varchar, text as text$1, bigint } from "drizzle-orm/mysql-core";
-import { pgTable, integer as integer$1, varchar as varchar$1, text as text$2, bigint as bigint$1 } from "drizzle-orm/pg-core";
-const contentTypes = [];
-const templates = [];
-const fallbackRegistry = {
-  contentTypes,
-  templates
-};
-let configuredRegistry = fallbackRegistry;
-function isRegistry(value) {
-  return typeof value === "object" && value !== null && Array.isArray(value.contentTypes) && Array.isArray(value.templates);
+import { sqliteTable, integer, text, index as index$5 } from "drizzle-orm/sqlite-core";
+import { mysqlTable, int, varchar, text as text$1, index as index$6, bigint } from "drizzle-orm/mysql-core";
+import { pgTable, integer as integer$1, varchar as varchar$1, text as text$2, index as index$7, bigint as bigint$1 } from "drizzle-orm/pg-core";
+function getCurrentTimestamp() {
+  return Math.floor(Date.now() / 1e3);
 }
-function setContentTypeRegistry(registry) {
-  if (isRegistry(registry)) configuredRegistry = registry;
+function toDateMilliseconds(value) {
+  if (value === null || value === void 0 || !Number.isFinite(value)) return null;
+  return Math.abs(value) < 1e10 ? value * 1e3 : value;
 }
-function getContentTypeRegistry() {
-  const browserRegistry = globalThis.__CMS_CONTENT_TYPE_REGISTRY__;
-  return isRegistry(browserRegistry) ? browserRegistry : configuredRegistry;
-}
-function stripBoundarySlashes(value) {
-  const trimmed = value?.trim() ?? "";
-  let start = 0;
-  let end = trimmed.length;
-  while (start < end && trimmed[start] === "/") start += 1;
-  while (end > start && trimmed[end - 1] === "/") end -= 1;
-  return trimmed.slice(start, end);
-}
-function normalizePath(value) {
-  const segment = stripBoundarySlashes(value) || stripBoundarySlashes(process.env.ADMIN_PATH) || "admin";
-  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(segment)) {
-    throw new Error("beaver adminPath must be a single URL segment, such as panel-rahasia.");
+const DEFAULT_ACTIVITY_LOG_RETENTION_DAYS = 90;
+const MIN_ACTIVITY_LOG_RETENTION_DAYS = 1;
+const MAX_ACTIVITY_LOG_RETENTION_DAYS = 3650;
+const ACTIVITY_LOG_RETENTION_ENV = "BEAVER_ACTIVITY_LOG_RETENTION_DAYS";
+function parseRetentionDays(value) {
+  if (value === void 0 || value.trim() === "") return DEFAULT_ACTIVITY_LOG_RETENTION_DAYS;
+  if (!/^\d+$/.test(value.trim())) {
+    throw new Error(`${ACTIVITY_LOG_RETENTION_ENV} must be a whole number between ${MIN_ACTIVITY_LOG_RETENTION_DAYS} and ${MAX_ACTIVITY_LOG_RETENTION_DAYS}.`);
   }
-  return `/${segment}`;
-}
-function resolveRegistry(value, defaultFile, optionName) {
-  const filePath = value instanceof URL ? fileURLToPath(value) : value ? resolve(process.cwd(), value) : fileURLToPath(new URL(defaultFile, import.meta.url));
-  if (!filePath.endsWith(".json")) {
-    throw new Error(`beaver ${optionName} must point to a JSON file.`);
+  const days = Number(value.trim());
+  if (!Number.isSafeInteger(days) || days < MIN_ACTIVITY_LOG_RETENTION_DAYS || days > MAX_ACTIVITY_LOG_RETENTION_DAYS) {
+    throw new Error(`${ACTIVITY_LOG_RETENTION_ENV} must be a whole number between ${MIN_ACTIVITY_LOG_RETENTION_DAYS} and ${MAX_ACTIVITY_LOG_RETENTION_DAYS}.`);
   }
-  if (!existsSync(filePath)) {
-    throw new Error(`beaver ${optionName} does not exist: ${filePath}`);
-  }
-  return filePath;
+  return days;
 }
-function readRegistry(filePath) {
-  return JSON.parse(readFileSync(filePath, "utf8"));
+function getActivityLogRetentionDays() {
+  return parseRetentionDays(process.env[ACTIVITY_LOG_RETENTION_ENV]);
 }
-function beaver(options = {}) {
-  const adminPath = normalizePath(options.adminPath);
-  const registries = {
-    "@content-type-registry": resolveRegistry(options.contentTypeRegistry, "./registry/content-types.json", "contentTypeRegistry"),
-    "@section-registry": resolveRegistry(options.sectionRegistry, "./registry/sections.json", "sectionRegistry"),
-    "@menu-group-registry": resolveRegistry(options.menuGroupRegistry, "./registry/menu-groups.json", "menuGroupRegistry")
-  };
-  process.env.BEAVER_CONTENT_TYPE_REGISTRY_PATH = registries["@content-type-registry"];
-  process.env.BEAVER_SECTION_REGISTRY_PATH = registries["@section-registry"];
-  process.env.BEAVER_MENU_GROUP_REGISTRY_PATH = registries["@menu-group-registry"];
-  setContentTypeRegistry(readRegistry(registries["@content-type-registry"]));
-  const compatShim = fileURLToPath(new URL("./compat/use-sync-external-store.js", import.meta.url));
-  return {
-    name: "@zbeaver/beaver",
-    hooks: {
-      "astro:config:setup": ({ addMiddleware, injectRoute, updateConfig }) => {
-        updateConfig({
-          vite: {
-            resolve: {
-              alias: [
-                { find: /^use-sync-external-store(\/.*)?$/, replacement: compatShim },
-                { find: "use-sync-external-store/shim/index.js", replacement: compatShim },
-                { find: "use-sync-external-store/shim/with-selector.js", replacement: compatShim },
-                { find: "use-sync-external-store/shim/index", replacement: compatShim },
-                { find: "use-sync-external-store/shim/with-selector", replacement: compatShim },
-                { find: "use-sync-external-store/shim", replacement: compatShim },
-                { find: "use-sync-external-store", replacement: compatShim },
-                ...Object.entries(registries).map(([find, replacement]) => ({ find, replacement }))
-              ]
-            },
-            define: { __ADMIN_PATH__: JSON.stringify(adminPath) },
-            ssr: { noExternal: ["@zbeaver/beaver"] },
-            optimizeDeps: {
-              include: [
-                "highlight.js/lib/core"
-              ]
-            }
-          }
-        });
-        injectRoute({ pattern: "/__cms/control-panel", entrypoint: new URL("./astro/admin.astro", import.meta.url), prerender: false });
-        injectRoute({ pattern: "/__cms/http", entrypoint: new URL("./astro/http.js", import.meta.url), prerender: false });
-        injectRoute({ pattern: "/storage/[...path]", entrypoint: new URL("./astro/storage.js", import.meta.url), prerender: false });
-        addMiddleware({ entrypoint: new URL("./astro/middleware.js", import.meta.url), order: "pre" });
-      }
-    }
-  };
+function getActivityLogRetentionCutoff(now = getCurrentTimestamp()) {
+  return now - getActivityLogRetentionDays() * 24 * 60 * 60;
 }
 function env(name) {
   const value = process.env[name]?.trim();
@@ -201,8 +138,15 @@ const users$3 = sqliteTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  roleId: text("role_id").references(() => roles$3.id),
+  role: text("role").notNull().default("author"),
   emailVerified: integer("email_verified").notNull().default(0),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull()
+});
+const adminTwoFactor$3 = sqliteTable("admin_two_factor", {
+  userId: text("user_id").primaryKey(),
+  secret: text("secret").notNull(),
+  enabled: integer("enabled").notNull().default(0),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
@@ -234,11 +178,14 @@ const posts$3 = sqliteTable("posts", {
   metaDescription: text("meta_description"),
   featuredImage: text("featured_image"),
   gallery: text("gallery"),
-  authorId: text("author_id").notNull().references(() => users$3.id),
+  authorId: text("author_id").notNull(),
   publishedAt: integer("published_at"),
   createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull()
-});
+  updatedAt: integer("updated_at").notNull(),
+  deletedAt: integer("deleted_at")
+}, (table) => ({
+  deletedAtIdx: index$5("posts_deleted_at_idx").on(table.deletedAt, table.type, table.updatedAt)
+}));
 const menus$3 = sqliteTable("menus", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
@@ -270,33 +217,9 @@ const postCategories$3 = sqliteTable("post_categories", {
   categoryId: text("category_id").notNull().references(() => categories$3.id, { onDelete: "cascade" }),
   createdAt: integer("created_at").notNull()
 });
-const roles$3 = sqliteTable("roles", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
-  isSystem: integer("is_system").notNull().default(0),
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull()
-});
-const permissions$3 = sqliteTable("permissions", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  group: text("group").notNull(),
-  description: text("description"),
-  createdAt: integer("created_at").notNull(),
-  updatedAt: integer("updated_at").notNull()
-});
-const rolePermissions$3 = sqliteTable("role_permissions", {
-  id: text("id").primaryKey(),
-  roleId: text("role_id").notNull().references(() => roles$3.id, { onDelete: "cascade" }),
-  permissionId: text("permission_id").notNull().references(() => permissions$3.id, { onDelete: "cascade" }),
-  createdAt: integer("created_at").notNull()
-});
 const media$3 = sqliteTable("media", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users$3.id),
+  userId: text("user_id").notNull(),
   name: text("name").notNull(),
   fileName: text("file_name").notNull(),
   mimeType: text("mime_type").notNull(),
@@ -317,8 +240,26 @@ const settings$4 = sqliteTable("settings", {
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull()
 });
-const usersRelations$3 = relations(users$3, ({ one, many }) => ({
-  role: one(roles$3, { fields: [users$3.roleId], references: [roles$3.id] }),
+const activityLogs$4 = sqliteTable("activity_logs", {
+  id: text("id").primaryKey(),
+  actorId: text("actor_id"),
+  actorName: text("actor_name"),
+  actorEmail: text("actor_email"),
+  action: text("action").notNull(),
+  resource: text("resource").notNull(),
+  resourceId: text("resource_id"),
+  metadata: text("metadata"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  success: integer("success").notNull().default(1),
+  statusCode: integer("status_code").notNull().default(200),
+  createdAt: integer("created_at").notNull()
+}, (table) => ({
+  createdAtIdx: index$5("activity_logs_created_at_idx").on(table.createdAt),
+  actorCreatedAtIdx: index$5("activity_logs_actor_created_at_idx").on(table.actorId, table.createdAt),
+  resourceCreatedAtIdx: index$5("activity_logs_resource_created_at_idx").on(table.resource, table.resourceId, table.createdAt)
+}));
+const usersRelations$3 = relations(users$3, ({ many }) => ({
   posts: many(posts$3),
   media: many(media$3)
 }));
@@ -331,12 +272,6 @@ const postCategoriesRelations$3 = relations(postCategories$3, ({ one }) => ({
   post: one(posts$3, { fields: [postCategories$3.postId], references: [posts$3.id] }),
   category: one(categories$3, { fields: [postCategories$3.categoryId], references: [categories$3.id] })
 }));
-const rolesRelations$3 = relations(roles$3, ({ many }) => ({ users: many(users$3), rolePermissions: many(rolePermissions$3) }));
-const permissionsRelations$3 = relations(permissions$3, ({ many }) => ({ rolePermissions: many(rolePermissions$3) }));
-const rolePermissionsRelations$3 = relations(rolePermissions$3, ({ one }) => ({
-  role: one(roles$3, { fields: [rolePermissions$3.roleId], references: [roles$3.id] }),
-  permission: one(permissions$3, { fields: [rolePermissions$3.permissionId], references: [permissions$3.id] })
-}));
 const mediaRelations$3 = relations(media$3, ({ one }) => ({ user: one(users$3, { fields: [media$3.userId], references: [users$3.id] }) }));
 const menusRelations$3 = relations(menus$3, ({ one, many }) => ({
   parent: one(menus$3, { fields: [menus$3.parentId], references: [menus$3.id], relationName: "menuParentChild" }),
@@ -344,7 +279,9 @@ const menusRelations$3 = relations(menus$3, ({ one, many }) => ({
 }));
 const sqliteSchema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  activityLogs: activityLogs$4,
   adminRefreshSessions: adminRefreshSessions$3,
+  adminTwoFactor: adminTwoFactor$3,
   categories: categories$3,
   categoriesRelations: categoriesRelations$3,
   media: media$3,
@@ -352,16 +289,10 @@ const sqliteSchema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.define
   menus: menus$3,
   menusRelations: menusRelations$3,
   passwordResetTokens: passwordResetTokens$3,
-  permissions: permissions$3,
-  permissionsRelations: permissionsRelations$3,
   postCategories: postCategories$3,
   postCategoriesRelations: postCategoriesRelations$3,
   posts: posts$3,
   postsRelations: postsRelations$3,
-  rolePermissions: rolePermissions$3,
-  rolePermissionsRelations: rolePermissionsRelations$3,
-  roles: roles$3,
-  rolesRelations: rolesRelations$3,
   settings: settings$4,
   users: users$3,
   usersRelations: usersRelations$3
@@ -373,8 +304,15 @@ const users$2 = mysqlTable("users", {
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
-  roleId: id$1("role_id").references(() => roles$2.id),
+  role: varchar("role", { length: 32 }).notNull().default("author"),
   emailVerified: int("email_verified").notNull().default(0),
+  createdAt: timestamp$1("created_at").notNull(),
+  updatedAt: timestamp$1("updated_at").notNull()
+});
+const adminTwoFactor$2 = mysqlTable("admin_two_factor", {
+  userId: id$1("user_id").primaryKey(),
+  secret: text$1("secret").notNull(),
+  enabled: int("enabled").notNull().default(0),
   createdAt: timestamp$1("created_at").notNull(),
   updatedAt: timestamp$1("updated_at").notNull()
 });
@@ -406,11 +344,14 @@ const posts$2 = mysqlTable("posts", {
   metaDescription: text$1("meta_description"),
   featuredImage: text$1("featured_image"),
   gallery: text$1("gallery"),
-  authorId: id$1("author_id").notNull().references(() => users$2.id),
+  authorId: id$1("author_id").notNull(),
   publishedAt: timestamp$1("published_at"),
   createdAt: timestamp$1("created_at").notNull(),
-  updatedAt: timestamp$1("updated_at").notNull()
-});
+  updatedAt: timestamp$1("updated_at").notNull(),
+  deletedAt: timestamp$1("deleted_at")
+}, (table) => ({
+  deletedAtIdx: index$6("posts_deleted_at_idx").on(table.deletedAt, table.type, table.updatedAt)
+}));
 const menus$2 = mysqlTable("menus", {
   id: id$1("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
@@ -442,33 +383,9 @@ const postCategories$2 = mysqlTable("post_categories", {
   categoryId: id$1("category_id").notNull().references(() => categories$2.id, { onDelete: "cascade" }),
   createdAt: timestamp$1("created_at").notNull()
 });
-const roles$2 = mysqlTable("roles", {
-  id: id$1("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  slug: varchar("slug", { length: 255 }).notNull().unique(),
-  description: text$1("description"),
-  isSystem: int("is_system").notNull().default(0),
-  createdAt: timestamp$1("created_at").notNull(),
-  updatedAt: timestamp$1("updated_at").notNull()
-});
-const permissions$2 = mysqlTable("permissions", {
-  id: id$1("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  slug: varchar("slug", { length: 255 }).notNull().unique(),
-  group: varchar("group", { length: 64 }).notNull(),
-  description: text$1("description"),
-  createdAt: timestamp$1("created_at").notNull(),
-  updatedAt: timestamp$1("updated_at").notNull()
-});
-const rolePermissions$2 = mysqlTable("role_permissions", {
-  id: id$1("id").primaryKey(),
-  roleId: id$1("role_id").notNull().references(() => roles$2.id, { onDelete: "cascade" }),
-  permissionId: id$1("permission_id").notNull().references(() => permissions$2.id, { onDelete: "cascade" }),
-  createdAt: timestamp$1("created_at").notNull()
-});
 const media$2 = mysqlTable("media", {
   id: id$1("id").primaryKey(),
-  userId: id$1("user_id").notNull().references(() => users$2.id),
+  userId: id$1("user_id").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   fileName: varchar("file_name", { length: 255 }).notNull(),
   mimeType: varchar("mime_type", { length: 255 }).notNull(),
@@ -489,8 +406,26 @@ const settings$3 = mysqlTable("settings", {
   createdAt: timestamp$1("created_at").notNull(),
   updatedAt: timestamp$1("updated_at").notNull()
 });
-const usersRelations$2 = relations(users$2, ({ one, many }) => ({
-  role: one(roles$2, { fields: [users$2.roleId], references: [roles$2.id] }),
+const activityLogs$3 = mysqlTable("activity_logs", {
+  id: id$1("id").primaryKey(),
+  actorId: id$1("actor_id"),
+  actorName: varchar("actor_name", { length: 255 }),
+  actorEmail: varchar("actor_email", { length: 255 }),
+  action: varchar("action", { length: 64 }).notNull(),
+  resource: varchar("resource", { length: 64 }).notNull(),
+  resourceId: id$1("resource_id"),
+  metadata: text$1("metadata"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text$1("user_agent"),
+  success: int("success").notNull().default(1),
+  statusCode: int("status_code").notNull().default(200),
+  createdAt: timestamp$1("created_at").notNull()
+}, (table) => ({
+  createdAtIdx: index$6("activity_logs_created_at_idx").on(table.createdAt),
+  actorCreatedAtIdx: index$6("activity_logs_actor_created_at_idx").on(table.actorId, table.createdAt),
+  resourceCreatedAtIdx: index$6("activity_logs_resource_created_at_idx").on(table.resource, table.resourceId, table.createdAt)
+}));
+const usersRelations$2 = relations(users$2, ({ many }) => ({
   posts: many(posts$2),
   media: many(media$2)
 }));
@@ -503,12 +438,6 @@ const postCategoriesRelations$2 = relations(postCategories$2, ({ one }) => ({
   post: one(posts$2, { fields: [postCategories$2.postId], references: [posts$2.id] }),
   category: one(categories$2, { fields: [postCategories$2.categoryId], references: [categories$2.id] })
 }));
-const rolesRelations$2 = relations(roles$2, ({ many }) => ({ users: many(users$2), rolePermissions: many(rolePermissions$2) }));
-const permissionsRelations$2 = relations(permissions$2, ({ many }) => ({ rolePermissions: many(rolePermissions$2) }));
-const rolePermissionsRelations$2 = relations(rolePermissions$2, ({ one }) => ({
-  role: one(roles$2, { fields: [rolePermissions$2.roleId], references: [roles$2.id] }),
-  permission: one(permissions$2, { fields: [rolePermissions$2.permissionId], references: [permissions$2.id] })
-}));
 const mediaRelations$2 = relations(media$2, ({ one }) => ({ user: one(users$2, { fields: [media$2.userId], references: [users$2.id] }) }));
 const menusRelations$2 = relations(menus$2, ({ one, many }) => ({
   parent: one(menus$2, { fields: [menus$2.parentId], references: [menus$2.id], relationName: "menuParentChild" }),
@@ -516,7 +445,9 @@ const menusRelations$2 = relations(menus$2, ({ one, many }) => ({
 }));
 const mysqlSchema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  activityLogs: activityLogs$3,
   adminRefreshSessions: adminRefreshSessions$2,
+  adminTwoFactor: adminTwoFactor$2,
   categories: categories$2,
   categoriesRelations: categoriesRelations$2,
   media: media$2,
@@ -524,16 +455,10 @@ const mysqlSchema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineP
   menus: menus$2,
   menusRelations: menusRelations$2,
   passwordResetTokens: passwordResetTokens$2,
-  permissions: permissions$2,
-  permissionsRelations: permissionsRelations$2,
   postCategories: postCategories$2,
   postCategoriesRelations: postCategoriesRelations$2,
   posts: posts$2,
   postsRelations: postsRelations$2,
-  rolePermissions: rolePermissions$2,
-  rolePermissionsRelations: rolePermissionsRelations$2,
-  roles: roles$2,
-  rolesRelations: rolesRelations$2,
   settings: settings$3,
   users: users$2,
   usersRelations: usersRelations$2
@@ -545,8 +470,15 @@ const users$1 = pgTable("users", {
   name: varchar$1("name", { length: 255 }).notNull(),
   email: varchar$1("email", { length: 255 }).notNull().unique(),
   password: varchar$1("password", { length: 255 }).notNull(),
-  roleId: id("role_id").references(() => roles$1.id),
+  role: varchar$1("role", { length: 32 }).notNull().default("author"),
   emailVerified: integer$1("email_verified").notNull().default(0),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull()
+});
+const adminTwoFactor$1 = pgTable("admin_two_factor", {
+  userId: id("user_id").primaryKey(),
+  secret: text$2("secret").notNull(),
+  enabled: integer$1("enabled").notNull().default(0),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull()
 });
@@ -578,11 +510,14 @@ const posts$1 = pgTable("posts", {
   metaDescription: text$2("meta_description"),
   featuredImage: text$2("featured_image"),
   gallery: text$2("gallery"),
-  authorId: id("author_id").notNull().references(() => users$1.id),
+  authorId: id("author_id").notNull(),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull()
-});
+  updatedAt: timestamp("updated_at").notNull(),
+  deletedAt: timestamp("deleted_at")
+}, (table) => ({
+  deletedAtIdx: index$7("posts_deleted_at_idx").on(table.deletedAt, table.type, table.updatedAt)
+}));
 const menus$1 = pgTable("menus", {
   id: id("id").primaryKey(),
   title: varchar$1("title", { length: 255 }).notNull(),
@@ -614,33 +549,9 @@ const postCategories$1 = pgTable("post_categories", {
   categoryId: id("category_id").notNull().references(() => categories$1.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").notNull()
 });
-const roles$1 = pgTable("roles", {
-  id: id("id").primaryKey(),
-  name: varchar$1("name", { length: 255 }).notNull(),
-  slug: varchar$1("slug", { length: 255 }).notNull().unique(),
-  description: text$2("description"),
-  isSystem: integer$1("is_system").notNull().default(0),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull()
-});
-const permissions$1 = pgTable("permissions", {
-  id: id("id").primaryKey(),
-  name: varchar$1("name", { length: 255 }).notNull(),
-  slug: varchar$1("slug", { length: 255 }).notNull().unique(),
-  group: varchar$1("group", { length: 64 }).notNull(),
-  description: text$2("description"),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull()
-});
-const rolePermissions$1 = pgTable("role_permissions", {
-  id: id("id").primaryKey(),
-  roleId: id("role_id").notNull().references(() => roles$1.id, { onDelete: "cascade" }),
-  permissionId: id("permission_id").notNull().references(() => permissions$1.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").notNull()
-});
 const media$1 = pgTable("media", {
   id: id("id").primaryKey(),
-  userId: id("user_id").notNull().references(() => users$1.id),
+  userId: id("user_id").notNull(),
   name: varchar$1("name", { length: 255 }).notNull(),
   fileName: varchar$1("file_name", { length: 255 }).notNull(),
   mimeType: varchar$1("mime_type", { length: 255 }).notNull(),
@@ -661,8 +572,26 @@ const settings$2 = pgTable("settings", {
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull()
 });
-const usersRelations$1 = relations(users$1, ({ one, many }) => ({
-  role: one(roles$1, { fields: [users$1.roleId], references: [roles$1.id] }),
+const activityLogs$2 = pgTable("activity_logs", {
+  id: id("id").primaryKey(),
+  actorId: id("actor_id"),
+  actorName: varchar$1("actor_name", { length: 255 }),
+  actorEmail: varchar$1("actor_email", { length: 255 }),
+  action: varchar$1("action", { length: 64 }).notNull(),
+  resource: varchar$1("resource", { length: 64 }).notNull(),
+  resourceId: id("resource_id"),
+  metadata: text$2("metadata"),
+  ipAddress: varchar$1("ip_address", { length: 45 }),
+  userAgent: text$2("user_agent"),
+  success: integer$1("success").notNull().default(1),
+  statusCode: integer$1("status_code").notNull().default(200),
+  createdAt: timestamp("created_at").notNull()
+}, (table) => ({
+  createdAtIdx: index$7("activity_logs_created_at_idx").on(table.createdAt),
+  actorCreatedAtIdx: index$7("activity_logs_actor_created_at_idx").on(table.actorId, table.createdAt),
+  resourceCreatedAtIdx: index$7("activity_logs_resource_created_at_idx").on(table.resource, table.resourceId, table.createdAt)
+}));
+const usersRelations$1 = relations(users$1, ({ many }) => ({
   posts: many(posts$1),
   media: many(media$1)
 }));
@@ -675,12 +604,6 @@ const postCategoriesRelations$1 = relations(postCategories$1, ({ one }) => ({
   post: one(posts$1, { fields: [postCategories$1.postId], references: [posts$1.id] }),
   category: one(categories$1, { fields: [postCategories$1.categoryId], references: [categories$1.id] })
 }));
-const rolesRelations$1 = relations(roles$1, ({ many }) => ({ users: many(users$1), rolePermissions: many(rolePermissions$1) }));
-const permissionsRelations$1 = relations(permissions$1, ({ many }) => ({ rolePermissions: many(rolePermissions$1) }));
-const rolePermissionsRelations$1 = relations(rolePermissions$1, ({ one }) => ({
-  role: one(roles$1, { fields: [rolePermissions$1.roleId], references: [roles$1.id] }),
-  permission: one(permissions$1, { fields: [rolePermissions$1.permissionId], references: [permissions$1.id] })
-}));
 const mediaRelations$1 = relations(media$1, ({ one }) => ({ user: one(users$1, { fields: [media$1.userId], references: [users$1.id] }) }));
 const menusRelations$1 = relations(menus$1, ({ one, many }) => ({
   parent: one(menus$1, { fields: [menus$1.parentId], references: [menus$1.id], relationName: "menuParentChild" }),
@@ -688,7 +611,9 @@ const menusRelations$1 = relations(menus$1, ({ one, many }) => ({
 }));
 const pgsqlSchema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
+  activityLogs: activityLogs$2,
   adminRefreshSessions: adminRefreshSessions$1,
+  adminTwoFactor: adminTwoFactor$1,
   categories: categories$1,
   categoriesRelations: categoriesRelations$1,
   media: media$1,
@@ -696,62 +621,48 @@ const pgsqlSchema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineP
   menus: menus$1,
   menusRelations: menusRelations$1,
   passwordResetTokens: passwordResetTokens$1,
-  permissions: permissions$1,
-  permissionsRelations: permissionsRelations$1,
   postCategories: postCategories$1,
   postCategoriesRelations: postCategoriesRelations$1,
   posts: posts$1,
   postsRelations: postsRelations$1,
-  rolePermissions: rolePermissions$1,
-  rolePermissionsRelations: rolePermissionsRelations$1,
-  roles: roles$1,
-  rolesRelations: rolesRelations$1,
   settings: settings$2,
   users: users$1,
   usersRelations: usersRelations$1
 }, Symbol.toStringTag, { value: "Module" }));
 const activeSchema = databaseConfig.connection === "mysql" ? mysqlSchema : databaseConfig.connection === "pgsql" ? pgsqlSchema : sqliteSchema;
 const users = activeSchema.users;
+const adminTwoFactor = activeSchema.adminTwoFactor;
 const adminRefreshSessions = activeSchema.adminRefreshSessions;
 const passwordResetTokens = activeSchema.passwordResetTokens;
 const posts = activeSchema.posts;
 const menus = activeSchema.menus;
 const categories = activeSchema.categories;
 const postCategories = activeSchema.postCategories;
-const roles = activeSchema.roles;
-const permissions = activeSchema.permissions;
-const rolePermissions = activeSchema.rolePermissions;
 const media = activeSchema.media;
 const settings$1 = activeSchema.settings;
+const activityLogs$1 = activeSchema.activityLogs;
 const usersRelations = activeSchema.usersRelations;
 const postsRelations = activeSchema.postsRelations;
 const categoriesRelations = activeSchema.categoriesRelations;
 const postCategoriesRelations = activeSchema.postCategoriesRelations;
-const rolesRelations = activeSchema.rolesRelations;
-const permissionsRelations = activeSchema.permissionsRelations;
-const rolePermissionsRelations = activeSchema.rolePermissionsRelations;
 const mediaRelations = activeSchema.mediaRelations;
 const menusRelations = activeSchema.menusRelations;
 const schema = {
   users,
+  adminTwoFactor,
   adminRefreshSessions,
   passwordResetTokens,
   posts,
   menus,
   categories,
   postCategories,
-  roles,
-  permissions,
-  rolePermissions,
   media,
   settings: settings$1,
+  activityLogs: activityLogs$1,
   usersRelations,
   postsRelations,
   categoriesRelations,
   postCategoriesRelations,
-  rolesRelations,
-  permissionsRelations,
-  rolePermissionsRelations,
   mediaRelations,
   menusRelations
 };
@@ -778,15 +689,18 @@ const pgClient = databaseConfig.connection === "pgsql" ? new Pool({
   ssl: databaseConfig.ssl ? { rejectUnauthorized: false } : void 0
 }) : null;
 const databaseTables = [
+  "admin_two_factor",
   "admin_refresh_sessions",
   "password_reset_tokens",
   "post_categories",
+  // Legacy tables retained so migrate:fresh can remove pre-static-role schemas.
   "role_permissions",
   "posts",
   "menus",
   "categories",
   "media",
   "settings",
+  "activity_logs",
   "users",
   "permissions",
   "roles",
@@ -868,7 +782,9 @@ const executeSqlite = async (sql2, params, method) => {
   return { rows: statement.raw().all(...params) };
 };
 async function executeSqliteMigrations(queries) {
-  if (queries.length > 0) sqliteClient.exec(queries.join("\n"));
+  for (const query of queries) {
+    if (query.trim()) sqliteClient.exec(query);
+  }
 }
 const sqliteDb = drizzle(executeSqlite, { schema });
 const db = databaseConfig.connection === "sqlite" ? sqliteDb : databaseConfig.connection === "mysql" ? drizzle$1({ client: mysqlClient, schema, mode: "default" }) : drizzle$2({ client: pgClient, schema });
@@ -950,19 +866,6 @@ function sanitizeText(text2) {
   if (!text2) return "";
   return sanitizeHtmlLibrary(text2.slice(0, MAX_TEXT_LENGTH), { allowedTags: [], allowedAttributes: {} }).trim();
 }
-const MAX_PAGE = 1e4;
-const MAX_PER_PAGE = 100;
-function clampPage(value, fallback = 1) {
-  return typeof value === "number" && Number.isSafeInteger(value) ? Math.min(MAX_PAGE, Math.max(1, value)) : fallback;
-}
-function clampPerPage(value, fallback = 20) {
-  return typeof value === "number" && Number.isSafeInteger(value) ? Math.min(MAX_PER_PAGE, Math.max(1, value)) : fallback;
-}
-function clampPagination(filters) {
-  const page = clampPage(filters.page);
-  const perPage = clampPerPage(filters.perPage);
-  return { page, perPage, offset: (page - 1) * perPage };
-}
 function affectedRows(result) {
   if (Array.isArray(result)) return affectedRows(result[0]);
   if (!result || typeof result !== "object") return 0;
@@ -974,154 +877,262 @@ function affectedRows(result) {
   if (record.rows !== result) return affectedRows(record.rows);
   return 0;
 }
-const MAX_FILTER_TEXT_LENGTH$2 = 100;
-function toSafe(user) {
-  const safe = { ...user };
-  Reflect.deleteProperty(safe, "password");
-  return safe;
-}
-async function findUserByIdRecord(id2) {
-  const rows = await db.select().from(users).where(eq(users.id, id2)).limit(1).execute();
+const MAX_CATEGORY_ROWS = 5e3;
+async function findCategoryByIdRecord(id2) {
+  const rows = await db.select({
+    id: categories.id,
+    name: categories.name,
+    slug: categories.slug,
+    type: categories.type,
+    description: categories.description,
+    image: categories.image,
+    status: categories.status,
+    createdAt: categories.createdAt,
+    updatedAt: categories.updatedAt
+  }).from(categories).where(eq(categories.id, id2)).limit(1).execute();
   return rows[0];
 }
-async function findUserByEmailRecord(email) {
-  const rows = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim())).limit(1).execute();
-  return rows[0];
-}
-async function listUsersPaginatedRecord(filters) {
-  const { page, perPage, offset } = clampPagination(filters);
+async function listCategoryRecords(filters) {
   const conditions = [];
-  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH$2);
-  const roleId = filters.roleId?.slice(0, 128);
+  const type = filters?.type?.slice(0, 64);
+  const search2 = filters?.search?.slice(0, 100);
+  if (type) {
+    conditions.push(eq(categories.type, type));
+  }
   if (search2) {
-    conditions.push(
-      or(like(users.name, `%${search2}%`), like(users.email, `%${search2}%`))
-    );
+    conditions.push(like(categories.name, `%${search2}%`));
   }
-  if (roleId) {
-    conditions.push(eq(users.roleId, roleId));
+  if (filters?.status) {
+    conditions.push(eq(categories.status, filters.status));
   }
-  const whereClause = conditions.length > 0 ? and(...conditions) : void 0;
-  const totalQuery = db.select({ value: count() }).from(users);
-  const totalRows = whereClause ? await totalQuery.where(whereClause).execute() : await totalQuery.execute();
-  const total = totalRows[0]?.value ?? 0;
-  const lastPage = Math.max(1, Math.ceil(total / perPage));
-  let orderColumn = desc(users.updatedAt);
-  if (filters.sortBy) {
-    const column = filters.sortBy === "name" ? users.name : filters.sortBy === "email" ? users.email : filters.sortBy === "createdAt" ? users.createdAt : filters.sortBy === "updatedAt" ? users.updatedAt : null;
+  let orderColumn = desc(categories.updatedAt);
+  if (filters?.sortBy) {
+    const column = filters.sortBy === "name" ? categories.name : filters.sortBy === "createdAt" ? categories.createdAt : null;
     if (column) {
       orderColumn = filters.sortOrder === "asc" ? asc(column) : desc(column);
     }
   }
-  const dataQuery = db.select({
-    id: users.id,
-    name: users.name,
-    email: users.email,
-    roleId: users.roleId,
-    emailVerified: users.emailVerified,
-    createdAt: users.createdAt,
-    updatedAt: users.updatedAt,
-    roleName: roles.name
-  }).from(users).leftJoin(roles, eq(users.roleId, roles.id));
-  const paged = await (whereClause ? dataQuery.where(whereClause) : dataQuery).orderBy(orderColumn).limit(perPage).offset(offset).execute();
+  const query = db.select({
+    id: categories.id,
+    name: categories.name,
+    slug: categories.slug,
+    type: categories.type,
+    description: categories.description,
+    image: categories.image,
+    status: categories.status,
+    createdAt: categories.createdAt,
+    updatedAt: categories.updatedAt
+  }).from(categories).orderBy(orderColumn);
+  return await (conditions.length > 0 ? query.where(and(...conditions)) : query).limit(MAX_CATEGORY_ROWS).execute();
+}
+async function categorySlugExistsRecord(slug, excludeId) {
+  const rows = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).limit(1).execute();
+  return excludeId ? rows.some((row) => row.id !== excludeId) : rows.length > 0;
+}
+async function createCategoryRecord(input) {
+  await db.insert(categories).values({
+    ...input,
+    name: sanitizeText(input.name),
+    description: input.description ? sanitizeText(input.description) : null
+  }).execute();
   return {
-    data: paged,
+    id: input.id,
+    name: sanitizeText(input.name),
+    slug: input.slug,
+    type: input.type,
+    description: input.description ? sanitizeText(input.description) : null,
+    image: input.image,
+    status: input.status,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt
+  };
+}
+async function updateCategoryRecord(id2, input) {
+  const updates = { updatedAt: input.updatedAt };
+  if (input.name !== void 0) updates.name = sanitizeText(input.name);
+  if (input.slug !== void 0) updates.slug = input.slug;
+  if (input.type !== void 0) updates.type = input.type;
+  if (input.description !== void 0) updates.description = input.description ? sanitizeText(input.description) : null;
+  if (input.image !== void 0) updates.image = input.image;
+  if (input.status !== void 0) updates.status = input.status;
+  await db.update(categories).set(updates).where(eq(categories.id, id2)).execute();
+  return await findCategoryByIdRecord(id2) ?? null;
+}
+async function deleteCategoryRecord(id2) {
+  const result = await db.delete(categories).where(eq(categories.id, id2)).execute();
+  return affectedRows(result) > 0;
+}
+const MAX_PAGE = 1e4;
+const DEFAULT_PER_PAGE = 10;
+const MAX_PER_PAGE = 10;
+function clampPage(value, fallback = 1) {
+  return typeof value === "number" && Number.isSafeInteger(value) ? Math.min(MAX_PAGE, Math.max(1, value)) : fallback;
+}
+function clampPerPage(value, fallback = DEFAULT_PER_PAGE) {
+  const safeFallback = Math.min(MAX_PER_PAGE, Math.max(1, fallback));
+  return typeof value === "number" && Number.isSafeInteger(value) ? Math.min(MAX_PER_PAGE, Math.max(1, value)) : safeFallback;
+}
+function clampPagination(filters) {
+  const page = clampPage(filters.page);
+  const perPage = clampPerPage(filters.perPage);
+  return { page, perPage, offset: (page - 1) * perPage };
+}
+const MAX_FILTER_TEXT_LENGTH$3 = 100;
+async function findMediaByIdRecord(id2) {
+  const rows = await db.select().from(media).where(eq(media.id, id2)).limit(1).execute();
+  return rows[0];
+}
+async function listMediaRecords(filters) {
+  const { page, perPage, offset } = clampPagination(filters);
+  const conditions = [];
+  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH$3);
+  const folder = filters.folder === null ? null : filters.folder?.slice(0, 255);
+  const mimeType = filters.mimeType?.slice(0, 100);
+  if (search2) {
+    conditions.push(like(media.name, `%${search2}%`));
+  }
+  if (filters.folder !== void 0) {
+    if (folder === null) conditions.push(eq(media.folder, null));
+    else if (folder !== void 0) conditions.push(eq(media.folder, folder));
+  }
+  if (mimeType && mimeType !== "all") {
+    conditions.push(
+      mimeType.endsWith("/*") ? like(media.mimeType, `${mimeType.slice(0, -1)}%`) : eq(media.mimeType, mimeType)
+    );
+  }
+  const whereClause = conditions.length > 0 ? and(...conditions) : void 0;
+  let query = db.select().from(media);
+  if (whereClause) query = query.where(whereClause);
+  const totalQuery = db.select({ value: count() }).from(media);
+  const totalRows = whereClause ? await totalQuery.where(whereClause).execute() : await totalQuery.execute();
+  const total = totalRows[0]?.value ?? 0;
+  const data = await query.orderBy(desc(media.createdAt)).limit(perPage).offset(offset).execute();
+  return {
+    data,
     meta: {
       currentPage: page,
       perPage,
       total,
-      lastPage,
-      from: total > 0 ? offset + 1 : 0,
+      lastPage: Math.max(1, Math.ceil(total / perPage)),
+      from: total === 0 ? 0 : offset + 1,
       to: Math.min(offset + perPage, total)
     }
   };
 }
-async function createUserRecord(input) {
-  await db.insert(users).values({
+async function createMediaRecord$1(input) {
+  await db.insert(media).values(input).execute();
+  return await findMediaByIdRecord(input.id);
+}
+async function updateMediaRecord(id2, input) {
+  await db.update(media).set(input).where(eq(media.id, id2)).execute();
+  return await findMediaByIdRecord(id2) ?? null;
+}
+async function deleteMediaRecord(id2) {
+  const result = await db.delete(media).where(eq(media.id, id2)).execute();
+  return affectedRows(result) > 0;
+}
+const MAX_MENU_ROWS = 5e3;
+async function findMenuById(id2) {
+  const rows = await db.select().from(menus).where(eq(menus.id, id2)).limit(1).execute();
+  return rows[0];
+}
+async function listMenus$1(type, publishedOnly = false) {
+  const query = db.select().from(menus);
+  const condition = type ? eq(menus.type, type) : void 0;
+  const where = publishedOnly ? condition ? and(condition, eq(menus.status, "published")) : eq(menus.status, "published") : condition;
+  return await (where ? query.where(where) : query).limit(MAX_MENU_ROWS).execute();
+}
+async function getMenuTreeRecords(items, type) {
+  const rows = await listMenus$1(type, true);
+  const map = /* @__PURE__ */ new Map();
+  const roots = [];
+  for (const row of rows) {
+    map.set(row.id, {
+      id: row.id,
+      title: row.title,
+      url: row.url,
+      position: row.position,
+      cssClass: row.cssClass,
+      target: row.target,
+      image: row.image,
+      parentId: row.parentId,
+      children: []
+    });
+  }
+  for (const row of rows) {
+    const node = map.get(row.id);
+    if (row.parentId && map.has(row.parentId)) {
+      map.get(row.parentId).children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  const visited = /* @__PURE__ */ new Set();
+  const MAX_RENDER_DEPTH = 50;
+  const sortTree = (tree, depth = 0) => {
+    const result = [];
+    for (const node of [...tree].sort((a, b) => a.position - b.position)) {
+      if (visited.has(node.id)) continue;
+      visited.add(node.id);
+      result.push({
+        ...node,
+        children: depth < MAX_RENDER_DEPTH ? sortTree(node.children, depth + 1) : []
+      });
+    }
+    return result;
+  };
+  const sortedRoots = sortTree(roots);
+  for (const node of map.values()) {
+    if (!visited.has(node.id)) {
+      node.parentId = null;
+      sortedRoots.push(...sortTree([node]));
+    }
+  }
+  return sortedRoots;
+}
+async function createMenuRecord(input) {
+  await db.insert(menus).values({
     id: input.id,
-    name: sanitizeText(input.name),
-    email: input.email.toLowerCase().trim(),
-    password: input.passwordHash,
-    roleId: input.roleId,
-    emailVerified: 0,
+    title: sanitizeText(input.title),
+    url: input.url,
+    type: input.type,
+    position: input.position,
+    cssClass: input.cssClass ? sanitizeText(input.cssClass) : null,
+    target: input.target ?? null,
+    image: input.image ?? null,
+    status: input.status ?? "published",
+    parentId: input.parentId ?? null,
     createdAt: input.createdAt,
     updatedAt: input.updatedAt
   }).execute();
-  return await findSafeUserByIdRecord(input.id);
+  return await findMenuById(input.id);
 }
-async function updateUserRecord(id2, input) {
-  const updates = { updatedAt: input.updatedAt };
-  if (input.name !== void 0) updates.name = sanitizeText(input.name);
-  if (input.email !== void 0) updates.email = input.email.toLowerCase().trim();
-  if (input.passwordHash !== void 0) updates.password = input.passwordHash;
-  if (input.roleId !== void 0) updates.roleId = input.roleId;
-  await db.update(users).set(updates).where(eq(users.id, id2)).execute();
-  return await findSafeUserByIdRecord(id2) ?? null;
+async function updateMenuRecord(id2, input) {
+  const updateData = { updatedAt: input.updatedAt };
+  if (input.title !== void 0) updateData.title = sanitizeText(input.title);
+  if (input.url !== void 0) updateData.url = input.url;
+  if (input.type !== void 0) updateData.type = input.type;
+  if (input.position !== void 0) updateData.position = input.position;
+  if (input.cssClass !== void 0) updateData.cssClass = input.cssClass ? sanitizeText(input.cssClass) : null;
+  if (input.target !== void 0) updateData.target = input.target ?? null;
+  if (input.image !== void 0) updateData.image = input.image ?? null;
+  if (input.status !== void 0) updateData.status = input.status;
+  if (input.parentId !== void 0) updateData.parentId = input.parentId ?? null;
+  await db.update(menus).set(updateData).where(eq(menus.id, id2)).execute();
+  return await findMenuById(id2) ?? null;
 }
-async function deleteUserRecord(id2) {
-  const result = await db.delete(users).where(eq(users.id, id2)).execute();
+async function deleteMenuRecord(id2) {
+  await db.update(menus).set({ parentId: null }).where(eq(menus.parentId, id2)).execute();
+  const result = await db.delete(menus).where(eq(menus.id, id2)).execute();
   return affectedRows(result) > 0;
 }
-async function findSafeUserByIdRecord(id2) {
-  const user = await findUserByIdRecord(id2);
-  return user ? toSafe(user) : null;
-}
-async function getUserRole(userId) {
-  const userRows = await db.select({ roleId: users.roleId }).from(users).where(eq(users.id, userId)).limit(1).execute();
-  const user = userRows[0];
-  if (!user?.roleId) return null;
-  const roleRows = await db.select({ isSystem: roles.isSystem }).from(roles).where(eq(roles.id, user.roleId)).limit(1).execute();
-  const role = roleRows[0];
-  if (!role) return null;
-  return { roleId: user.roleId, isSystem: role.isSystem === 1 };
-}
-async function getUserPermissions(userId) {
-  const userRole = await getUserRole(userId);
-  if (!userRole) return [];
-  if (userRole.isSystem) {
-    const allPermissions = await db.select({ slug: permissions.slug }).from(permissions).execute();
-    return allPermissions.map((permission) => permission.slug);
+async function reorderMenuTree(items) {
+  for (const item of items) {
+    await db.update(menus).set({ position: item.position, parentId: item.parentId, updatedAt: Date.now() }).where(eq(menus.id, item.id)).execute();
   }
-  const rolePerms = await db.select({ slug: permissions.slug }).from(rolePermissions).innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id)).where(eq(rolePermissions.roleId, userRole.roleId)).execute();
-  return rolePerms.map((rolePermission) => rolePermission.slug);
 }
-async function can(userId, permission) {
-  const userRole = await getUserRole(userId);
-  if (userRole?.isSystem) return true;
-  return (await getUserPermissions(userId)).includes(permission);
-}
-async function canAny(userId, permissions2) {
-  const userRole = await getUserRole(userId);
-  if (userRole?.isSystem) return true;
-  const userPermissions = await getUserPermissions(userId);
-  return permissions2.some((permission) => userPermissions.includes(permission));
-}
-const ADMIN_ACCESS_COOKIE = "admin_access_token";
-const ADMIN_REFRESH_COOKIE = "admin_refresh_token";
-const secure = process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test";
-function buildAdminAccessCookieOptions() {
-  return {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 15
-  };
-}
-function buildAdminRefreshCookieOptions() {
-  return {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30
-  };
-}
-function readAdminAccessToken(cookies) {
-  return cookies.get(ADMIN_ACCESS_COOKIE)?.value ?? null;
-}
-function readAdminRefreshToken(cookies) {
-  return cookies.get(ADMIN_REFRESH_COOKIE)?.value ?? null;
+function generateId() {
+  return ulid();
 }
 const SECRET_NAMES = ["SESSION_SECRET", "ADMIN_JWT_ACCESS_SECRET", "ADMIN_JWT_REFRESH_SECRET"];
 const PLACEHOLDER_VALUES = /* @__PURE__ */ new Set([
@@ -1130,6 +1141,8 @@ const PLACEHOLDER_VALUES = /* @__PURE__ */ new Set([
   "admin@example.com",
   "password123"
 ]);
+const BASE32_TOTP_SECRET_PATTERN = /^[A-Z2-7]+=*$/;
+const MIN_TOTP_SECRET_LENGTH = 26;
 function isTestEnvironment() {
   return process.env.NODE_ENV === "test" || process.env.NODE_ENV !== "production" && process.env.BEAVER_TEST_MODE === "true";
 }
@@ -1142,20 +1155,21 @@ function assertSecureSecrets() {
     }
   }
 }
-function assertSecureSeedEnvironment() {
+function assertSecureAdminEnvironment() {
   if (isTestEnvironment()) return;
   assertSecureSecrets();
   const email = process.env.ADMIN_EMAIL?.trim();
   const password = process.env.ADMIN_PASSWORD;
   const name = process.env.ADMIN_NAME?.trim();
   if (!email || email.length > 254 || !/^.+@.+\..+$/.test(email) || !password || password.length < 12 || password.length > 128 || !name || name.length > 100) {
-    throw new Error("Seeding requires ADMIN_EMAIL, ADMIN_NAME, and an ADMIN_PASSWORD of at least 12 characters.");
+    throw new Error("Super Admin requires ADMIN_EMAIL, ADMIN_NAME, and an ADMIN_PASSWORD of at least 12 characters.");
   }
   if (PLACEHOLDER_VALUES.has(email) || PLACEHOLDER_VALUES.has(password)) {
-    throw new Error("Seeding does not allow placeholder administrator credentials.");
+    throw new Error("Super Admin does not allow placeholder administrator credentials.");
   }
+  getSuperAdminTwoFactorConfig();
 }
-function getSeedAdminCredentials() {
+function getAdminCredentials() {
   if (isTestEnvironment()) {
     return {
       email: process.env.ADMIN_EMAIL?.trim() || "admin@example.com",
@@ -1163,379 +1177,86 @@ function getSeedAdminCredentials() {
       name: process.env.ADMIN_NAME?.trim() || "Super Admin"
     };
   }
-  assertSecureSeedEnvironment();
+  assertSecureAdminEnvironment();
   return {
     email: process.env.ADMIN_EMAIL.trim(),
     password: process.env.ADMIN_PASSWORD,
     name: process.env.ADMIN_NAME.trim()
   };
 }
-const encoder = new TextEncoder();
-function getJwtSecret(name) {
-  const value = process.env[name];
-  if (!isTestEnvironment()) {
-    assertSecureSecrets();
-    return encoder.encode(value);
+function getSuperAdminTwoFactorConfig() {
+  const rawEnabled = process.env.ADMIN_2FA_ENABLED?.trim().toLowerCase();
+  if (rawEnabled && rawEnabled !== "true" && rawEnabled !== "false") {
+    throw new Error("ADMIN_2FA_ENABLED must be either true or false.");
   }
-  if (value && value.length >= 32) return encoder.encode(value);
-  if (process.env.SESSION_SECRET) {
-    return encoder.encode(
-      createHash("sha256").update(`${name}:${process.env.SESSION_SECRET}`).digest("base64url")
-    );
+  const enabled = rawEnabled === "true";
+  if (!enabled) return { enabled: false, secret: null };
+  const secret = process.env.ADMIN_2FA_SECRET?.replace(/\s+/g, "").toUpperCase();
+  if (!secret || secret.length < MIN_TOTP_SECRET_LENGTH || !BASE32_TOTP_SECRET_PATTERN.test(secret)) {
+    throw new Error("ADMIN_2FA_SECRET must be a valid Base32 TOTP secret of at least 26 characters when ADMIN_2FA_ENABLED=true.");
   }
-  return crypto.getRandomValues(new Uint8Array(32));
+  return { enabled: true, secret };
 }
-let accessSecret;
-let refreshSecret;
-function getAccessSecret() {
-  return accessSecret ??= getJwtSecret("ADMIN_JWT_ACCESS_SECRET");
+const BCRYPT_COST = 12;
+async function hashPassword(password) {
+  return bcrypt.hash(password, BCRYPT_COST);
 }
-function getRefreshSecret() {
-  return refreshSecret ??= getJwtSecret("ADMIN_JWT_REFRESH_SECRET");
+async function verifyPassword(password, hash) {
+  return bcrypt.compare(password, hash);
 }
-async function signAccessToken(claims) {
-  return new SignJWT(claims).setProtectedHeader({ alg: "HS256" }).setSubject(claims.sub).setIssuedAt().setExpirationTime("15m").sign(getAccessSecret());
+const SUPER_ADMIN_USER_ID = "env-super-admin";
+function isSuperAdminUserId(userId) {
+  return userId === SUPER_ADMIN_USER_ID;
 }
-async function signRefreshToken(claims) {
-  return new SignJWT(claims).setProtectedHeader({ alg: "HS256" }).setSubject(claims.sub).setIssuedAt().setExpirationTime("30d").sign(getRefreshSecret());
+function isConfiguredSuperAdminEmail(email) {
+  return email.trim().toLowerCase() === getAdminCredentials().email.toLowerCase();
 }
-async function verifyAccessToken(token) {
-  const result = await jwtVerify(token, getAccessSecret(), { algorithms: ["HS256"] });
-  return result.payload;
-}
-async function verifyRefreshToken(token) {
-  const result = await jwtVerify(token, getRefreshSecret(), { algorithms: ["HS256"] });
-  return result.payload;
-}
-function generateId() {
-  return ulid();
-}
-function slugify(input) {
-  let slug = input.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
-  if (slug.length > 200) {
-    slug = slug.slice(0, 200).replace(/-+$/, "");
-  }
-  return slug;
-}
-function getCurrentTimestamp() {
-  return Math.floor(Date.now() / 1e3);
-}
-const REFRESH_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
-const LEGACY_MILLISECONDS_THRESHOLD = 1e10;
-function normalizeExpiry(expiresAt) {
-  return expiresAt >= LEGACY_MILLISECONDS_THRESHOLD ? Math.floor(expiresAt / 1e3) : expiresAt;
-}
-function activeExpiryCondition(now) {
-  return or(
-    gt(adminRefreshSessions.expiresAt, now * 1e3),
-    and(
-      gt(adminRefreshSessions.expiresAt, now),
-      lt(adminRefreshSessions.expiresAt, LEGACY_MILLISECONDS_THRESHOLD)
-    )
-  );
-}
-function getRefreshSessionExpiry() {
-  return getCurrentTimestamp() + REFRESH_SESSION_TTL_SECONDS;
-}
-async function saveRefreshSession(sessionId, userId, expiresAt) {
-  await db.insert(adminRefreshSessions).values({
-    id: sessionId,
-    userId,
-    expiresAt: normalizeExpiry(expiresAt),
-    createdAt: getCurrentTimestamp()
-  }).execute();
-}
-async function deleteRefreshSession(sessionId) {
-  await db.delete(adminRefreshSessions).where(eq(adminRefreshSessions.id, sessionId)).execute();
-}
-async function deleteRefreshSessionsForUser(userId) {
-  await db.delete(adminRefreshSessions).where(eq(adminRefreshSessions.userId, userId)).execute();
-}
-async function deleteRefreshSessionsForRole(roleId) {
-  const roleUsers = await db.select({ id: users.id }).from(users).where(eq(users.roleId, roleId)).execute();
-  if (roleUsers.length === 0) return;
-  await db.delete(adminRefreshSessions).where(inArray(adminRefreshSessions.userId, roleUsers.map((user) => user.id))).execute();
-}
-async function findActiveRefreshSession(sessionId) {
-  const now = getCurrentTimestamp();
-  const rows = await db.select({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).from(adminRefreshSessions).where(and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now))).limit(1).execute();
-  const row = rows[0];
-  return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null;
-}
-async function consumeRefreshSession(sessionId) {
-  const now = getCurrentTimestamp();
-  const condition = and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now));
-  if (databaseConfig.connection !== "mysql") {
-    const rows = await db.delete(adminRefreshSessions).where(condition).returning({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).execute();
-    const row = rows[0];
-    return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null;
-  }
-  return await db.transaction(async (tx) => {
-    const rows = await tx.select({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).from(adminRefreshSessions).where(condition).limit(1).execute();
-    const row = rows[0];
-    if (!row) return null;
-    await tx.delete(adminRefreshSessions).where(condition).execute();
-    return { ...row, expiresAt: normalizeExpiry(row.expiresAt) };
-  });
-}
-async function getAdminSession(cookies) {
-  const access = readAdminAccessToken(cookies);
-  if (!access) return null;
-  try {
-    const payload = await verifyAccessToken(access);
-    if (typeof payload.sessionId !== "string") return null;
-    const stored = await findActiveRefreshSession(payload.sessionId);
-    if (!stored || stored.userId !== payload.sub) return null;
-    const user = await findSafeUserByIdRecord(payload.sub);
-    if (!user) return null;
-    return { user, permissions: await getUserPermissions(user.id) };
-  } catch {
-    return null;
-  }
-}
-async function refreshAdminSession(cookies) {
-  const refresh2 = readAdminRefreshToken(cookies);
-  if (!refresh2) return null;
-  try {
-    const payload = await verifyRefreshToken(refresh2);
-    const stored = await consumeRefreshSession(payload.sessionId);
-    if (!stored || stored.userId !== payload.sub) return null;
-    const user = await findSafeUserByIdRecord(payload.sub);
-    if (!user) return null;
-    const permissions2 = await getUserPermissions(user.id);
-    const nextSessionId = generateId();
-    const nextAccess = await signAccessToken({
-      sub: user.id,
-      sessionId: nextSessionId,
-      email: user.email,
-      roleId: user.roleId,
-      permissions: permissions2
-    });
-    const nextRefresh = await signRefreshToken({
-      sub: user.id,
-      sessionId: nextSessionId
-    });
-    await saveRefreshSession(nextSessionId, user.id, getRefreshSessionExpiry());
-    cookies.set(ADMIN_ACCESS_COOKIE, nextAccess, buildAdminAccessCookieOptions());
-    cookies.set(ADMIN_REFRESH_COOKIE, nextRefresh, buildAdminRefreshCookieOptions());
-    return { user, permissions: permissions2 };
-  } catch {
-    return null;
-  }
-}
-const RATE_LIMITS = /* @__PURE__ */ new Map();
-const MAX_RATE_LIMIT_KEYS = 1e4;
-function isWithinRateLimit(key, limit, windowMs) {
-  const now = Date.now();
-  if (RATE_LIMITS.size >= MAX_RATE_LIMIT_KEYS) {
-    for (const [storedKey, value] of RATE_LIMITS) {
-      if (value.resetAt <= now) RATE_LIMITS.delete(storedKey);
-    }
-    if (RATE_LIMITS.size >= MAX_RATE_LIMIT_KEYS && !RATE_LIMITS.has(key)) {
-      const oldestKey = RATE_LIMITS.keys().next().value;
-      if (oldestKey) RATE_LIMITS.delete(oldestKey);
-    }
-  }
-  const current = RATE_LIMITS.get(key);
-  if (!current || current.resetAt <= now) {
-    RATE_LIMITS.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  if (current.count >= limit) return false;
-  current.count += 1;
-  return true;
-}
-function applySecurityHeaders(context) {
-  context.header("X-Content-Type-Options", "nosniff");
-  context.header("X-Frame-Options", "SAMEORIGIN");
-  context.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  context.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  context.header("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data: blob:; media-src 'self'; connect-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com https://challenges.cloudflare.com; script-src 'self' 'unsafe-inline' blob: https://challenges.cloudflare.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'");
-  if (process.env.NODE_ENV === "production") context.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-}
-function isReadRequest(method) {
-  return method === "GET" || method === "HEAD" || method === "OPTIONS";
-}
-async function enforceRequestBodyLimit(context, maximum) {
-  const request = context.req.raw;
-  if (!request.body) return null;
-  const contentLength = request.headers.get("content-length");
-  if (contentLength && !request.headers.has("transfer-encoding")) {
-    const length = Number(contentLength);
-    return !Number.isSafeInteger(length) || length < 0 || length > maximum ? "Request body is too large." : null;
-  }
-  const reader = request.body.getReader();
-  const chunks = [];
-  let size = 0;
-  for (; ; ) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > maximum) {
-      await reader.cancel();
-      return "Request body is too large.";
-    }
-    chunks.push(value);
-  }
-  context.req.raw = new Request(request, {
-    body: new ReadableStream({
-      start(controller) {
-        for (const chunk of chunks) controller.enqueue(chunk);
-        controller.close();
-      }
-    }),
-    duplex: "half"
-  });
-  return null;
-}
-function hasValidSameOrigin(request) {
-  const origin = request.headers.get("origin");
-  return Boolean(origin && origin === new URL(request.url).origin);
-}
-function clientAddress(request) {
-  if (process.env.TRUST_PROXY === "true") {
-    const forwarded = [
-      request.headers.get("cf-connecting-ip"),
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
-      request.headers.get("x-real-ip")
-    ];
-    for (const candidate of forwarded) {
-      if (candidate && isIP(candidate) !== 0) return candidate;
-    }
-  }
-  return "unknown";
-}
-const PUBLIC_PATHS = /* @__PURE__ */ new Set(["/api/admin/auth/login", "/api/admin/auth/refresh", "/api/admin/auth/session", "/api/admin/auth/logout"]);
-function readCookie(request, name) {
-  const value = request.headers.get("cookie")?.split(";").map((entry) => entry.trim()).find((entry) => entry.startsWith(`${name}=`))?.slice(name.length + 1);
-  return value ? { value } : void 0;
-}
-function requiredPermissions(pathname, method) {
-  const rest = pathname.slice("/api/admin".length);
-  const read = method === "GET" || method === "HEAD";
-  if (rest.startsWith("/users")) {
-    if (read) return ["users.view"];
-    if (rest.includes("/bulk/delete") || method === "DELETE") return ["users.delete", "users.manage"];
-    if (rest.includes("duplicate") || method === "POST") return ["users.create", "users.manage"];
-    return ["users.edit", "users.manage"];
-  }
-  if (rest.startsWith("/roles")) {
-    if (rest === "/roles/sync-permissions" && method === "POST") return ["roles.manage"];
-    if (read) return ["roles.view"];
-    if (rest.includes("/bulk/delete") || method === "DELETE") return ["roles.delete", "roles.manage"];
-    if (rest.includes("duplicate") || method === "POST") return ["roles.create", "roles.manage"];
-    return ["roles.edit", "roles.manage"];
-  }
-  if (rest === "/dashboard") return ["dashboard.view"];
-  if (rest.startsWith("/categories") || rest.startsWith("/posts")) return null;
-  if (rest.startsWith("/menus")) {
-    if (read) return ["menus.view"];
-    if (method === "DELETE") return ["menus.delete"];
-    if (method === "POST" && rest === "/menus") return ["menus.create"];
-    return ["menus.edit", "menus.manage"];
-  }
-  if (rest.startsWith("/media")) return read ? ["media.view"] : null;
-  if (rest === "/settings") return ["settings.manage"];
-  return null;
-}
-const adminSecurity = async (context, next) => {
-  const request = context.req.raw;
-  const pathname = context.req.path;
-  const method = request.method;
-  if (pathname === "/api/admin/auth/login" && method === "POST") {
-    const client = clientAddress(request);
-    const key = client === "unknown" ? `${pathname}:global` : `${pathname}:${client}`;
-    const limit = client === "unknown" ? 60 : 10;
-    if (!isWithinRateLimit(key, limit, 15 * 60 * 1e3)) return context.json({ success: false, message: "Too many requests. Please try again later." }, 429);
-  }
-  if (PUBLIC_PATHS.has(pathname)) return next();
-  const session2 = await getAdminSession({ get: (name) => readCookie(request, name), set: () => void 0 });
-  if (!session2) return context.json({ success: false, message: "Unauthorized." }, 401);
-  const permissions2 = requiredPermissions(pathname, method);
-  const allowed = permissions2 ? (await Promise.all(permissions2.map((permission) => can(session2.user.id, permission)))).some(Boolean) : true;
-  if (!allowed) {
-    return context.json({ success: false, message: "Insufficient permissions." }, 403);
-  }
-  context.set("session", { user: session2.user });
-  return next();
-};
-const middleware = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  adminSecurity
-}, Symbol.toStringTag, { value: "Module" }));
-function createAdminRouteContext(context) {
+function getSuperAdminUser() {
+  const credentials = getAdminCredentials();
   return {
-    request: context.req.raw,
-    params: context.req.param(),
-    cookies: {
-      get: (name) => {
-        const value = getCookie(context, name);
-        return value ? { value } : void 0;
-      },
-      set: (name, value, options) => {
-        setCookie(context, name, value, options);
-      }
-    },
-    locals: { session: context.get("session") ?? null }
+    id: SUPER_ADMIN_USER_ID,
+    name: credentials.name,
+    email: credentials.email,
+    password: "",
+    role: "super-admin",
+    emailVerified: 1,
+    createdAt: 0,
+    updatedAt: 0
   };
 }
-const routeModules = {
-  .../* @__PURE__ */ Object.assign({ "./admin/auth/login.ts": () => Promise.resolve().then(() => login), "./admin/auth/logout.ts": () => Promise.resolve().then(() => logout), "./admin/auth/profile.ts": () => Promise.resolve().then(() => profile), "./admin/auth/refresh.ts": () => Promise.resolve().then(() => refresh), "./admin/auth/session.ts": () => Promise.resolve().then(() => session), "./admin/categories/[id].ts": () => Promise.resolve().then(() => _id_$5), "./admin/categories/[id]/duplicate.ts": () => Promise.resolve().then(() => duplicate$7), "./admin/categories/bulk/delete.ts": () => Promise.resolve().then(() => _delete$4), "./admin/categories/bulk/duplicate.ts": () => Promise.resolve().then(() => duplicate$6), "./admin/categories/bulk/status.ts": () => Promise.resolve().then(() => status), "./admin/categories/index.ts": () => Promise.resolve().then(() => index$5), "./admin/dashboard.ts": () => Promise.resolve().then(() => dashboard), "./admin/media/[id].ts": () => Promise.resolve().then(() => _id_$4), "./admin/media/bulk/delete.ts": () => Promise.resolve().then(() => _delete$3), "./admin/media/index.ts": () => Promise.resolve().then(() => index$4), "./admin/media/upload.ts": () => Promise.resolve().then(() => upload), "./admin/menus/[id].ts": () => Promise.resolve().then(() => _id_$3), "./admin/menus/index.ts": () => Promise.resolve().then(() => index$3), "./admin/menus/reorder.ts": () => Promise.resolve().then(() => reorder), "./admin/middleware.ts": () => Promise.resolve().then(() => middleware), "./admin/posts/[id].ts": () => Promise.resolve().then(() => _id_$2), "./admin/posts/[id]/duplicate.ts": () => Promise.resolve().then(() => duplicate$5), "./admin/posts/bulk/delete.ts": () => Promise.resolve().then(() => _delete$2), "./admin/posts/bulk/duplicate.ts": () => Promise.resolve().then(() => duplicate$4), "./admin/posts/bulk/publish.ts": () => Promise.resolve().then(() => publish), "./admin/posts/bulk/unpublish.ts": () => Promise.resolve().then(() => unpublish), "./admin/posts/index.ts": () => Promise.resolve().then(() => index$2), "./admin/roles/[id].ts": () => Promise.resolve().then(() => _id_$1), "./admin/roles/[id]/duplicate.ts": () => Promise.resolve().then(() => duplicate$3), "./admin/roles/bulk/delete.ts": () => Promise.resolve().then(() => _delete$1), "./admin/roles/bulk/duplicate.ts": () => Promise.resolve().then(() => duplicate$2), "./admin/roles/index.ts": () => Promise.resolve().then(() => index$1), "./admin/roles/sync-permissions.ts": () => Promise.resolve().then(() => syncPermissions), "./admin/settings.ts": () => Promise.resolve().then(() => settings), "./admin/users/[id].ts": () => Promise.resolve().then(() => _id_), "./admin/users/[id]/duplicate.ts": () => Promise.resolve().then(() => duplicate$1), "./admin/users/bulk/delete.ts": () => Promise.resolve().then(() => _delete), "./admin/users/bulk/duplicate.ts": () => Promise.resolve().then(() => duplicate), "./admin/users/index.ts": () => Promise.resolve().then(() => index) }),
-  .../* @__PURE__ */ Object.assign({ "./public/archive/[type].ts": () => Promise.resolve().then(() => _type_), "./public/contact.ts": () => Promise.resolve().then(() => contact), "./public/search.ts": () => Promise.resolve().then(() => search) })
-};
-function toHonoPath(modulePath) {
-  const routeSegments = modulePath.replace(/^\.\//, "").replace(/^public\//, "").replace(/\.ts$/, "").split("/").filter((segment) => segment !== "index").map((segment) => segment.replace(/^\[([^\.][^\]]*)\]$/, ":$1"));
-  return `/${routeSegments.join("/")}`;
+function getSafeSuperAdminUser() {
+  const user = getSuperAdminUser();
+  Reflect.deleteProperty(user, "password");
+  return user;
 }
-const routes = Object.entries(routeModules).filter(([modulePath]) => !modulePath.endsWith(".test.ts") && !modulePath.endsWith("/middleware.ts")).map(([modulePath, load]) => ({
-  path: toHonoPath(modulePath),
-  load
-})).sort((left, right) => right.path.length - left.path.length);
-const apiApp = new Hono().basePath("/api");
-apiApp.onError((error, context) => {
-  const invalidBody = error instanceof SyntaxError;
-  if (!invalidBody) console.error("API request failed", error);
-  return context.json(
-    { success: false, message: invalidBody ? "Invalid request body." : "Request could not be processed." },
-    invalidBody ? 400 : 500
+let configuredPasswordHash;
+async function getConfiguredPasswordHash(password) {
+  return configuredPasswordHash ??= bcrypt.hash(password, 12);
+}
+async function authenticateSuperAdmin(email, password) {
+  const credentials = getAdminCredentials();
+  if (email.trim().toLowerCase() !== credentials.email.toLowerCase()) return null;
+  const hash = await getConfiguredPasswordHash(credentials.password);
+  if (!await verifyPassword(password, hash)) return null;
+  return getSafeSuperAdminUser();
+}
+const MAX_FILTER_TEXT_LENGTH$2 = 100;
+function publicPublishedCondition(now = Date.now()) {
+  return and(
+    isNull(posts.deletedAt),
+    eq(posts.status, "published"),
+    or(isNull(posts.publishedAt), lte(posts.publishedAt, now))
   );
-});
-apiApp.use("*", async (context, next) => {
-  applySecurityHeaders(context);
-  const request = context.req.raw;
-  if (request.url.length > 8192) {
-    return context.json({ success: false, message: "Request URL is too long." }, 414);
-  }
-  const pathname = context.req.path;
-  if (pathname.startsWith("/api/admin/")) context.header("Cache-Control", "no-store, private");
-  if (!isReadRequest(request.method)) {
-    const maximum = pathname === "/api/admin/media/upload" ? 11 * 1024 * 1024 : 1024 * 1024;
-    const bodyError = await enforceRequestBodyLimit(context, maximum);
-    if (bodyError) return context.json({ success: false, message: bodyError }, 413);
-    if (!hasValidSameOrigin(request)) return context.json({ success: false, message: "Invalid request origin." }, 403);
-  }
-  return next();
-});
-apiApp.use("/admin/*", adminSecurity);
-function withHonoHeaders(response, context) {
-  const headers = new Headers(response.headers);
-  for (const [name, value] of context.res.headers) {
-    if (name.toLowerCase() === "set-cookie") headers.append(name, value);
-    else if (!headers.has(name)) headers.set(name, value);
-  }
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
-for (const route of routes) {
-  apiApp.all(route.path, async (context) => {
-    const handler = (await route.load())[context.req.method];
-    if (!handler) {
-      return Response.json({ success: false, message: "Method not allowed." }, { status: 405 });
-    }
-    return withHonoHeaders(await handler(createAdminRouteContext(context)), context);
-  });
+function activePostCondition() {
+  return isNull(posts.deletedAt);
 }
-const ADMIN_PATH = typeof globalThis.__CMS_ADMIN_PATH__ === "string" ? globalThis.__CMS_ADMIN_PATH__ : "/admin";
-const MAX_FILTER_TEXT_LENGTH$1 = 100;
+function trashedPostCondition() {
+  return isNotNull(posts.deletedAt);
+}
+function authorNameExpression() {
+  return sql`CASE WHEN ${posts.authorId} = ${SUPER_ADMIN_USER_ID} THEN ${getSuperAdminUser().name} ELSE ${users.name} END`;
+}
 function buildPaginationMeta(page, perPage, total, offset) {
   const lastPage = Math.max(1, Math.ceil(total / perPage));
   const from = total > 0 ? offset + 1 : 0;
@@ -1576,7 +1297,10 @@ async function findPostByIdRecord(id2) {
   ]);
   return {
     ...row,
-    author: authorRows[0] ?? null,
+    author: authorRows[0] ?? (row.authorId === SUPER_ADMIN_USER_ID ? (() => {
+      const user = getSuperAdminUser();
+      return { id: user.id, name: user.name, email: user.email };
+    })() : null),
     categories: postCategoriesRows
   };
 }
@@ -1604,20 +1328,27 @@ async function findPublishedByTypeAndSlugRecord(type, slug) {
     publishedAt: posts.publishedAt,
     createdAt: posts.createdAt,
     updatedAt: posts.updatedAt,
-    authorName: users.name
-  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(and(eq(posts.type, type), eq(posts.slug, slug), eq(posts.status, "published"))).limit(1).execute();
+    authorName: authorNameExpression()
+  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(and(eq(posts.type, type), eq(posts.slug, slug), publicPublishedCondition())).limit(1).execute();
   return rows[0];
 }
 async function listPostRecords(filters = {}) {
   const { page, perPage, offset } = clampPagination(filters);
   const conditions = [];
-  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH$1);
+  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH$2);
   const type = filters.type?.slice(0, 64);
   const status2 = filters.status?.slice(0, 32);
   const authorId = filters.authorId?.slice(0, 128);
   const categoryId = filters.categoryId?.slice(0, 128);
+  conditions.push(filters.trash ? trashedPostCondition() : activePostCondition());
   if (search2) conditions.push(like(posts.title, `%${search2}%`));
   if (type) conditions.push(eq(posts.type, type));
+  if (filters.types) {
+    if (filters.types.length === 0) {
+      return { data: [], meta: buildPaginationMeta(page, perPage, 0, offset) };
+    }
+    conditions.push(inArray(posts.type, filters.types.slice(0, 100)));
+  }
   if (status2) conditions.push(eq(posts.status, status2));
   if (authorId) conditions.push(eq(posts.authorId, authorId));
   if (categoryId) {
@@ -1650,18 +1381,19 @@ async function listPostRecords(filters = {}) {
     publishedAt: posts.publishedAt,
     createdAt: posts.createdAt,
     updatedAt: posts.updatedAt,
-    authorName: users.name
+    deletedAt: posts.deletedAt,
+    authorName: authorNameExpression()
   }).from(posts).leftJoin(users, eq(posts.authorId, users.id));
   const orderColumn = filters.sortBy === "title" ? filters.sortOrder === "asc" ? posts.title : desc(posts.title) : filters.sortBy === "updatedAt" && filters.sortOrder === "asc" ? posts.updatedAt : desc(posts.updatedAt);
   const data = await (whereClause ? dataQuery.where(whereClause) : dataQuery).orderBy(orderColumn).limit(perPage).offset(offset).execute();
   return { data, meta: buildPaginationMeta(page, perPage, total, offset) };
 }
-async function listPublishedPostRecordsByType(type, page = 1, perPage = 12, filters = {}) {
+async function listPublishedPostRecordsByType(type, page = 1, perPage = 10, filters = {}) {
   const clampedPage = clampPage(page);
-  const clampedPerPage = clampPerPage(perPage, 12);
+  const clampedPerPage = clampPerPage(perPage, 10);
   const offset = (clampedPage - 1) * clampedPerPage;
-  const conditions = [eq(posts.type, type), eq(posts.status, "published")];
-  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH$1);
+  const conditions = [eq(posts.type, type), publicPublishedCondition()];
+  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH$2);
   if (search2) {
     const pattern = `%${search2}%`;
     conditions.push(or(like(posts.title, pattern), like(posts.excerpt, pattern), like(posts.description, pattern)));
@@ -1686,7 +1418,7 @@ async function listPublishedPostRecordsByType(type, page = 1, perPage = 12, filt
     featuredImage: posts.featuredImage,
     gallery: posts.gallery,
     publishedAt: posts.publishedAt,
-    authorName: users.name,
+    authorName: authorNameExpression(),
     tags: posts.tags,
     customFieldValues: posts.customFieldValues,
     createdAt: posts.createdAt
@@ -1699,21 +1431,21 @@ async function listPublishedPostRecordsByType(type, page = 1, perPage = 12, filt
   };
 }
 async function listPublishedArchiveFilterOptionsByType(type) {
-  const categoryOptions = await db.selectDistinct({ name: categories.name, slug: categories.slug }).from(categories).innerJoin(postCategories, eq(categories.id, postCategories.categoryId)).innerJoin(posts, eq(postCategories.postId, posts.id)).where(and(eq(posts.type, type), eq(posts.status, "published"), eq(categories.status, "published"))).orderBy(asc(categories.name)).limit(5e3).execute();
-  const tagRows = await db.select({ tags: posts.tags }).from(posts).where(and(eq(posts.type, type), eq(posts.status, "published"))).limit(5e3).execute();
+  const categoryOptions = await db.selectDistinct({ name: categories.name, slug: categories.slug }).from(categories).innerJoin(postCategories, eq(categories.id, postCategories.categoryId)).innerJoin(posts, eq(postCategories.postId, posts.id)).where(and(eq(posts.type, type), publicPublishedCondition(), eq(categories.status, "published"))).orderBy(asc(categories.name)).limit(5e3).execute();
+  const tagRows = await db.select({ tags: posts.tags }).from(posts).where(and(eq(posts.type, type), publicPublishedCondition())).limit(5e3).execute();
   const tags = [...new Set(tagRows.flatMap(({ tags: tags2 }) => {
     const value = parseJson(tags2);
     return Array.isArray(value) ? value.filter((tag) => typeof tag === "string").map((tag) => tag.trim().slice(0, 100)).filter(Boolean) : [];
   }))].sort((a, b) => a.localeCompare(b)).slice(0, 5e3);
   return { categories: categoryOptions, tags, customFields: [] };
 }
-async function searchPublishedPostRecords(query, page = 1, perPage = 12) {
+async function searchPublishedPostRecords(query, page = 1, perPage = 10) {
   const clampedPage = clampPage(page);
-  const clampedPerPage = clampPerPage(perPage, 12);
+  const clampedPerPage = clampPerPage(perPage, 10);
   const offset = (clampedPage - 1) * clampedPerPage;
   const pattern = `%${query}%`;
   const condition = and(
-    eq(posts.status, "published"),
+    publicPublishedCondition(),
     or(like(posts.title, pattern), like(posts.excerpt, pattern), like(posts.description, pattern))
   );
   const data = await db.select({
@@ -1725,14 +1457,14 @@ async function searchPublishedPostRecords(query, page = 1, perPage = 12) {
     featuredImage: posts.featuredImage,
     gallery: posts.gallery,
     publishedAt: posts.publishedAt,
-    authorName: users.name
+    authorName: authorNameExpression()
   }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(condition).orderBy(desc(posts.publishedAt)).limit(clampedPerPage).offset(offset).execute();
   const totalRows = await db.select({ value: count() }).from(posts).where(condition).execute();
   return { data, meta: buildPaginationMeta(clampedPage, clampedPerPage, Number(totalRows[0]?.value ?? 0), offset) };
 }
-async function listPublishedPostRecordsByTag(tag, page = 1, perPage = 12) {
+async function listPublishedPostRecordsByTag(tag, page = 1, perPage = 10) {
   const clampedPage = clampPage(page);
-  const clampedPerPage = clampPerPage(perPage, 12);
+  const clampedPerPage = clampPerPage(perPage, 10);
   const offset = (clampedPage - 1) * clampedPerPage;
   const rows = await db.select({
     id: posts.id,
@@ -1743,25 +1475,29 @@ async function listPublishedPostRecordsByTag(tag, page = 1, perPage = 12) {
     featuredImage: posts.featuredImage,
     gallery: posts.gallery,
     publishedAt: posts.publishedAt,
-    authorName: users.name,
+    authorName: authorNameExpression(),
     tags: posts.tags,
     customFieldValues: posts.customFieldValues,
     createdAt: posts.createdAt
-  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(eq(posts.status, "published")).orderBy(desc(posts.publishedAt)).execute();
+  }).from(posts).leftJoin(users, eq(posts.authorId, users.id)).where(publicPublishedCondition()).orderBy(desc(posts.publishedAt)).execute();
   const filtered = rows.filter((row) => hasTag(row.tags, tag));
   return {
     data: filtered.slice(offset, offset + clampedPerPage).map(stripFilterFields),
     meta: buildPaginationMeta(clampedPage, clampedPerPage, filtered.length, offset)
   };
 }
-async function getDashboardStatsRecord() {
+async function getDashboardStatsRecord(authorId) {
+  const postOwner = authorId ? eq(posts.authorId, authorId) : void 0;
+  const postScope = authorId ? and(postOwner, activePostCondition()) : activePostCondition();
+  const publishedCondition = authorId ? and(postOwner, publicPublishedCondition()) : publicPublishedCondition();
+  const draftCondition = authorId ? and(postOwner, activePostCondition(), eq(posts.status, "draft")) : and(activePostCondition(), eq(posts.status, "draft"));
   const [totalPosts, publishedPosts, draftPosts, totalMedia, totalUsers, totalCategories] = await Promise.all([
-    db.select({ value: count() }).from(posts).execute(),
-    db.select({ value: count() }).from(posts).where(eq(posts.status, "published")).execute(),
-    db.select({ value: count() }).from(posts).where(eq(posts.status, "draft")).execute(),
-    db.select({ value: count() }).from(media).execute(),
-    db.select({ value: count() }).from(users).execute(),
-    db.select({ value: count() }).from(categories).execute()
+    db.select({ value: count() }).from(posts).where(postScope).execute(),
+    db.select({ value: count() }).from(posts).where(publishedCondition).execute(),
+    db.select({ value: count() }).from(posts).where(draftCondition).execute(),
+    authorId ? db.select({ value: count() }).from(media).where(eq(media.userId, authorId)).execute() : db.select({ value: count() }).from(media).execute(),
+    authorId ? Promise.resolve([{ value: 0 }]) : db.select({ value: count() }).from(users).execute(),
+    authorId ? Promise.resolve([{ value: 0 }]) : db.select({ value: count() }).from(categories).execute()
   ]);
   return {
     totalPosts: Number(totalPosts[0]?.value ?? 0),
@@ -1782,8 +1518,32 @@ async function updatePostRecord(id2, input) {
   const rows = await db.select().from(posts).where(eq(posts.id, id2)).limit(1).execute();
   return rows[0];
 }
-async function deletePostRecord(id2) {
-  const result = await db.delete(posts).where(eq(posts.id, id2)).execute();
+async function normalizeLegacyScheduledPostRecords(now) {
+  const result = await db.update(posts).set({ status: "scheduled" }).where(and(activePostCondition(), eq(posts.status, "published"), gt(posts.publishedAt, now))).execute();
+  return affectedRows(result);
+}
+async function listDueScheduledPostRecords(now, limit = 100) {
+  return await db.select({ id: posts.id, publishedAt: posts.publishedAt }).from(posts).where(and(activePostCondition(), eq(posts.status, "scheduled"), lte(posts.publishedAt, now))).orderBy(asc(posts.publishedAt), asc(posts.id)).limit(limit).execute();
+}
+async function publishScheduledPostRecord(id2, now) {
+  const result = await db.update(posts).set({ status: "published", updatedAt: now }).where(and(
+    eq(posts.id, id2),
+    activePostCondition(),
+    eq(posts.status, "scheduled"),
+    lte(posts.publishedAt, now)
+  )).execute();
+  return affectedRows(result) > 0;
+}
+async function trashPostRecord(id2, deletedAt) {
+  const result = await db.update(posts).set({ deletedAt, updatedAt: deletedAt }).where(and(eq(posts.id, id2), activePostCondition())).execute();
+  return affectedRows(result) > 0;
+}
+async function restorePostRecord(id2, updatedAt) {
+  const result = await db.update(posts).set({ deletedAt: null, updatedAt }).where(and(eq(posts.id, id2), trashedPostCondition())).execute();
+  return affectedRows(result) > 0;
+}
+async function permanentlyDeletePostRecord(id2) {
+  const result = await db.delete(posts).where(and(eq(posts.id, id2), trashedPostCondition())).execute();
   return affectedRows(result) > 0;
 }
 async function syncPostCategoriesRecord(postId, categoryIds, now) {
@@ -1792,47 +1552,179 @@ async function syncPostCategoriesRecord(postId, categoryIds, now) {
     await db.insert(postCategories).values({ id: generateId(), postId, categoryId, createdAt: now }).execute();
   }
 }
-let loadedPath;
-function getServerContentTypeRegistry() {
-  const registryPath = process.env.BEAVER_CONTENT_TYPE_REGISTRY_PATH;
-  if (registryPath && registryPath !== loadedPath) {
-    setContentTypeRegistry(JSON.parse(readFileSync(registryPath, "utf8")));
-    loadedPath = registryPath;
+const STATIC_ROLE_SLUGS = [
+  "super-admin",
+  "admin",
+  "editor",
+  "author"
+];
+const STATIC_ROLES = [
+  {
+    slug: "super-admin",
+    name: "Super Admin",
+    description: "Full system access."
+  },
+  {
+    slug: "admin",
+    name: "Admin",
+    description: "Manages users, settings, media, menus, and all content."
+  },
+  {
+    slug: "editor",
+    name: "Editor",
+    description: "Manages all content and publication."
+  },
+  {
+    slug: "author",
+    name: "Author",
+    description: "Creates, edits, publishes, unpublishes, and deletes their own posts, but cannot access pages."
   }
-  return getContentTypeRegistry();
+];
+const ROLE_NAMES = new Map(STATIC_ROLES.map((role) => [role.slug, role.name]));
+function isStaticRole(value) {
+  return typeof value === "string" && STATIC_ROLE_SLUGS.includes(value);
 }
-const ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/;
-const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const emptyToNull = z.string().max(1e4, "Text must be at most 10000 characters").transform((val) => val.trim() === "" ? null : val).nullable().optional();
-const SAFE_SCHEMES = /* @__PURE__ */ new Set(["http:", "https:", "mailto:", "tel:"]);
-function isSafeHref(value) {
-  const candidate = value.trim();
-  if (!candidate || /[\u0000-\u001f\u007f\\]/.test(candidate) || candidate.startsWith("//")) return false;
-  if (candidate.startsWith("/") || candidate.startsWith("#") || candidate.startsWith("?")) return true;
-  try {
-    return SAFE_SCHEMES.has(new URL(candidate).protocol);
-  } catch {
-    return false;
+function getStaticRoleName(role) {
+  if (!isStaticRole(role)) return null;
+  return ROLE_NAMES.get(role) ?? null;
+}
+function getStaticRoleRank(role) {
+  return STATIC_ROLE_SLUGS.length - STATIC_ROLE_SLUGS.indexOf(role);
+}
+const MAX_FILTER_TEXT_LENGTH$1 = 100;
+function toSafe(user) {
+  const safe = { ...user };
+  Reflect.deleteProperty(safe, "password");
+  return safe;
+}
+async function findUserByIdRecord(id2) {
+  if (isSuperAdminUserId(id2)) return getSuperAdminUser();
+  const rows = await db.select().from(users).where(eq(users.id, id2)).limit(1).execute();
+  return rows[0];
+}
+async function findUserByEmailRecord(email) {
+  if (isConfiguredSuperAdminEmail(email)) return getSuperAdminUser();
+  const rows = await db.select().from(users).where(eq(users.email, email.toLowerCase().trim())).limit(1).execute();
+  return rows[0];
+}
+async function listUsersPaginatedRecord(filters) {
+  const { page, perPage, offset } = clampPagination(filters);
+  const conditions = [];
+  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH$1);
+  const role = filters.role;
+  if (search2) {
+    conditions.push(
+      or(like(users.name, `%${search2}%`), like(users.email, `%${search2}%`))
+    );
   }
-}
-const safeHrefSchema = z.string().trim().min(1, "URL is required").max(2048, "URL must be at most 2048 characters").refine(isSafeHref, "URL must be a relative path or use http, https, mailto, or tel");
-const safeImageUrlSchema = z.string().trim().max(2048, "Image URL must be at most 2048 characters").refine((value) => {
-  if (/^https?:\/\//i.test(value)) {
-    try {
-      return ["http:", "https:"].includes(new URL(value).protocol);
-    } catch {
-      return false;
+  if (role) {
+    conditions.push(eq(users.role, role));
+  }
+  const whereClause = conditions.length > 0 ? and(...conditions) : void 0;
+  const totalQuery = db.select({ value: count() }).from(users);
+  const totalRows = whereClause ? await totalQuery.where(whereClause).execute() : await totalQuery.execute();
+  const total = totalRows[0]?.value ?? 0;
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
+  let orderColumn = desc(users.updatedAt);
+  if (filters.sortBy) {
+    const column = filters.sortBy === "name" ? users.name : filters.sortBy === "email" ? users.email : filters.sortBy === "createdAt" ? users.createdAt : filters.sortBy === "updatedAt" ? users.updatedAt : null;
+    if (column) {
+      orderColumn = filters.sortOrder === "asc" ? asc(column) : desc(column);
     }
   }
-  return value.startsWith("/") && !value.startsWith("//") && !/[\u0000-\u001f\u007f\\]/.test(value);
-}, "Image must be a valid http/https URL or a relative path starting with /");
-const imageUrlSchema = safeImageUrlSchema.nullable().optional();
-const featuredImageSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(imageUrlSchema);
-const galleryImageSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(imageUrlSchema);
-const imageUrlSimpleSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(
-  z.string().refine((val) => safeImageUrlSchema.safeParse(val).success, "Image must be a valid http/https URL or a relative path starting with /").nullable().optional()
-);
-const publishStatusEnum = z.enum(["draft", "published"]);
+  const dataQuery = db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+    emailVerified: users.emailVerified,
+    createdAt: users.createdAt,
+    updatedAt: users.updatedAt
+  }).from(users);
+  const paged = await (whereClause ? dataQuery.where(whereClause) : dataQuery).orderBy(orderColumn).limit(perPage).offset(offset).execute();
+  return {
+    data: paged.map((user) => ({ ...user, roleName: getStaticRoleName(user.role) })),
+    meta: {
+      currentPage: page,
+      perPage,
+      total,
+      lastPage,
+      from: total > 0 ? offset + 1 : 0,
+      to: Math.min(offset + perPage, total)
+    }
+  };
+}
+async function createUserRecord(input) {
+  await db.insert(users).values({
+    id: input.id,
+    name: sanitizeText(input.name),
+    email: input.email.toLowerCase().trim(),
+    password: input.passwordHash,
+    role: input.role,
+    emailVerified: 0,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt
+  }).execute();
+  return await findSafeUserByIdRecord(input.id);
+}
+async function updateUserRecord(id2, input) {
+  const updates = { updatedAt: input.updatedAt };
+  if (input.name !== void 0) updates.name = sanitizeText(input.name);
+  if (input.email !== void 0) updates.email = input.email.toLowerCase().trim();
+  if (input.passwordHash !== void 0) updates.password = input.passwordHash;
+  if (input.role !== void 0) updates.role = input.role;
+  await db.update(users).set(updates).where(eq(users.id, id2)).execute();
+  return await findSafeUserByIdRecord(id2) ?? null;
+}
+async function deleteUserRecord(id2) {
+  const result = await db.delete(users).where(eq(users.id, id2)).execute();
+  return affectedRows(result) > 0;
+}
+async function findSafeUserByIdRecord(id2) {
+  if (isSuperAdminUserId(id2)) return getSafeSuperAdminUser();
+  const user = await findUserByIdRecord(id2);
+  return user ? toSafe(user) : null;
+}
+function slugify(input) {
+  let slug = input.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
+  if (slug.length > 200) {
+    slug = slug.slice(0, 200).replace(/-+$/, "");
+  }
+  return slug;
+}
+async function getAllSettingsRecords() {
+  return await db.select().from(settings$1).execute();
+}
+async function getSettingRecord(key) {
+  const rows = await db.select().from(settings$1).where(eq(settings$1.key, key)).limit(1).execute();
+  return rows[0];
+}
+async function upsertSettingRecord(key, value) {
+  const now = getCurrentTimestamp();
+  const existing = await getSettingRecord(key);
+  if (existing) {
+    await db.update(settings$1).set({ value, updatedAt: now }).where(eq(settings$1.key, key)).execute();
+    return { key, value, createdAt: existing.createdAt, updatedAt: now };
+  }
+  await db.insert(settings$1).values({ key, value, createdAt: now, updatedAt: now }).execute();
+  return { key, value, createdAt: now, updatedAt: now };
+}
+const SETTING_KEYS = {
+  TITLE: "title",
+  DESCRIPTION: "description",
+  META_TITLE: "meta_title",
+  META_DESCRIPTION: "meta_description",
+  MAINTENANCE_MODE: "maintenance_mode",
+  TIMEZONE: "timezone",
+  LOGO: "logo",
+  FAVICON: "favicon",
+  LINKS: "links",
+  OPEN_HOURS: "open_hours",
+  CUSTOM_CSS: "custom_css",
+  CUSTOM_JAVASCRIPT: "custom_javascript",
+  TRANSLATE_COUNTRIES: "translate_countries",
+  EMAIL_NOTIFICATIONS: "email_notifications"
+};
 function serviceSuccess(data, message) {
   return { success: true, data, message };
 }
@@ -1938,6 +1830,1353 @@ function invalidatePublicDataCache() {
   } catch {
   }
 }
+const DEFAULT_SETTINGS = {
+  title: "My CMS",
+  description: "A content management system",
+  meta_title: "My CMS - Home",
+  meta_description: "Welcome to My CMS",
+  maintenance_mode: false,
+  timezone: "UTC",
+  logo: "",
+  favicon: "",
+  links: [],
+  open_hours: [],
+  custom_css: "",
+  custom_javascript: "",
+  translate_countries: [],
+  email_notifications: []
+};
+function parseSetting(record, fallback, parser) {
+  if (!record || record.value === "" || record.value === null) return fallback;
+  try {
+    return parser(record.value);
+  } catch {
+    return fallback;
+  }
+}
+function parseJsonSetting(record, fallback) {
+  return parseSetting(record, fallback, (raw) => JSON.parse(raw));
+}
+function parseBooleanSetting(record, fallback) {
+  return parseSetting(record, fallback, (raw) => raw === "true" || raw === "1");
+}
+function parseStringSetting(record, fallback) {
+  return parseSetting(record, fallback, (raw) => raw);
+}
+function parseStringArraySetting(record, fallback) {
+  return parseSetting(record, fallback, (raw) => {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.every((value) => typeof value === "string") ? parsed : fallback;
+  });
+}
+async function getSiteSettings() {
+  return await getCachedPublicData("site-settings", async () => {
+    const records = await getAllSettingsRecords();
+    const map = new Map(records.map((r) => [r.key, r]));
+    return {
+      title: parseStringSetting(map.get(SETTING_KEYS.TITLE), DEFAULT_SETTINGS.title),
+      description: parseStringSetting(map.get(SETTING_KEYS.DESCRIPTION), DEFAULT_SETTINGS.description),
+      meta_title: parseStringSetting(map.get(SETTING_KEYS.META_TITLE), DEFAULT_SETTINGS.meta_title),
+      meta_description: parseStringSetting(map.get(SETTING_KEYS.META_DESCRIPTION), DEFAULT_SETTINGS.meta_description),
+      maintenance_mode: parseBooleanSetting(map.get(SETTING_KEYS.MAINTENANCE_MODE), DEFAULT_SETTINGS.maintenance_mode),
+      timezone: parseStringSetting(map.get(SETTING_KEYS.TIMEZONE), DEFAULT_SETTINGS.timezone),
+      logo: parseStringSetting(map.get(SETTING_KEYS.LOGO), DEFAULT_SETTINGS.logo),
+      favicon: parseStringSetting(map.get(SETTING_KEYS.FAVICON), DEFAULT_SETTINGS.favicon),
+      links: parseJsonSetting(map.get(SETTING_KEYS.LINKS), DEFAULT_SETTINGS.links),
+      open_hours: parseJsonSetting(map.get(SETTING_KEYS.OPEN_HOURS), DEFAULT_SETTINGS.open_hours),
+      custom_css: parseStringSetting(map.get(SETTING_KEYS.CUSTOM_CSS), DEFAULT_SETTINGS.custom_css),
+      custom_javascript: parseStringSetting(map.get(SETTING_KEYS.CUSTOM_JAVASCRIPT), DEFAULT_SETTINGS.custom_javascript),
+      translate_countries: parseStringArraySetting(map.get(SETTING_KEYS.TRANSLATE_COUNTRIES), DEFAULT_SETTINGS.translate_countries),
+      email_notifications: parseStringArraySetting(map.get(SETTING_KEYS.EMAIL_NOTIFICATIONS), DEFAULT_SETTINGS.email_notifications)
+    };
+  });
+}
+async function updateSiteSettings(data) {
+  const upserts = [];
+  if (data.title !== void 0) {
+    upserts.push({ key: SETTING_KEYS.TITLE, value: data.title });
+  }
+  if (data.description !== void 0) {
+    upserts.push({ key: SETTING_KEYS.DESCRIPTION, value: data.description });
+  }
+  if (data.meta_title !== void 0) {
+    upserts.push({ key: SETTING_KEYS.META_TITLE, value: data.meta_title });
+  }
+  if (data.meta_description !== void 0) {
+    upserts.push({ key: SETTING_KEYS.META_DESCRIPTION, value: data.meta_description });
+  }
+  if (data.maintenance_mode !== void 0) {
+    upserts.push({ key: SETTING_KEYS.MAINTENANCE_MODE, value: String(data.maintenance_mode) });
+  }
+  if (data.timezone !== void 0) {
+    upserts.push({ key: SETTING_KEYS.TIMEZONE, value: data.timezone });
+  }
+  if (data.logo !== void 0) {
+    upserts.push({ key: SETTING_KEYS.LOGO, value: data.logo });
+  }
+  if (data.favicon !== void 0) {
+    upserts.push({ key: SETTING_KEYS.FAVICON, value: data.favicon });
+  }
+  if (data.links !== void 0) {
+    upserts.push({ key: SETTING_KEYS.LINKS, value: JSON.stringify(data.links) });
+  }
+  if (data.open_hours !== void 0) {
+    upserts.push({ key: SETTING_KEYS.OPEN_HOURS, value: JSON.stringify(data.open_hours) });
+  }
+  if (data.custom_css !== void 0) {
+    upserts.push({ key: SETTING_KEYS.CUSTOM_CSS, value: data.custom_css });
+  }
+  if (data.custom_javascript !== void 0) {
+    upserts.push({ key: SETTING_KEYS.CUSTOM_JAVASCRIPT, value: data.custom_javascript });
+  }
+  if (data.translate_countries !== void 0) {
+    upserts.push({
+      key: SETTING_KEYS.TRANSLATE_COUNTRIES,
+      value: JSON.stringify(data.translate_countries)
+    });
+  }
+  if (data.email_notifications !== void 0) {
+    const emails = data.email_notifications.split(",").map((s) => s.trim()).filter(Boolean);
+    upserts.push({
+      key: SETTING_KEYS.EMAIL_NOTIFICATIONS,
+      value: JSON.stringify(emails)
+    });
+  }
+  if (upserts.length === 0) {
+    return serviceSuccess(await getSiteSettings(), "No settings to update.");
+  }
+  for (const { key, value } of upserts) {
+    await upsertSettingRecord(key, value);
+  }
+  invalidatePublicDataCache();
+  return serviceSuccess(await getSiteSettings(), "Settings updated successfully.");
+}
+const MAX_FILTER_TEXT_LENGTH = 100;
+function parseMetadata(value) {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function toActivityLogItem(row) {
+  return {
+    ...row,
+    metadata: parseMetadata(row.metadata)
+  };
+}
+async function createActivityLogRecord(input) {
+  const now = input.createdAt ?? getCurrentTimestamp();
+  const row = {
+    id: generateId(),
+    actorId: input.actorId ?? null,
+    actorName: input.actorName ?? null,
+    actorEmail: input.actorEmail ?? null,
+    action: input.action,
+    resource: input.resource,
+    resourceId: input.resourceId ?? null,
+    metadata: input.metadata ? JSON.stringify(input.metadata) : null,
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent ?? null,
+    success: input.success ? 1 : 0,
+    statusCode: input.statusCode,
+    createdAt: now
+  };
+  await db.insert(activityLogs$1).values(row).execute();
+  return toActivityLogItem({ ...row, metadata: row.metadata });
+}
+async function listActivityLogRecords(filters = {}) {
+  const { page, perPage, offset } = clampPagination(filters);
+  const conditions = [];
+  const search2 = filters.search?.trim().slice(0, MAX_FILTER_TEXT_LENGTH);
+  if (search2) {
+    const pattern = `%${search2}%`;
+    conditions.push(
+      or(
+        like(activityLogs$1.actorName, pattern),
+        like(activityLogs$1.actorEmail, pattern),
+        like(activityLogs$1.action, pattern),
+        like(activityLogs$1.resource, pattern),
+        like(activityLogs$1.resourceId, pattern)
+      )
+    );
+  }
+  if (filters.action) conditions.push(eq(activityLogs$1.action, filters.action));
+  if (filters.resource) conditions.push(eq(activityLogs$1.resource, filters.resource));
+  if (filters.success !== void 0) conditions.push(eq(activityLogs$1.success, filters.success ? 1 : 0));
+  if (filters.from !== void 0) conditions.push(gte(activityLogs$1.createdAt, filters.from));
+  if (filters.to !== void 0) conditions.push(lte(activityLogs$1.createdAt, filters.to));
+  const whereClause = conditions.length > 0 ? and(...conditions) : void 0;
+  const totalQuery = db.select({ value: count() }).from(activityLogs$1);
+  const totalRows = whereClause ? await totalQuery.where(whereClause).execute() : await totalQuery.execute();
+  const total = Number(totalRows[0]?.value ?? 0);
+  const lastPage = Math.max(1, Math.ceil(total / perPage));
+  const dataQuery = db.select().from(activityLogs$1);
+  const rows = await (whereClause ? dataQuery.where(whereClause) : dataQuery).orderBy(desc(activityLogs$1.createdAt), desc(activityLogs$1.id)).limit(perPage).offset(offset).execute();
+  return {
+    data: rows.map(toActivityLogItem),
+    meta: {
+      currentPage: page,
+      perPage,
+      total,
+      lastPage,
+      from: total > 0 ? offset + 1 : 0,
+      to: Math.min(offset + perPage, total)
+    }
+  };
+}
+async function deleteActivityLogsBefore(timestamp2) {
+  const result = await db.delete(activityLogs$1).where(lt(activityLogs$1.createdAt, timestamp2)).execute();
+  return affectedRows(result);
+}
+function getPathSegments(pathname) {
+  const prefix = pathname.startsWith("/api/admin/") ? "/api/admin/" : pathname.startsWith("/admin/") ? "/admin/" : null;
+  if (!prefix) return null;
+  return pathname.slice(prefix.length).split("/").filter(Boolean);
+}
+function collectionDescriptor(resource, segments, method) {
+  const second = segments[1];
+  const third = segments[2];
+  if (second === "bulk") {
+    if (!third || method !== "POST") return null;
+    const action = third === "permanent-delete" ? "permanent_delete" : third;
+    return { resource, action: `bulk_${action}`, resourceId: null, authenticationEvent: false };
+  }
+  if (resource === "media" && second === "upload" && method === "POST") {
+    return { resource, action: "upload", resourceId: null, authenticationEvent: false };
+  }
+  if (resource === "menus" && second === "reorder" && method === "POST") {
+    return { resource, action: "reorder", resourceId: null, authenticationEvent: false };
+  }
+  if (!second && method === "POST") {
+    return { resource, action: "create", resourceId: null, authenticationEvent: false };
+  }
+  if (!second) return null;
+  if (third === "duplicate" && method === "POST") {
+    return { resource, action: "duplicate", resourceId: second, authenticationEvent: false };
+  }
+  if (third === "restore" && method === "POST") {
+    return { resource, action: "restore", resourceId: second, authenticationEvent: false };
+  }
+  if (third === "permanent-delete" && method === "DELETE") {
+    return { resource, action: "permanent_delete", resourceId: second, authenticationEvent: false };
+  }
+  if (resource === "users" && third === "2fa" && segments[3] === "disable" && method === "POST") {
+    return { resource, action: "disable_2fa", resourceId: second, authenticationEvent: false };
+  }
+  if (method === "PUT") return { resource, action: "update", resourceId: second, authenticationEvent: false };
+  if (method === "DELETE") return { resource, action: "delete", resourceId: second, authenticationEvent: false };
+  return null;
+}
+function describeActivityRequest(pathname, method) {
+  const segments = getPathSegments(pathname);
+  if (!segments || segments.length === 0) return null;
+  const [resource, second] = segments;
+  if (resource === "auth") {
+    if (second === "login" && method === "POST") return { resource, action: "login", resourceId: null, authenticationEvent: true };
+    if (second === "logout" && method === "POST") return { resource, action: "logout", resourceId: null, authenticationEvent: true };
+    if (second === "refresh" && method === "POST") return null;
+    if (second === "profile" && method === "PUT") return { resource: "profile", action: "update", resourceId: null, authenticationEvent: false };
+    if (second === "2fa" && segments[2] === "verify" && method === "POST") return { resource, action: "login_2fa", resourceId: null, authenticationEvent: true };
+    if (second === "2fa" && (segments[2] === "setup" || segments[2] === "enable" || segments[2] === "disable") && method === "POST") {
+      return { resource, action: `${segments[2]}_2fa`, resourceId: null, authenticationEvent: false };
+    }
+    return null;
+  }
+  if (resource === "settings" && !second && method === "PUT") {
+    return { resource, action: "update", resourceId: null, authenticationEvent: false };
+  }
+  if (resource === "posts") return collectionDescriptor("post", segments, method);
+  if (resource === "categories") return collectionDescriptor("category", segments, method);
+  if (resource === "users") return collectionDescriptor("user", segments, method);
+  if (resource === "media") return collectionDescriptor("media", segments, method);
+  if (resource === "menus") return collectionDescriptor("menu", segments, method);
+  return null;
+}
+const TECHNICAL_CHANGE_KEYS = /* @__PURE__ */ new Set(["id", "createdAt", "updatedAt", "authorId", "author", "categories"]);
+const SENSITIVE_KEY_PATTERN = /(password|token|secret|authorization|cookie|otp|code)/i;
+const CHANGE_ACTIONS = /* @__PURE__ */ new Set([
+  "create",
+  "update",
+  "delete",
+  "restore",
+  "permanent_delete",
+  "duplicate",
+  "upload",
+  "reorder",
+  "publish",
+  "unpublish",
+  "bulk_create",
+  "bulk_update",
+  "bulk_delete",
+  "bulk_restore",
+  "bulk_permanent_delete",
+  "bulk_duplicate",
+  "bulk_publish",
+  "bulk_unpublish",
+  "bulk_status"
+]);
+const STATUS_ONLY_BULK_ACTIONS = /* @__PURE__ */ new Set(["bulk_status"]);
+const MAX_ACTIVITY_STRING_LENGTH = 2e3;
+const MAX_ACTIVITY_OBJECT_KEYS = 100;
+const MAX_ACTIVITY_ARRAY_ITEMS = 50;
+const MAX_ACTIVITY_VALUE_DEPTH = 4;
+function isSensitiveActivityKey(key) {
+  return SENSITIVE_KEY_PATTERN.test(key);
+}
+function isObject(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+function toActivityValue(value, key = "", depth = 0) {
+  if (isSensitiveActivityKey(key)) return "[redacted]";
+  if (value === null || value === void 0) return null;
+  if (typeof value === "string") return value.length > MAX_ACTIVITY_STRING_LENGTH ? `${value.slice(0, MAX_ACTIVITY_STRING_LENGTH)}…` : value;
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  if (typeof value === "bigint") return Number(value);
+  if (value instanceof Date) return value.toISOString();
+  if (depth >= MAX_ACTIVITY_VALUE_DEPTH) return "[truncated]";
+  if (Array.isArray(value)) return value.slice(0, MAX_ACTIVITY_ARRAY_ITEMS).map((item) => toActivityValue(item, key, depth + 1));
+  if (isObject(value)) {
+    return Object.fromEntries(
+      Object.entries(value).slice(0, MAX_ACTIVITY_OBJECT_KEYS).map(([entryKey, entryValue]) => [entryKey, toActivityValue(entryValue, entryKey, depth + 1)])
+    );
+  }
+  return String(value);
+}
+function asActivitySnapshot(value) {
+  return isObject(value) ? value : null;
+}
+function bulkActivityIds(value) {
+  if (!isObject(value) || !Array.isArray(value.ids)) return [];
+  return value.ids.filter((id2) => typeof id2 === "string").slice(0, MAX_ACTIVITY_ARRAY_ITEMS);
+}
+async function findActivityResourceSnapshot(resource, resourceId) {
+  if (resource === "post") return asActivitySnapshot(await findPostByIdRecord(resourceId));
+  if (resource === "category") return asActivitySnapshot(await findCategoryByIdRecord(resourceId));
+  if (resource === "media") return asActivitySnapshot(await findMediaByIdRecord(resourceId));
+  if (resource === "menu") return asActivitySnapshot(await findMenuById(resourceId));
+  if (resource === "user" || resource === "profile") return asActivitySnapshot(await findSafeUserByIdRecord(resourceId));
+  return null;
+}
+async function captureActivitySnapshot(input) {
+  const descriptor = describeActivityRequest(input.pathname, input.method);
+  if (!descriptor) return null;
+  try {
+    if (descriptor.resource === "settings") {
+      return asActivitySnapshot(await getSiteSettings());
+    }
+    if (descriptor.action.startsWith("bulk_")) {
+      const ids = bulkActivityIds(input.requestBody);
+      if (ids.length === 0) return null;
+      return await Promise.all(ids.map(async (id2) => ({
+        id: id2,
+        value: await findActivityResourceSnapshot(descriptor.resource, id2).catch(() => null)
+      })));
+    }
+    const resourceId = descriptor.resourceId ?? (descriptor.resource === "profile" ? input.actorId ?? null : null);
+    if (!resourceId) return null;
+    return await findActivityResourceSnapshot(descriptor.resource, resourceId);
+  } catch {
+  }
+  return null;
+}
+async function responseBody(response) {
+  try {
+    const body = await response.clone().json();
+    return isObject(body) ? body : null;
+  } catch {
+    return null;
+  }
+}
+function responseActorId(body) {
+  if (!body || !isObject(body.data)) return null;
+  const user = body.data.user;
+  if (!isObject(user) || typeof user.id !== "string") return null;
+  return user.id;
+}
+function valuesEqual(left, right) {
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return false;
+  }
+}
+function isBulkActivitySnapshot(value) {
+  return Array.isArray(value) && value.every((item) => isObject(item) && typeof item.id === "string" && Object.prototype.hasOwnProperty.call(item, "value"));
+}
+function bulkSnapshotRecords(value) {
+  if (!isBulkActivitySnapshot(value)) return [];
+  return value.map((item) => ({ id: item.id, data: item.value }));
+}
+function statusOnlyBulkRecords(records) {
+  return records.flatMap((record) => {
+    if (!isObject(record) || typeof record.id !== "string") return [];
+    const data = isObject(record.data) ? record.data : null;
+    return [{ id: record.id, data: { status: data?.status ?? null } }];
+  });
+}
+function buildBulkActivityChanges(before, after, requestBody, action, responseBody2) {
+  const changes = {};
+  const ids = bulkActivityIds(requestBody);
+  if (ids.length > 0) {
+    changes.ids = { before: null, after: toActivityValue(ids, "ids") };
+  }
+  const rawBeforeRecords = bulkSnapshotRecords(before);
+  const rawAfterRecords = action === "bulk_duplicate" && responseBody2 && Array.isArray(responseBody2.data) ? responseBody2.data : bulkSnapshotRecords(after);
+  const beforeRecords = STATUS_ONLY_BULK_ACTIONS.has(action) ? statusOnlyBulkRecords(rawBeforeRecords) : rawBeforeRecords;
+  const afterRecords = STATUS_ONLY_BULK_ACTIONS.has(action) && Array.isArray(rawAfterRecords) ? statusOnlyBulkRecords(rawAfterRecords) : rawAfterRecords;
+  if (beforeRecords.length > 0 || afterRecords.length > 0) {
+    const beforeValue = toActivityValue(beforeRecords, "records");
+    const afterValue = toActivityValue(afterRecords, "records");
+    if (!valuesEqual(beforeValue, afterValue)) {
+      changes.records = { before: beforeValue, after: afterValue };
+    }
+  }
+  return Object.keys(changes).length > 0 ? changes : void 0;
+}
+function buildActivityChanges(before, after, requestBody, action, responseBody2 = null) {
+  if (!CHANGE_ACTIONS.has(action)) return void 0;
+  if (action.startsWith("bulk_")) {
+    return buildBulkActivityChanges(before, after, requestBody, action, responseBody2);
+  }
+  const beforeRecord = isObject(before) ? before : null;
+  const afterRecord = asActivitySnapshot(after);
+  const submittedRecord = asActivitySnapshot(requestBody);
+  const keys = /* @__PURE__ */ new Set([
+    ...Object.keys(beforeRecord ?? {}),
+    ...Object.keys(afterRecord ?? {}),
+    ...Object.keys(submittedRecord ?? {})
+  ]);
+  const changes = {};
+  for (const key of keys) {
+    if (TECHNICAL_CHANGE_KEYS.has(key)) continue;
+    const hasBefore = Boolean(beforeRecord && Object.prototype.hasOwnProperty.call(beforeRecord, key));
+    const hasAfter = Boolean(afterRecord && Object.prototype.hasOwnProperty.call(afterRecord, key));
+    const hasSubmitted = Boolean(submittedRecord && Object.prototype.hasOwnProperty.call(submittedRecord, key));
+    if (isSensitiveActivityKey(key) && hasSubmitted) {
+      changes[key] = { before: "[redacted]", after: "[redacted]" };
+      continue;
+    }
+    const beforeValue = toActivityValue(hasBefore ? beforeRecord[key] : null, key);
+    const afterValue = toActivityValue(
+      hasAfter ? afterRecord[key] : hasSubmitted ? submittedRecord[key] : null,
+      key
+    );
+    if (valuesEqual(beforeValue, afterValue)) continue;
+    changes[key] = { before: beforeValue, after: afterValue };
+  }
+  return Object.keys(changes).length > 0 ? changes : void 0;
+}
+function requestMetadata(pathname, method, descriptor, response, changes) {
+  return {
+    path: pathname,
+    method,
+    statusCode: response.status,
+    ...descriptor.resourceId ? { resourceId: descriptor.resourceId } : {},
+    ...changes ? { changes } : {}
+  };
+}
+async function recordActivityRequest(input) {
+  const descriptor = describeActivityRequest(input.pathname, input.method);
+  if (!descriptor) return;
+  const success = input.response.status >= 200 && input.response.status < 400;
+  if (!descriptor.authenticationEvent && !success) return;
+  const body = await responseBody(input.response);
+  const actorId = input.actorId ?? responseActorId(body);
+  const actor = actorId ? await findSafeUserByIdRecord(actorId).catch(() => null) : null;
+  const userAgent = input.request.headers.get("user-agent")?.slice(0, 1024) ?? null;
+  const responseData = body && "data" in body ? body.data : null;
+  const after = descriptor.action.startsWith("bulk_") ? await captureActivitySnapshot({
+    pathname: input.pathname,
+    method: input.method,
+    actorId,
+    requestBody: input.requestBody
+  }) : responseData;
+  const changes = buildActivityChanges(
+    input.before ?? null,
+    after,
+    input.requestBody,
+    descriptor.action,
+    body
+  );
+  await createActivityLogRecord({
+    actorId,
+    actorName: actor?.name ?? null,
+    actorEmail: actor?.email ?? null,
+    action: descriptor.action,
+    resource: descriptor.resource,
+    resourceId: descriptor.resourceId,
+    metadata: requestMetadata(input.pathname, input.method, descriptor, input.response, changes),
+    ipAddress: input.ipAddress ?? null,
+    userAgent,
+    success,
+    statusCode: input.response.status
+  }).catch((error) => {
+    console.error("Activity log write failed", error);
+  });
+}
+async function listActivityLogs(filters = {}) {
+  return listActivityLogRecords(filters);
+}
+async function purgeExpiredActivityLogs() {
+  return deleteActivityLogsBefore(getActivityLogRetentionCutoff());
+}
+const CONTENT_TYPE_REGISTRY_PATH = "src/components/web/content-type-templates/registry.json";
+const BUILT_IN_CONTENT_TYPES = [
+  { slug: "post", name: "post" },
+  { slug: "page", name: "page" }
+];
+function getRegistryPath() {
+  const configuredPath = process.env.CONTENT_TYPE_REGISTRY_PATH?.trim() || process.env.BEAVER_CONTENT_TYPE_REGISTRY_PATH?.trim();
+  if (configuredPath) return resolve(process.cwd(), configuredPath);
+  const hostRegistryPath = resolve(process.cwd(), CONTENT_TYPE_REGISTRY_PATH);
+  return existsSync(hostRegistryPath) ? hostRegistryPath : void 0;
+}
+function loadRegistryContentTypes() {
+  const filePath = getRegistryPath();
+  if (!filePath || !existsSync(filePath)) return [];
+  const registry = JSON.parse(readFileSync(filePath, "utf8"));
+  if (!Array.isArray(registry.contentTypes)) return [];
+  return registry.contentTypes.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const record = entry;
+    const slug = typeof record.slug === "string" ? record.slug.trim() : "";
+    if (!slug) return [];
+    const name = typeof record.name === "string" && record.name.trim() ? record.name.trim() : slug;
+    return [{ slug, name }];
+  });
+}
+function getContentTypes() {
+  const seen = /* @__PURE__ */ new Set();
+  return [...BUILT_IN_CONTENT_TYPES, ...loadRegistryContentTypes()].filter((contentType) => {
+    if (seen.has(contentType.slug)) return false;
+    seen.add(contentType.slug);
+    return true;
+  });
+}
+function contentTypePermissions(contentType) {
+  const { name, slug } = contentType;
+  return [
+    { slug: `content.${slug}.view`, name: `View ${name} content`, group: slug },
+    { slug: `content.${slug}.create`, name: `Create ${name} content`, group: slug },
+    { slug: `content.${slug}.edit`, name: `Edit any ${name} content`, group: slug },
+    { slug: `content.${slug}.edit-own`, name: `Edit own ${name} content`, group: slug },
+    { slug: `content.${slug}.delete`, name: `Delete ${name} content`, group: slug },
+    { slug: `content.${slug}.delete-own`, name: `Delete own ${name} content`, group: slug },
+    { slug: `content.${slug}.publish`, name: `Publish ${name} content`, group: slug },
+    { slug: `content.${slug}.publish-own`, name: `Publish own ${name} content`, group: slug },
+    { slug: `content.${slug}.unpublish`, name: `Unpublish ${name} content`, group: slug },
+    { slug: `content.${slug}.unpublish-own`, name: `Unpublish own ${name} content`, group: slug },
+    { slug: `category.${slug}.view`, name: `View ${name} categories`, group: slug },
+    { slug: `category.${slug}.manage`, name: `Manage ${name} categories`, group: slug },
+    { slug: `category.${slug}.publish`, name: `Publish ${name} categories`, group: slug },
+    { slug: `category.${slug}.unpublish`, name: `Unpublish ${name} categories`, group: slug }
+  ];
+}
+function getPermissionDefinitions() {
+  return [
+    ...getContentTypes().flatMap(contentTypePermissions),
+    { slug: "dashboard.view", name: "View dashboard statistics", group: "dashboard" },
+    { slug: "media.view", name: "View media library", group: "media" },
+    { slug: "media.upload", name: "Upload new media", group: "media" },
+    { slug: "media.edit", name: "Edit media metadata", group: "media" },
+    { slug: "media.delete", name: "Delete media files", group: "media" },
+    { slug: "menus.view", name: "View menus", group: "menus" },
+    { slug: "menus.create", name: "Create menus", group: "menus" },
+    { slug: "menus.edit", name: "Edit menus", group: "menus" },
+    { slug: "menus.manage", name: "Manage menus", group: "menus" },
+    { slug: "menus.delete", name: "Delete menus", group: "menus" },
+    { slug: "menus.publish", name: "Publish menus", group: "menus" },
+    { slug: "menus.unpublish", name: "Unpublish menus", group: "menus" },
+    { slug: "users.view", name: "View users list", group: "users" },
+    { slug: "users.create", name: "Create new users", group: "users" },
+    { slug: "users.edit", name: "Edit user profiles", group: "users" },
+    { slug: "users.delete", name: "Delete users", group: "users" },
+    { slug: "users.manage", name: "Manage users and credentials", group: "users" },
+    { slug: "activity-log.view", name: "View activity log", group: "activity-log" },
+    { slug: "settings.manage", name: "Manage system settings", group: "settings" }
+  ];
+}
+function isContentPermissionSlug(slug) {
+  return slug.startsWith("content.") || slug.startsWith("category.");
+}
+function permissionSlugsForRole(role) {
+  const definitions = getPermissionDefinitions();
+  if (role === "super-admin" || role === "admin") {
+    return definitions.map((permission) => permission.slug);
+  }
+  if (role === "editor") {
+    return definitions.filter(
+      (permission) => isContentPermissionSlug(permission.slug) || permission.slug === "dashboard.view" || permission.slug === "media.view" || permission.slug === "media.upload"
+    ).map((permission) => permission.slug);
+  }
+  return definitions.filter((permission) => {
+    if (permission.slug === "media.view" || permission.slug === "media.upload") return true;
+    if (permission.slug === "dashboard.view") return true;
+    if (permission.slug.startsWith("content.page.") || permission.slug.startsWith("category.page.")) return false;
+    if (permission.slug.startsWith("category.")) {
+      return permission.slug.endsWith(".view");
+    }
+    if (!permission.slug.startsWith("content.")) return false;
+    const action = permission.slug.slice(permission.slug.lastIndexOf(".") + 1);
+    return action === "view" || action === "create" || action === "edit-own" || action === "delete-own" || action === "publish-own" || action === "unpublish-own";
+  }).map((permission) => permission.slug);
+}
+async function getUserRole(userId) {
+  const user = await findUserByIdRecord(userId);
+  return user && isStaticRole(user.role) ? user.role : null;
+}
+async function getUserPermissions(userId) {
+  const role = await getUserRole(userId);
+  return role ? permissionSlugsForRole(role) : [];
+}
+async function can(userId, permission) {
+  const role = await getUserRole(userId);
+  if (role === "super-admin") return true;
+  return role ? permissionSlugsForRole(role).includes(permission) : false;
+}
+async function canAny(userId, permissions) {
+  const role = await getUserRole(userId);
+  if (role === "super-admin") return true;
+  if (!role) return false;
+  const userPermissions = permissionSlugsForRole(role);
+  return permissions.some((permission) => userPermissions.includes(permission));
+}
+const ADMIN_ACCESS_COOKIE = "admin_access_token";
+const ADMIN_REFRESH_COOKIE = "admin_refresh_token";
+const ADMIN_2FA_CHALLENGE_COOKIE = "admin_2fa_challenge";
+const secure = process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV !== "development" && process.env.NODE_ENV !== "test";
+function buildAdminAccessCookieOptions() {
+  return {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 15
+  };
+}
+function buildAdminRefreshCookieOptions() {
+  return {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30
+  };
+}
+function buildAdminTwoFactorChallengeCookieOptions() {
+  return {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/api/admin/auth",
+    maxAge: 5 * 60
+  };
+}
+function readAdminAccessToken(cookies) {
+  return cookies.get(ADMIN_ACCESS_COOKIE)?.value ?? null;
+}
+function readAdminRefreshToken(cookies) {
+  return cookies.get(ADMIN_REFRESH_COOKIE)?.value ?? null;
+}
+function readAdminTwoFactorChallenge(cookies) {
+  return cookies.get(ADMIN_2FA_CHALLENGE_COOKIE)?.value ?? null;
+}
+function clearAdminSessionCookies(cookies) {
+  cookies.set(ADMIN_ACCESS_COOKIE, "", { ...buildAdminAccessCookieOptions(), maxAge: 0 });
+  cookies.set(ADMIN_REFRESH_COOKIE, "", { ...buildAdminRefreshCookieOptions(), maxAge: 0 });
+}
+function clearAdminTwoFactorChallengeCookie(cookies) {
+  cookies.set(ADMIN_2FA_CHALLENGE_COOKIE, "", { ...buildAdminTwoFactorChallengeCookieOptions(), maxAge: 0 });
+}
+const encoder = new TextEncoder();
+function getJwtSecret(name) {
+  const value = process.env[name];
+  if (!isTestEnvironment()) {
+    assertSecureSecrets();
+    return encoder.encode(value);
+  }
+  if (value && value.length >= 32) return encoder.encode(value);
+  if (process.env.SESSION_SECRET) {
+    return encoder.encode(
+      createHash("sha256").update(`${name}:${process.env.SESSION_SECRET}`).digest("base64url")
+    );
+  }
+  return crypto.getRandomValues(new Uint8Array(32));
+}
+let accessSecret;
+let refreshSecret;
+function getAccessSecret() {
+  return accessSecret ??= getJwtSecret("ADMIN_JWT_ACCESS_SECRET");
+}
+function getRefreshSecret() {
+  return refreshSecret ??= getJwtSecret("ADMIN_JWT_REFRESH_SECRET");
+}
+async function signAccessToken(claims) {
+  return new SignJWT(claims).setProtectedHeader({ alg: "HS256" }).setSubject(claims.sub).setIssuedAt().setExpirationTime("15m").sign(getAccessSecret());
+}
+async function signRefreshToken(claims) {
+  return new SignJWT(claims).setProtectedHeader({ alg: "HS256" }).setSubject(claims.sub).setIssuedAt().setExpirationTime("30d").sign(getRefreshSecret());
+}
+async function signTwoFactorChallengeToken(claims) {
+  return new SignJWT({ ...claims, purpose: "admin-2fa" }).setProtectedHeader({ alg: "HS256" }).setSubject(claims.sub).setIssuedAt().setExpirationTime("5m").sign(getAccessSecret());
+}
+async function verifyAccessToken(token) {
+  const result = await jwtVerify(token, getAccessSecret(), { algorithms: ["HS256"] });
+  return result.payload;
+}
+async function verifyRefreshToken(token) {
+  const result = await jwtVerify(token, getRefreshSecret(), { algorithms: ["HS256"] });
+  return result.payload;
+}
+async function verifyTwoFactorChallengeToken(token) {
+  const result = await jwtVerify(token, getAccessSecret(), { algorithms: ["HS256"] });
+  if (result.payload.purpose !== "admin-2fa") throw new Error("Invalid two-factor challenge.");
+  return result.payload;
+}
+const REFRESH_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
+const LEGACY_MILLISECONDS_THRESHOLD = 1e10;
+function normalizeExpiry(expiresAt) {
+  return expiresAt >= LEGACY_MILLISECONDS_THRESHOLD ? Math.floor(expiresAt / 1e3) : expiresAt;
+}
+function activeExpiryCondition(now) {
+  return or(
+    gt(adminRefreshSessions.expiresAt, now * 1e3),
+    and(
+      gt(adminRefreshSessions.expiresAt, now),
+      lt(adminRefreshSessions.expiresAt, LEGACY_MILLISECONDS_THRESHOLD)
+    )
+  );
+}
+function getRefreshSessionExpiry() {
+  return getCurrentTimestamp() + REFRESH_SESSION_TTL_SECONDS;
+}
+async function saveRefreshSession(sessionId, userId, expiresAt) {
+  await db.insert(adminRefreshSessions).values({
+    id: sessionId,
+    userId,
+    expiresAt: normalizeExpiry(expiresAt),
+    createdAt: getCurrentTimestamp()
+  }).execute();
+}
+async function deleteRefreshSession(sessionId) {
+  await db.delete(adminRefreshSessions).where(eq(adminRefreshSessions.id, sessionId)).execute();
+}
+async function deleteRefreshSessionsForUser(userId) {
+  await db.delete(adminRefreshSessions).where(eq(adminRefreshSessions.userId, userId)).execute();
+}
+async function findActiveRefreshSession(sessionId) {
+  const now = getCurrentTimestamp();
+  const rows = await db.select({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).from(adminRefreshSessions).where(and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now))).limit(1).execute();
+  const row = rows[0];
+  return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null;
+}
+async function consumeRefreshSession(sessionId) {
+  const now = getCurrentTimestamp();
+  const condition = and(eq(adminRefreshSessions.id, sessionId), activeExpiryCondition(now));
+  if (databaseConfig.connection !== "mysql") {
+    const rows = await db.delete(adminRefreshSessions).where(condition).returning({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).execute();
+    const row = rows[0];
+    return row ? { ...row, expiresAt: normalizeExpiry(row.expiresAt) } : null;
+  }
+  return await db.transaction(async (tx) => {
+    const rows = await tx.select({ userId: adminRefreshSessions.userId, expiresAt: adminRefreshSessions.expiresAt }).from(adminRefreshSessions).where(condition).limit(1).execute();
+    const row = rows[0];
+    if (!row) return null;
+    await tx.delete(adminRefreshSessions).where(condition).execute();
+    return { ...row, expiresAt: normalizeExpiry(row.expiresAt) };
+  });
+}
+async function findTwoFactorRecord(userId) {
+  const rows = await db.select().from(adminTwoFactor).where(eq(adminTwoFactor.userId, userId)).limit(1).execute();
+  return rows[0];
+}
+async function saveTwoFactorSetup(userId, secret, now) {
+  const existing = await findTwoFactorRecord(userId);
+  if (existing) {
+    await db.update(adminTwoFactor).set({ secret, enabled: 0, updatedAt: now }).where(eq(adminTwoFactor.userId, userId)).execute();
+    return;
+  }
+  await db.insert(adminTwoFactor).values({
+    userId,
+    secret,
+    enabled: 0,
+    createdAt: now,
+    updatedAt: now
+  }).execute();
+}
+async function enableTwoFactor(userId, now) {
+  await db.update(adminTwoFactor).set({ enabled: 1, updatedAt: now }).where(eq(adminTwoFactor.userId, userId)).execute();
+}
+async function deleteTwoFactorRecord(userId) {
+  await db.delete(adminTwoFactor).where(eq(adminTwoFactor.userId, userId)).execute();
+}
+const TWO_FACTOR_ISSUER$1 = "Beaver";
+const ENCRYPTION_PREFIX = "v1";
+const TOTP_EPOCH_TOLERANCE_SECONDS = 30;
+function encryptionKey() {
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret) {
+    if (isTestEnvironment()) {
+      return createHash("sha256").update("beaver-test-two-factor").digest();
+    }
+    throw new Error("SESSION_SECRET must be configured before using two-factor authentication.");
+  }
+  if (!isTestEnvironment()) assertSecureSecrets();
+  return createHash("sha256").update(`beaver-two-factor:${sessionSecret}`).digest();
+}
+function encryptSecret(secret) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(secret, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return [ENCRYPTION_PREFIX, iv.toString("base64url"), tag.toString("base64url"), encrypted.toString("base64url")].join(".");
+}
+function decryptSecret(value) {
+  const [prefix, ivValue, tagValue, encryptedValue] = value.split(".");
+  if (prefix !== ENCRYPTION_PREFIX || !ivValue || !tagValue || !encryptedValue) {
+    throw new Error("Invalid two-factor secret format.");
+  }
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    encryptionKey(),
+    Buffer.from(ivValue, "base64url")
+  );
+  decipher.setAuthTag(Buffer.from(tagValue, "base64url"));
+  return Buffer.concat([
+    decipher.update(Buffer.from(encryptedValue, "base64url")),
+    decipher.final()
+  ]).toString("utf8");
+}
+function normalizeCode(code) {
+  return code.trim();
+}
+async function verifyStoredCode(userId, code, requireEnabled = true) {
+  const record = await findTwoFactorRecord(userId);
+  if (!record || requireEnabled && record.enabled !== 1) return false;
+  try {
+    const result = await verify$1({
+      secret: decryptSecret(record.secret),
+      token: normalizeCode(code),
+      epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS
+    });
+    return result.valid;
+  } catch {
+    return false;
+  }
+}
+async function verifySuperAdminCode(code) {
+  const config = getSuperAdminTwoFactorConfig();
+  if (!config.enabled || !config.secret) return false;
+  try {
+    const result = await verify$1({
+      secret: config.secret,
+      token: normalizeCode(code),
+      epochTolerance: TOTP_EPOCH_TOLERANCE_SECONDS
+    });
+    return result.valid;
+  } catch {
+    return false;
+  }
+}
+async function isTwoFactorEnabled(userId) {
+  if (isSuperAdminUserId(userId)) {
+    return getSuperAdminTwoFactorConfig().enabled;
+  }
+  const record = await findTwoFactorRecord(userId);
+  return record?.enabled === 1;
+}
+async function getTwoFactorStatus(userId) {
+  return { enabled: await isTwoFactorEnabled(userId) };
+}
+async function beginTwoFactorSetup(userId) {
+  if (isSuperAdminUserId(userId)) {
+    const config = getSuperAdminTwoFactorConfig();
+    if (config.enabled) {
+      return serviceConflict("twoFactor", "Super Admin two-factor authentication is already enabled.");
+    }
+    return serviceValidation("Configure ADMIN_2FA_ENABLED=true and ADMIN_2FA_SECRET, then restart the application.");
+  }
+  const user = await findSafeUserByIdRecord(userId);
+  if (!user) return serviceNotFound("User");
+  const existing = await findTwoFactorRecord(userId);
+  if (existing?.enabled === 1) {
+    return serviceConflict("twoFactor", "Two-factor authentication is already enabled.");
+  }
+  const secret = generateSecret();
+  await saveTwoFactorSetup(userId, encryptSecret(secret), getCurrentTimestamp());
+  return serviceSuccess({
+    secret,
+    otpauthUrl: generateURI({
+      issuer: TWO_FACTOR_ISSUER$1,
+      label: user.email,
+      secret
+    })
+  }, "Two-factor setup started.");
+}
+async function confirmTwoFactorSetup(userId, code) {
+  if (isSuperAdminUserId(userId)) {
+    return serviceValidation("Super Admin two-factor authentication is managed by ADMIN_2FA_ENABLED and ADMIN_2FA_SECRET.");
+  }
+  const record = await findTwoFactorRecord(userId);
+  if (!record) return serviceValidation("Start two-factor setup before enabling it.");
+  if (record.enabled === 1) return serviceConflict("twoFactor", "Two-factor authentication is already enabled.");
+  if (!await verifyStoredCode(userId, code, false)) {
+    return serviceValidation("Invalid authenticator code.");
+  }
+  await enableTwoFactor(userId, getCurrentTimestamp());
+  await deleteRefreshSessionsForUser(userId);
+  return serviceSuccess({ enabled: true }, "Two-factor authentication enabled.");
+}
+async function verifyCurrentPassword(userId, password) {
+  if (isSuperAdminUserId(userId)) {
+    const credentials = getAdminCredentials();
+    return Boolean(await authenticateSuperAdmin(credentials.email, password));
+  }
+  const user = await findUserByIdRecord(userId);
+  return user ? verifyPassword(password, user.password) : false;
+}
+async function disableTwoFactor(userId, password, code) {
+  if (isSuperAdminUserId(userId)) {
+    return serviceValidation("Super Admin two-factor authentication is managed by ADMIN_2FA_ENABLED and ADMIN_2FA_SECRET.");
+  }
+  const record = await findTwoFactorRecord(userId);
+  if (!record || record.enabled !== 1) {
+    return serviceValidation("Two-factor authentication is not enabled.");
+  }
+  if (!await verifyCurrentPassword(userId, password)) {
+    return serviceValidation("Current password is invalid.");
+  }
+  if (!await verifyStoredCode(userId, code)) {
+    return serviceValidation("Invalid authenticator code.");
+  }
+  await deleteTwoFactorRecord(userId);
+  await deleteRefreshSessionsForUser(userId);
+  return serviceSuccess({ enabled: false }, "Two-factor authentication disabled.");
+}
+async function verifyTwoFactorCode(userId, code) {
+  if (isSuperAdminUserId(userId)) return verifySuperAdminCode(code);
+  return verifyStoredCode(userId, code);
+}
+async function getAdminSession(cookies) {
+  const access = readAdminAccessToken(cookies);
+  if (!access) return null;
+  try {
+    const payload = await verifyAccessToken(access);
+    if (typeof payload.sessionId !== "string") return null;
+    if (isSuperAdminUserId(payload.sub)) {
+      const user2 = getSafeSuperAdminUser();
+      if (payload.email !== user2.email || payload.role !== "super-admin") return null;
+      const twoFactorEnabled2 = await isTwoFactorEnabled(user2.id);
+      if (twoFactorEnabled2 && payload.twoFactorVerified !== true) return null;
+      return {
+        user: user2,
+        permissions: await getUserPermissions(user2.id),
+        twoFactorEnabled: twoFactorEnabled2
+      };
+    }
+    const stored = await findActiveRefreshSession(payload.sessionId);
+    if (!stored || stored.userId !== payload.sub) return null;
+    const user = await findSafeUserByIdRecord(payload.sub);
+    if (!user) return null;
+    const twoFactorEnabled = await isTwoFactorEnabled(user.id);
+    if (twoFactorEnabled && payload.twoFactorVerified !== true) return null;
+    return {
+      user,
+      permissions: await getUserPermissions(user.id),
+      twoFactorEnabled
+    };
+  } catch {
+    return null;
+  }
+}
+async function refreshAdminSession(cookies) {
+  const refresh2 = readAdminRefreshToken(cookies);
+  if (!refresh2) return null;
+  try {
+    const payload = await verifyRefreshToken(refresh2);
+    if (isSuperAdminUserId(payload.sub)) {
+      const user2 = getSafeSuperAdminUser();
+      if (payload.email !== void 0 && payload.email !== user2.email) return null;
+      const twoFactorEnabled2 = await isTwoFactorEnabled(user2.id);
+      if (twoFactorEnabled2 && payload.twoFactorVerified !== true) return null;
+      const permissions2 = await getUserPermissions(user2.id);
+      const nextSessionId2 = generateId();
+      const nextAccess2 = await signAccessToken({
+        sub: user2.id,
+        sessionId: nextSessionId2,
+        email: user2.email,
+        role: user2.role,
+        permissions: permissions2,
+        twoFactorVerified: payload.twoFactorVerified === true
+      });
+      const nextRefresh2 = await signRefreshToken({
+        sub: user2.id,
+        sessionId: nextSessionId2,
+        email: user2.email,
+        twoFactorVerified: payload.twoFactorVerified === true
+      });
+      cookies.set(ADMIN_ACCESS_COOKIE, nextAccess2, buildAdminAccessCookieOptions());
+      cookies.set(ADMIN_REFRESH_COOKIE, nextRefresh2, buildAdminRefreshCookieOptions());
+      return { user: user2, permissions: permissions2, twoFactorEnabled: twoFactorEnabled2 };
+    }
+    const stored = await consumeRefreshSession(payload.sessionId);
+    if (!stored || stored.userId !== payload.sub) return null;
+    const user = await findSafeUserByIdRecord(payload.sub);
+    if (!user) return null;
+    const twoFactorEnabled = await isTwoFactorEnabled(user.id);
+    if (twoFactorEnabled && payload.twoFactorVerified !== true) return null;
+    const permissions = await getUserPermissions(user.id);
+    const nextSessionId = generateId();
+    const nextAccess = await signAccessToken({
+      sub: user.id,
+      sessionId: nextSessionId,
+      email: user.email,
+      role: user.role,
+      permissions,
+      twoFactorVerified: payload.twoFactorVerified === true
+    });
+    const nextRefresh = await signRefreshToken({
+      sub: user.id,
+      sessionId: nextSessionId,
+      email: user.email,
+      twoFactorVerified: payload.twoFactorVerified === true
+    });
+    await saveRefreshSession(nextSessionId, user.id, getRefreshSessionExpiry());
+    cookies.set(ADMIN_ACCESS_COOKIE, nextAccess, buildAdminAccessCookieOptions());
+    cookies.set(ADMIN_REFRESH_COOKIE, nextRefresh, buildAdminRefreshCookieOptions());
+    return { user, permissions, twoFactorEnabled };
+  } catch {
+    return null;
+  }
+}
+const RATE_LIMITS = /* @__PURE__ */ new Map();
+const MAX_RATE_LIMIT_KEYS = 1e4;
+function isRateLimitAvailable(key, limit) {
+  const current = RATE_LIMITS.get(key);
+  if (!current) return true;
+  if (current.resetAt <= Date.now()) {
+    RATE_LIMITS.delete(key);
+    return true;
+  }
+  return current.count < limit;
+}
+function resetRateLimit(key) {
+  RATE_LIMITS.delete(key);
+}
+function isWithinRateLimit(key, limit, windowMs) {
+  const now = Date.now();
+  if (RATE_LIMITS.size >= MAX_RATE_LIMIT_KEYS) {
+    for (const [storedKey, value] of RATE_LIMITS) {
+      if (value.resetAt <= now) RATE_LIMITS.delete(storedKey);
+    }
+    if (RATE_LIMITS.size >= MAX_RATE_LIMIT_KEYS && !RATE_LIMITS.has(key)) {
+      const oldestKey = RATE_LIMITS.keys().next().value;
+      if (oldestKey) RATE_LIMITS.delete(oldestKey);
+    }
+  }
+  const current = RATE_LIMITS.get(key);
+  if (!current || current.resetAt <= now) {
+    RATE_LIMITS.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (current.count >= limit) return false;
+  current.count += 1;
+  return true;
+}
+function applySecurityHeaders(context) {
+  context.header("X-Content-Type-Options", "nosniff");
+  context.header("X-Frame-Options", "SAMEORIGIN");
+  context.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  context.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  context.header("Content-Security-Policy", "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; img-src 'self' data: blob:; media-src 'self'; connect-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.google.com https://challenges.cloudflare.com; script-src 'self' 'unsafe-inline' blob: https://challenges.cloudflare.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'");
+  if (process.env.NODE_ENV === "production") context.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+}
+function isReadRequest(method) {
+  return method === "GET" || method === "HEAD" || method === "OPTIONS";
+}
+async function enforceRequestBodyLimit(context, maximum) {
+  const request = context.req.raw;
+  if (!request.body) return null;
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && !request.headers.has("transfer-encoding")) {
+    const length = Number(contentLength);
+    return !Number.isSafeInteger(length) || length < 0 || length > maximum ? "Request body is too large." : null;
+  }
+  const reader = request.body.getReader();
+  const chunks = [];
+  let size = 0;
+  for (; ; ) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maximum) {
+      await reader.cancel();
+      return "Request body is too large.";
+    }
+    chunks.push(value);
+  }
+  context.req.raw = new Request(request, {
+    body: new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(chunk);
+        controller.close();
+      }
+    }),
+    duplex: "half"
+  });
+  return null;
+}
+function hasValidSameOrigin(request) {
+  const origin = request.headers.get("origin");
+  return Boolean(origin && origin === new URL(request.url).origin);
+}
+function clientAddress(request) {
+  if (process.env.TRUST_PROXY === "true") {
+    const forwarded = [
+      request.headers.get("cf-connecting-ip"),
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+      request.headers.get("x-real-ip")
+    ];
+    for (const candidate of forwarded) {
+      if (candidate && isIP(candidate) !== 0) return candidate;
+    }
+  }
+  const hostname = new URL(request.url).hostname.replace(/^\[|\]$/g, "");
+  if (hostname === "localhost" || hostname === "127.0.0.1") return "127.0.0.1";
+  if (hostname === "::1") return "::1";
+  return "unknown";
+}
+const PUBLIC_PATHS = /* @__PURE__ */ new Set([
+  "/api/admin/auth/login",
+  "/api/admin/auth/refresh",
+  "/api/admin/auth/session",
+  "/api/admin/auth/logout",
+  "/api/admin/auth/2fa/verify"
+]);
+function readCookie(request, name) {
+  const value = request.headers.get("cookie")?.split(";").map((entry) => entry.trim()).find((entry) => entry.startsWith(`${name}=`))?.slice(name.length + 1);
+  return value ? { value } : void 0;
+}
+function requiredPermissions(pathname, method) {
+  const rest = pathname.slice("/api/admin".length);
+  const read = method === "GET" || method === "HEAD";
+  if (rest.startsWith("/users")) {
+    if (read) return ["users.view"];
+    if (rest.includes("/2fa/disable") && method === "POST") return ["users.manage"];
+    if (rest.includes("/bulk/delete") || method === "DELETE") return ["users.delete", "users.manage"];
+    if (rest.includes("duplicate") || method === "POST") return ["users.create", "users.manage"];
+    return ["users.edit", "users.manage"];
+  }
+  if (rest === "/dashboard") return ["dashboard.view"];
+  if (rest.startsWith("/activity-logs")) return ["activity-log.view"];
+  if (rest.startsWith("/categories") || rest.startsWith("/posts")) return null;
+  if (rest.startsWith("/menus")) {
+    if (read) return ["menus.view"];
+    if (method === "DELETE") return ["menus.delete"];
+    if (method === "POST" && rest === "/menus") return ["menus.create"];
+    return ["menus.edit", "menus.manage"];
+  }
+  if (rest.startsWith("/media")) return read ? ["media.view"] : null;
+  if (rest === "/settings") return ["settings.manage"];
+  return null;
+}
+const adminSecurity = async (context, next) => {
+  const request = context.req.raw;
+  const pathname = context.req.path;
+  const method = request.method;
+  if (pathname === "/api/admin/auth/2fa/verify" && method === "POST") {
+    const client = clientAddress(request);
+    const key = client === "unknown" ? `${pathname}:global` : `${pathname}:${client}`;
+    const limit = client === "unknown" ? 60 : 10;
+    if (!isWithinRateLimit(key, limit, 15 * 60 * 1e3)) return context.json({ success: false, message: "Too many requests. Please try again later." }, 429);
+  }
+  if ((pathname === "/api/admin/auth/2fa/enable" || pathname === "/api/admin/auth/2fa/disable") && method === "POST") {
+    const client = clientAddress(request);
+    const key = client === "unknown" ? `${pathname}:global` : `${pathname}:${client}`;
+    const limit = client === "unknown" ? 60 : 10;
+    if (!isWithinRateLimit(key, limit, 15 * 60 * 1e3)) return context.json({ success: false, message: "Too many requests. Please try again later." }, 429);
+  }
+  if (PUBLIC_PATHS.has(pathname)) {
+    if (pathname === "/api/admin/auth/logout") {
+      const session22 = await getAdminSession({ get: (name) => readCookie(request, name), set: () => void 0 });
+      if (session22) context.set("session", { user: session22.user });
+    }
+    return next();
+  }
+  const session2 = await getAdminSession({ get: (name) => readCookie(request, name), set: () => void 0 });
+  if (!session2) return context.json({ success: false, message: "Unauthorized." }, 401);
+  const permissions = requiredPermissions(pathname, method);
+  const allowed = permissions ? (await Promise.all(permissions.map((permission) => can(session2.user.id, permission)))).some(Boolean) : true;
+  if (!allowed) {
+    return context.json({ success: false, message: "Insufficient permissions." }, 403);
+  }
+  context.set("session", { user: session2.user });
+  return next();
+};
+const middleware = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  adminSecurity
+}, Symbol.toStringTag, { value: "Module" }));
+function createAdminRouteContext(context) {
+  return {
+    request: context.req.raw,
+    params: context.req.param(),
+    cookies: {
+      get: (name) => {
+        const value = getCookie(context, name);
+        return value ? { value } : void 0;
+      },
+      set: (name, value, options) => {
+        setCookie(context, name, value, options);
+      }
+    },
+    locals: { session: context.get("session") ?? null }
+  };
+}
+const routeModules = {
+  .../* @__PURE__ */ Object.assign({ "./admin/activity-logs.ts": () => Promise.resolve().then(() => activityLogs), "./admin/auth/2fa/disable.ts": () => Promise.resolve().then(() => disable$1), "./admin/auth/2fa/enable.ts": () => Promise.resolve().then(() => enable), "./admin/auth/2fa/setup.ts": () => Promise.resolve().then(() => setup), "./admin/auth/2fa/status.ts": () => Promise.resolve().then(() => status$1), "./admin/auth/2fa/verify.ts": () => Promise.resolve().then(() => verify), "./admin/auth/login.ts": () => Promise.resolve().then(() => login), "./admin/auth/logout.ts": () => Promise.resolve().then(() => logout), "./admin/auth/profile.ts": () => Promise.resolve().then(() => profile), "./admin/auth/refresh.ts": () => Promise.resolve().then(() => refresh), "./admin/auth/session.ts": () => Promise.resolve().then(() => session), "./admin/categories/[id].ts": () => Promise.resolve().then(() => _id_$4), "./admin/categories/[id]/duplicate.ts": () => Promise.resolve().then(() => duplicate$5), "./admin/categories/bulk/delete.ts": () => Promise.resolve().then(() => _delete$3), "./admin/categories/bulk/duplicate.ts": () => Promise.resolve().then(() => duplicate$4), "./admin/categories/bulk/status.ts": () => Promise.resolve().then(() => status), "./admin/categories/index.ts": () => Promise.resolve().then(() => index$4), "./admin/dashboard.ts": () => Promise.resolve().then(() => dashboard), "./admin/media/[id].ts": () => Promise.resolve().then(() => _id_$3), "./admin/media/bulk/delete.ts": () => Promise.resolve().then(() => _delete$2), "./admin/media/index.ts": () => Promise.resolve().then(() => index$3), "./admin/media/upload.ts": () => Promise.resolve().then(() => upload), "./admin/menus/[id].ts": () => Promise.resolve().then(() => _id_$2), "./admin/menus/index.ts": () => Promise.resolve().then(() => index$2), "./admin/menus/reorder.ts": () => Promise.resolve().then(() => reorder), "./admin/middleware.ts": () => Promise.resolve().then(() => middleware), "./admin/posts/[id].ts": () => Promise.resolve().then(() => _id_$1), "./admin/posts/[id]/duplicate.ts": () => Promise.resolve().then(() => duplicate$3), "./admin/posts/[id]/permanent-delete.ts": () => Promise.resolve().then(() => permanentDelete$1), "./admin/posts/[id]/restore.ts": () => Promise.resolve().then(() => restore$1), "./admin/posts/bulk/delete.ts": () => Promise.resolve().then(() => _delete$1), "./admin/posts/bulk/duplicate.ts": () => Promise.resolve().then(() => duplicate$2), "./admin/posts/bulk/permanent-delete.ts": () => Promise.resolve().then(() => permanentDelete), "./admin/posts/bulk/publish.ts": () => Promise.resolve().then(() => publish), "./admin/posts/bulk/restore.ts": () => Promise.resolve().then(() => restore), "./admin/posts/bulk/unpublish.ts": () => Promise.resolve().then(() => unpublish), "./admin/posts/index.ts": () => Promise.resolve().then(() => index$1), "./admin/settings.ts": () => Promise.resolve().then(() => settings), "./admin/users/[id].ts": () => Promise.resolve().then(() => _id_), "./admin/users/[id]/2fa/disable.ts": () => Promise.resolve().then(() => disable), "./admin/users/[id]/duplicate.ts": () => Promise.resolve().then(() => duplicate$1), "./admin/users/bulk/delete.ts": () => Promise.resolve().then(() => _delete), "./admin/users/bulk/duplicate.ts": () => Promise.resolve().then(() => duplicate), "./admin/users/index.ts": () => Promise.resolve().then(() => index) }),
+  .../* @__PURE__ */ Object.assign({ "./public/archive/[type].ts": () => Promise.resolve().then(() => _type_), "./public/contact.ts": () => Promise.resolve().then(() => contact), "./public/search.ts": () => Promise.resolve().then(() => search) })
+};
+function toHonoPath(modulePath) {
+  const routeSegments = modulePath.replace(/^\.\//, "").replace(/^public\//, "").replace(/\.ts$/, "").split("/").filter((segment) => segment !== "index").map((segment) => segment.replace(/^\[([^\.][^\]]*)\]$/, ":$1"));
+  return `/${routeSegments.join("/")}`;
+}
+const routes = Object.entries(routeModules).filter(([modulePath]) => !modulePath.endsWith(".test.ts") && !modulePath.endsWith(".spec.ts") && !modulePath.endsWith("/middleware.ts")).map(([modulePath, load]) => ({
+  path: toHonoPath(modulePath),
+  load
+})).sort((left, right) => right.path.length - left.path.length);
+const apiApp = new Hono().basePath("/api");
+apiApp.onError((error, context) => {
+  const invalidBody = error instanceof SyntaxError;
+  if (!invalidBody) console.error("API request failed", error);
+  return context.json(
+    { success: false, message: invalidBody ? "Invalid request body." : "Request could not be processed." },
+    invalidBody ? 400 : 500
+  );
+});
+apiApp.use("*", async (context, next) => {
+  applySecurityHeaders(context);
+  const request = context.req.raw;
+  if (request.url.length > 8192) {
+    return context.json({ success: false, message: "Request URL is too long." }, 414);
+  }
+  const pathname = context.req.path;
+  if (pathname.startsWith("/api/admin/")) context.header("Cache-Control", "no-store, private");
+  if (!isReadRequest(request.method)) {
+    const maximum = pathname === "/api/admin/media/upload" ? 11 * 1024 * 1024 : 1024 * 1024;
+    const bodyError = await enforceRequestBodyLimit(context, maximum);
+    if (bodyError) return context.json({ success: false, message: bodyError }, 413);
+    if (!hasValidSameOrigin(request)) return context.json({ success: false, message: "Invalid request origin." }, 403);
+  }
+  return next();
+});
+apiApp.use("/admin/*", adminSecurity);
+function withHonoHeaders(response, context) {
+  const headers = new Headers(response.headers);
+  for (const [name, value] of context.res.headers) {
+    if (name.toLowerCase() === "set-cookie") headers.append(name, value);
+    else if (!headers.has(name)) headers.set(name, value);
+  }
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+async function readActivityRequestBody(request) {
+  if (!request.headers.get("content-type")?.toLowerCase().includes("application/json")) return void 0;
+  try {
+    return await request.clone().json();
+  } catch {
+    return void 0;
+  }
+}
+for (const route of routes) {
+  apiApp.all(route.path, async (context) => {
+    const handler = (await route.load())[context.req.method];
+    if (!handler) {
+      return Response.json({ success: false, message: "Method not allowed." }, { status: 405 });
+    }
+    const pathname = context.req.path;
+    const method = context.req.method;
+    const shouldCaptureActivity = pathname.startsWith("/api/admin/") && !isReadRequest(method);
+    const session2 = context.get("session");
+    const requestBody = shouldCaptureActivity ? await readActivityRequestBody(context.req.raw) : void 0;
+    const before = shouldCaptureActivity ? await captureActivitySnapshot({ pathname, method, actorId: session2?.user.id ?? null, requestBody }) : null;
+    const response = await handler(createAdminRouteContext(context));
+    await recordActivityRequest({
+      request: context.req.raw,
+      pathname,
+      method,
+      response,
+      actorId: session2?.user.id ?? null,
+      ipAddress: clientAddress(context.req.raw),
+      before,
+      requestBody
+    });
+    return withHonoHeaders(response, context);
+  });
+}
+const contentTypes = [];
+const templates = [];
+const fallbackRegistry = {
+  contentTypes,
+  templates
+};
+let configuredRegistry = fallbackRegistry;
+function isRegistry(value) {
+  return typeof value === "object" && value !== null && Array.isArray(value.contentTypes) && Array.isArray(value.templates);
+}
+function setContentTypeRegistry(registry) {
+  if (isRegistry(registry)) configuredRegistry = registry;
+}
+function getContentTypeRegistry() {
+  const browserRegistry = globalThis.__CMS_CONTENT_TYPE_REGISTRY__;
+  return isRegistry(browserRegistry) ? browserRegistry : configuredRegistry;
+}
+let loadedPath;
+function getServerContentTypeRegistry() {
+  const configuredPath = process.env.BEAVER_CONTENT_TYPE_REGISTRY_PATH?.trim() || process.env.CONTENT_TYPE_REGISTRY_PATH?.trim();
+  const hostPath = resolve(process.cwd(), "src/components/web/content-type-templates/registry.json");
+  const registryPath = configuredPath ? resolve(process.cwd(), configuredPath) : existsSync(hostPath) ? hostPath : void 0;
+  if (registryPath && registryPath !== loadedPath) {
+    setContentTypeRegistry(JSON.parse(readFileSync(registryPath, "utf8")));
+    loadedPath = registryPath;
+  }
+  return getContentTypeRegistry();
+}
+const ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const emptyToNull = z.string().max(1e4, "Text must be at most 10000 characters").transform((val) => val.trim() === "" ? null : val).nullable().optional();
+const SAFE_SCHEMES = /* @__PURE__ */ new Set(["http:", "https:", "mailto:", "tel:"]);
+function isSafeHref(value) {
+  const candidate = value.trim();
+  if (!candidate || /[\u0000-\u001f\u007f\\]/.test(candidate) || candidate.startsWith("//")) return false;
+  if (candidate.startsWith("/") || candidate.startsWith("#") || candidate.startsWith("?")) return true;
+  try {
+    return SAFE_SCHEMES.has(new URL(candidate).protocol);
+  } catch {
+    return false;
+  }
+}
+const safeHrefSchema = z.string().trim().min(1, "URL is required").max(2048, "URL must be at most 2048 characters").refine(isSafeHref, "URL must be a relative path or use http, https, mailto, or tel");
+const safeImageUrlSchema = z.string().trim().max(2048, "Image URL must be at most 2048 characters").refine((value) => {
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      return ["http:", "https:"].includes(new URL(value).protocol);
+    } catch {
+      return false;
+    }
+  }
+  return value.startsWith("/") && !value.startsWith("//") && !/[\u0000-\u001f\u007f\\]/.test(value);
+}, "Image must be a valid http/https URL or a relative path starting with /");
+const imageUrlSchema = safeImageUrlSchema.nullable().optional();
+const featuredImageSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(imageUrlSchema);
+const galleryImageSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(imageUrlSchema);
+const imageUrlSimpleSchema = z.string().transform((val) => val.trim() === "" ? null : val).nullable().optional().pipe(
+  z.string().refine((val) => safeImageUrlSchema.safeParse(val).success, "Image must be a valid http/https URL or a relative path starting with /").nullable().optional()
+);
+const publishStatusEnum = z.enum(["draft", "published"]);
 function buildSlug(input, title) {
   return (input || title).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 100);
 }
@@ -1945,21 +3184,23 @@ function jsonOrNull$1(value) {
   if (Array.isArray(value)) return value.length > 0 ? JSON.stringify(value) : null;
   return value ? JSON.stringify(value) : null;
 }
-function computePublishedAt(inputPublishedAt, oldStatus, newStatus, existing, now) {
-  if (inputPublishedAt !== void 0) return inputPublishedAt;
-  if (oldStatus !== "published" && newStatus === "published") return now;
-  if (oldStatus === "published" && newStatus === "draft") return null;
-  return existing.publishedAt ?? null;
+function resolvePublicationState(requestedStatus, inputPublishedAt, oldStatus, existingPublishedAt, now) {
+  if (requestedStatus === "draft") return { status: "draft", publishedAt: null };
+  const publishedAt = inputPublishedAt !== void 0 ? toDateMilliseconds(inputPublishedAt) : toDateMilliseconds(existingPublishedAt) ?? (oldStatus === "published" || oldStatus === "scheduled" ? null : now);
+  return {
+    status: publishedAt !== null && publishedAt > now ? "scheduled" : "published",
+    publishedAt
+  };
 }
 function buildPostPayload(data, userId) {
   const now = Date.now();
-  const isPublished = "status" in data ? data.status === "published" : false;
+  const publication = resolvePublicationState(data.status ?? "draft", data.publishedAt, void 0, null, now);
   return {
     id: generateId(),
     title: sanitizeText(data.title ?? ""),
     slug: buildSlug(data.slug, data.title ?? ""),
     type: data.type ?? "post",
-    status: data.status ?? "draft",
+    status: publication.status,
     excerpt: data.excerpt ?? null,
     description: data.description ? sanitizeHtml(data.description) : null,
     tags: jsonOrNull$1(data.tags),
@@ -1970,26 +3211,28 @@ function buildPostPayload(data, userId) {
     featuredImage: data.featuredImage ?? null,
     gallery: jsonOrNull$1(data.gallery),
     authorId: userId,
-    publishedAt: isPublished ? data.publishedAt ?? now : null,
+    publishedAt: publication.publishedAt,
     createdAt: now,
     updatedAt: now
   };
 }
 function buildUpdatePayload(data, existing, now) {
   const oldStatus = existing.status;
-  const newStatus = data.status ?? oldStatus;
-  const publishedAt = computePublishedAt(
+  const publication = resolvePublicationState(
+    data.status ?? oldStatus ?? "draft",
     data.publishedAt,
     oldStatus,
-    newStatus,
-    existing,
+    existing.publishedAt,
     now
   );
-  const update = { updatedAt: now };
+  const update = {
+    updatedAt: now,
+    status: publication.status,
+    publishedAt: publication.publishedAt
+  };
   if (data.title !== void 0) update.title = sanitizeText(data.title);
   if (data.slug !== void 0) update.slug = data.slug;
   if (data.type !== void 0) update.type = data.type;
-  if (data.status !== void 0) update.status = data.status;
   if (data.excerpt !== void 0) update.excerpt = data.excerpt ?? null;
   if (data.description !== void 0) update.description = data.description ? sanitizeHtml(data.description) : null;
   if (data.tags !== void 0) update.tags = jsonOrNull$1(data.tags);
@@ -1999,7 +3242,6 @@ function buildUpdatePayload(data, existing, now) {
   if (data.metaDescription !== void 0) update.metaDescription = data.metaDescription ?? null;
   if (data.featuredImage !== void 0) update.featuredImage = data.featuredImage ?? null;
   if (data.gallery !== void 0) update.gallery = jsonOrNull$1(data.gallery);
-  update.publishedAt = publishedAt;
   return update;
 }
 async function createPost(data, userId) {
@@ -2021,7 +3263,7 @@ async function createPost(data, userId) {
 }
 async function updatePost(id2, data) {
   const existing = await findPostByIdRecord(id2);
-  if (!existing) return serviceNotFound("Post");
+  if (!existing || existing.deletedAt != null) return serviceNotFound("Post");
   if (data.slug && data.slug !== existing.slug) {
     const slugConflict = await findPostBySlugRecord(data.slug);
     if (slugConflict) return serviceConflict("slug", "A post with this slug already exists.");
@@ -2041,7 +3283,7 @@ async function updatePost(id2, data) {
 }
 async function duplicatePost(id2, userId) {
   const original = await findPostByIdRecord(id2);
-  if (!original) return serviceNotFound("Post");
+  if (!original || original.deletedAt != null) return serviceNotFound("Post");
   const now = Date.now();
   const newId = generateId();
   let newSlug = `${original.slug}-copy`;
@@ -2088,13 +3330,12 @@ async function bulkDeletePosts(ids) {
   const results = [];
   for (const id2 of ids) {
     const existing = await findPostByIdRecord(id2);
-    if (!existing) {
+    if (!existing || existing.deletedAt != null) {
       results.push({ id: id2, success: false });
       continue;
     }
     try {
-      await deletePostRecord(id2);
-      results.push({ id: id2, success: true });
+      results.push({ id: id2, success: await trashPostRecord(id2, Date.now()) });
     } catch {
       results.push({ id: id2, success: false });
     }
@@ -2107,7 +3348,7 @@ async function bulkPublishPosts(ids) {
   const results = [];
   for (const id2 of ids) {
     const existing = await findPostByIdRecord(id2);
-    if (!existing) {
+    if (!existing || existing.deletedAt != null) {
       results.push({ id: id2, success: false });
       continue;
     }
@@ -2126,7 +3367,7 @@ async function bulkUnpublishPosts(ids) {
   const results = [];
   for (const id2 of ids) {
     const existing = await findPostByIdRecord(id2);
-    if (!existing) {
+    if (!existing || existing.deletedAt != null) {
       results.push({ id: id2, success: false });
       continue;
     }
@@ -2154,19 +3395,85 @@ async function bulkDuplicatePosts(ids, userId) {
 }
 async function deletePost(id2) {
   const existing = await findPostByIdRecord(id2);
-  if (!existing) return serviceNotFound("Post");
+  if (!existing || existing.deletedAt != null) return serviceNotFound("Post");
   try {
-    await deletePostRecord(id2);
+    const moved = await trashPostRecord(id2, Date.now());
+    if (!moved) return serviceNotFound("Post");
     invalidatePublicDataCache();
-    return serviceSuccess(null, "Post deleted.");
+    return serviceSuccess(null, "Post moved to trash.");
   } catch {
-    return { success: false, error: { code: "db_error", message: "Failed to delete post." } };
+    return { success: false, error: { code: "db_error", message: "Failed to move post to trash." } };
   }
 }
 async function getPost(id2) {
   const post = await findPostByIdRecord(id2);
-  if (!post) return serviceNotFound("Post");
+  if (!post || post.deletedAt != null) return serviceNotFound("Post");
   return serviceSuccess(post, "OK");
+}
+async function getTrashedPost(id2) {
+  const post = await findPostByIdRecord(id2);
+  if (!post || post.deletedAt == null) return serviceNotFound("Post");
+  return serviceSuccess(post, "OK");
+}
+async function restorePost(id2) {
+  const existing = await getTrashedPost(id2);
+  if (!existing.success) return existing;
+  try {
+    const restored = await restorePostRecord(id2, Date.now());
+    if (!restored) return serviceNotFound("Post");
+    const post = await findPostByIdRecord(id2);
+    if (!post) return serviceNotFound("Post");
+    invalidatePublicDataCache();
+    return serviceSuccess(post, "Post restored.");
+  } catch {
+    return { success: false, error: { code: "db_error", message: "Failed to restore post." } };
+  }
+}
+async function permanentlyDeletePost(id2) {
+  const existing = await getTrashedPost(id2);
+  if (!existing.success) return { success: false, error: existing.error };
+  try {
+    const deleted = await permanentlyDeletePostRecord(id2);
+    if (!deleted) return serviceNotFound("Post");
+    invalidatePublicDataCache();
+    return serviceSuccess(null, "Post permanently deleted.");
+  } catch {
+    return { success: false, error: { code: "db_error", message: "Failed to permanently delete post." } };
+  }
+}
+async function bulkRestorePosts(ids) {
+  const results = [];
+  for (const id2 of ids) {
+    const existing = await findPostByIdRecord(id2);
+    if (!existing || existing.deletedAt == null) {
+      results.push({ id: id2, success: false });
+      continue;
+    }
+    try {
+      results.push({ id: id2, success: await restorePostRecord(id2, Date.now()) });
+    } catch {
+      results.push({ id: id2, success: false });
+    }
+  }
+  if (results.some((result) => result.success)) invalidatePublicDataCache();
+  return serviceSuccess(results, "Bulk restore completed.");
+}
+async function bulkPermanentlyDeletePosts(ids) {
+  const results = [];
+  for (const id2 of ids) {
+    const existing = await findPostByIdRecord(id2);
+    if (!existing || existing.deletedAt == null) {
+      results.push({ id: id2, success: false });
+      continue;
+    }
+    try {
+      results.push({ id: id2, success: await permanentlyDeletePostRecord(id2) });
+    } catch {
+      results.push({ id: id2, success: false });
+    }
+  }
+  if (results.some((result) => result.success)) invalidatePublicDataCache();
+  return serviceSuccess(results, "Bulk permanent delete completed.");
 }
 async function listPosts(filters) {
   const result = await listPostRecords(filters);
@@ -2181,9 +3488,9 @@ async function getPublishedPostByType(type, slug) {
   if (!post) return serviceNotFound("Post");
   return serviceSuccess(post, "OK");
 }
-async function listPublishedPostsByType(type, page = 1, perPage = 12, filters = {}) {
+async function listPublishedPostsByType(type, page = 1, perPage = 10, filters = {}) {
   const normalizedPage = clampPage(page);
-  const normalizedPerPage = clampPerPage(perPage, 12);
+  const normalizedPerPage = clampPerPage(perPage, 10);
   const availableCustomFields = getPublicCustomFieldFilters(type);
   const requestedCustomFields = filters.customFields ?? {};
   const customFields = Object.fromEntries(
@@ -2236,10 +3543,10 @@ function isValidCustomFieldFilterValue(field, value) {
   if (field.type === "date") return /^\d{4}-\d{2}-\d{2}$/.test(value);
   return true;
 }
-async function searchPublishedPosts(query, page = 1, perPage = 12) {
+async function searchPublishedPosts(query, page = 1, perPage = 10) {
   const normalizedQuery = query.trim().slice(0, 100);
   const normalizedPage = clampPage(page);
-  const normalizedPerPage = clampPerPage(perPage, 12);
+  const normalizedPerPage = clampPerPage(perPage, 10);
   if (!normalizedQuery) {
     return serviceSuccess({ data: [], meta: { currentPage: 1, perPage: normalizedPerPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK");
   }
@@ -2249,10 +3556,10 @@ async function searchPublishedPosts(query, page = 1, perPage = 12) {
   );
   return serviceSuccess(result, "OK");
 }
-async function listPublishedPostsByTag(tag, page = 1, perPage = 12) {
+async function listPublishedPostsByTag(tag, page = 1, perPage = 10) {
   const normalizedTag = tag.trim().slice(0, 100);
   const normalizedPage = clampPage(page);
-  const normalizedPerPage = clampPerPage(perPage, 12);
+  const normalizedPerPage = clampPerPage(perPage, 10);
   if (!normalizedTag) {
     return serviceSuccess({ data: [], meta: { currentPage: 1, perPage: normalizedPerPage, total: 0, lastPage: 1, from: 0, to: 0 } }, "OK");
   }
@@ -2263,106 +3570,6 @@ async function listPublishedPostsByTag(tag, page = 1, perPage = 12) {
     ),
     "OK"
   );
-}
-const MAX_MENU_ROWS = 5e3;
-async function findMenuById(id2) {
-  const rows = await db.select().from(menus).where(eq(menus.id, id2)).limit(1).execute();
-  return rows[0];
-}
-async function listMenus$1(type, publishedOnly = false) {
-  const query = db.select().from(menus);
-  const condition = type ? eq(menus.type, type) : void 0;
-  const where = publishedOnly ? condition ? and(condition, eq(menus.status, "published")) : eq(menus.status, "published") : condition;
-  return await (where ? query.where(where) : query).limit(MAX_MENU_ROWS).execute();
-}
-async function getMenuTreeRecords(items, type) {
-  const rows = await listMenus$1(type, true);
-  const map = /* @__PURE__ */ new Map();
-  const roots = [];
-  for (const row of rows) {
-    map.set(row.id, {
-      id: row.id,
-      title: row.title,
-      url: row.url,
-      position: row.position,
-      cssClass: row.cssClass,
-      target: row.target,
-      image: row.image,
-      parentId: row.parentId,
-      children: []
-    });
-  }
-  for (const row of rows) {
-    const node = map.get(row.id);
-    if (row.parentId && map.has(row.parentId)) {
-      map.get(row.parentId).children.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-  const visited = /* @__PURE__ */ new Set();
-  const MAX_RENDER_DEPTH = 50;
-  const sortTree = (tree, depth = 0) => {
-    const result = [];
-    for (const node of [...tree].sort((a, b) => a.position - b.position)) {
-      if (visited.has(node.id)) continue;
-      visited.add(node.id);
-      result.push({
-        ...node,
-        children: depth < MAX_RENDER_DEPTH ? sortTree(node.children, depth + 1) : []
-      });
-    }
-    return result;
-  };
-  const sortedRoots = sortTree(roots);
-  for (const node of map.values()) {
-    if (!visited.has(node.id)) {
-      node.parentId = null;
-      sortedRoots.push(...sortTree([node]));
-    }
-  }
-  return sortedRoots;
-}
-async function createMenuRecord(input) {
-  await db.insert(menus).values({
-    id: input.id,
-    title: sanitizeText(input.title),
-    url: input.url,
-    type: input.type,
-    position: input.position,
-    cssClass: input.cssClass ? sanitizeText(input.cssClass) : null,
-    target: input.target ?? null,
-    image: input.image ?? null,
-    status: input.status ?? "published",
-    parentId: input.parentId ?? null,
-    createdAt: input.createdAt,
-    updatedAt: input.updatedAt
-  }).execute();
-  return await findMenuById(input.id);
-}
-async function updateMenuRecord(id2, input) {
-  const updateData = { updatedAt: input.updatedAt };
-  if (input.title !== void 0) updateData.title = sanitizeText(input.title);
-  if (input.url !== void 0) updateData.url = input.url;
-  if (input.type !== void 0) updateData.type = input.type;
-  if (input.position !== void 0) updateData.position = input.position;
-  if (input.cssClass !== void 0) updateData.cssClass = input.cssClass ? sanitizeText(input.cssClass) : null;
-  if (input.target !== void 0) updateData.target = input.target ?? null;
-  if (input.image !== void 0) updateData.image = input.image ?? null;
-  if (input.status !== void 0) updateData.status = input.status;
-  if (input.parentId !== void 0) updateData.parentId = input.parentId ?? null;
-  await db.update(menus).set(updateData).where(eq(menus.id, id2)).execute();
-  return await findMenuById(id2) ?? null;
-}
-async function deleteMenuRecord(id2) {
-  await db.update(menus).set({ parentId: null }).where(eq(menus.parentId, id2)).execute();
-  const result = await db.delete(menus).where(eq(menus.id, id2)).execute();
-  return affectedRows(result) > 0;
-}
-async function reorderMenuTree(items) {
-  for (const item of items) {
-    await db.update(menus).set({ position: item.position, parentId: item.parentId, updatedAt: Date.now() }).where(eq(menus.id, item.id)).execute();
-  }
 }
 const MAX_MENU_PARENT_DEPTH = 20;
 async function validateParentId(parentId, type, currentId) {
@@ -2484,160 +3691,6 @@ async function deleteMenu(id2) {
   await deleteMenuRecord(id2);
   invalidatePublicDataCache();
   return serviceSuccess(null, "Menu deleted.");
-}
-async function getAllSettingsRecords() {
-  return await db.select().from(settings$1).execute();
-}
-async function getSettingRecord(key) {
-  const rows = await db.select().from(settings$1).where(eq(settings$1.key, key)).limit(1).execute();
-  return rows[0];
-}
-async function upsertSettingRecord(key, value) {
-  const now = getCurrentTimestamp();
-  const existing = await getSettingRecord(key);
-  if (existing) {
-    await db.update(settings$1).set({ value, updatedAt: now }).where(eq(settings$1.key, key)).execute();
-    return { key, value, createdAt: existing.createdAt, updatedAt: now };
-  }
-  await db.insert(settings$1).values({ key, value, createdAt: now, updatedAt: now }).execute();
-  return { key, value, createdAt: now, updatedAt: now };
-}
-const SETTING_KEYS = {
-  TITLE: "title",
-  DESCRIPTION: "description",
-  META_TITLE: "meta_title",
-  META_DESCRIPTION: "meta_description",
-  MAINTENANCE_MODE: "maintenance_mode",
-  TIMEZONE: "timezone",
-  LOGO: "logo",
-  FAVICON: "favicon",
-  LINKS: "links",
-  OPEN_HOURS: "open_hours",
-  CUSTOM_CSS: "custom_css",
-  CUSTOM_JAVASCRIPT: "custom_javascript",
-  TRANSLATE_COUNTRIES: "translate_countries",
-  EMAIL_NOTIFICATIONS: "email_notifications"
-};
-const DEFAULT_SETTINGS = {
-  title: "My CMS",
-  description: "A content management system",
-  meta_title: "My CMS - Home",
-  meta_description: "Welcome to My CMS",
-  maintenance_mode: false,
-  timezone: "UTC",
-  logo: "",
-  favicon: "",
-  links: [],
-  open_hours: [],
-  custom_css: "",
-  custom_javascript: "",
-  translate_countries: [],
-  email_notifications: []
-};
-function parseSetting(record, fallback, parser) {
-  if (!record || record.value === "" || record.value === null) return fallback;
-  try {
-    return parser(record.value);
-  } catch {
-    return fallback;
-  }
-}
-function parseJsonSetting(record, fallback) {
-  return parseSetting(record, fallback, (raw) => JSON.parse(raw));
-}
-function parseBooleanSetting(record, fallback) {
-  return parseSetting(record, fallback, (raw) => raw === "true" || raw === "1");
-}
-function parseStringSetting(record, fallback) {
-  return parseSetting(record, fallback, (raw) => raw);
-}
-function parseStringArraySetting(record, fallback) {
-  return parseSetting(record, fallback, (raw) => {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.every((value) => typeof value === "string") ? parsed : fallback;
-  });
-}
-async function getSiteSettings() {
-  return await getCachedPublicData("site-settings", async () => {
-    const records = await getAllSettingsRecords();
-    const map = new Map(records.map((r) => [r.key, r]));
-    return {
-      title: parseStringSetting(map.get(SETTING_KEYS.TITLE), DEFAULT_SETTINGS.title),
-      description: parseStringSetting(map.get(SETTING_KEYS.DESCRIPTION), DEFAULT_SETTINGS.description),
-      meta_title: parseStringSetting(map.get(SETTING_KEYS.META_TITLE), DEFAULT_SETTINGS.meta_title),
-      meta_description: parseStringSetting(map.get(SETTING_KEYS.META_DESCRIPTION), DEFAULT_SETTINGS.meta_description),
-      maintenance_mode: parseBooleanSetting(map.get(SETTING_KEYS.MAINTENANCE_MODE), DEFAULT_SETTINGS.maintenance_mode),
-      timezone: parseStringSetting(map.get(SETTING_KEYS.TIMEZONE), DEFAULT_SETTINGS.timezone),
-      logo: parseStringSetting(map.get(SETTING_KEYS.LOGO), DEFAULT_SETTINGS.logo),
-      favicon: parseStringSetting(map.get(SETTING_KEYS.FAVICON), DEFAULT_SETTINGS.favicon),
-      links: parseJsonSetting(map.get(SETTING_KEYS.LINKS), DEFAULT_SETTINGS.links),
-      open_hours: parseJsonSetting(map.get(SETTING_KEYS.OPEN_HOURS), DEFAULT_SETTINGS.open_hours),
-      custom_css: parseStringSetting(map.get(SETTING_KEYS.CUSTOM_CSS), DEFAULT_SETTINGS.custom_css),
-      custom_javascript: parseStringSetting(map.get(SETTING_KEYS.CUSTOM_JAVASCRIPT), DEFAULT_SETTINGS.custom_javascript),
-      translate_countries: parseStringArraySetting(map.get(SETTING_KEYS.TRANSLATE_COUNTRIES), DEFAULT_SETTINGS.translate_countries),
-      email_notifications: parseStringArraySetting(map.get(SETTING_KEYS.EMAIL_NOTIFICATIONS), DEFAULT_SETTINGS.email_notifications)
-    };
-  });
-}
-async function updateSiteSettings(data) {
-  const upserts = [];
-  if (data.title !== void 0) {
-    upserts.push({ key: SETTING_KEYS.TITLE, value: data.title });
-  }
-  if (data.description !== void 0) {
-    upserts.push({ key: SETTING_KEYS.DESCRIPTION, value: data.description });
-  }
-  if (data.meta_title !== void 0) {
-    upserts.push({ key: SETTING_KEYS.META_TITLE, value: data.meta_title });
-  }
-  if (data.meta_description !== void 0) {
-    upserts.push({ key: SETTING_KEYS.META_DESCRIPTION, value: data.meta_description });
-  }
-  if (data.maintenance_mode !== void 0) {
-    upserts.push({ key: SETTING_KEYS.MAINTENANCE_MODE, value: String(data.maintenance_mode) });
-  }
-  if (data.timezone !== void 0) {
-    upserts.push({ key: SETTING_KEYS.TIMEZONE, value: data.timezone });
-  }
-  if (data.logo !== void 0) {
-    upserts.push({ key: SETTING_KEYS.LOGO, value: data.logo });
-  }
-  if (data.favicon !== void 0) {
-    upserts.push({ key: SETTING_KEYS.FAVICON, value: data.favicon });
-  }
-  if (data.links !== void 0) {
-    upserts.push({ key: SETTING_KEYS.LINKS, value: JSON.stringify(data.links) });
-  }
-  if (data.open_hours !== void 0) {
-    upserts.push({ key: SETTING_KEYS.OPEN_HOURS, value: JSON.stringify(data.open_hours) });
-  }
-  if (data.custom_css !== void 0) {
-    upserts.push({ key: SETTING_KEYS.CUSTOM_CSS, value: data.custom_css });
-  }
-  if (data.custom_javascript !== void 0) {
-    upserts.push({ key: SETTING_KEYS.CUSTOM_JAVASCRIPT, value: data.custom_javascript });
-  }
-  if (data.translate_countries !== void 0) {
-    upserts.push({
-      key: SETTING_KEYS.TRANSLATE_COUNTRIES,
-      value: JSON.stringify(data.translate_countries)
-    });
-  }
-  if (data.email_notifications !== void 0) {
-    const emails = data.email_notifications.split(",").map((s) => s.trim()).filter(Boolean);
-    upserts.push({
-      key: SETTING_KEYS.EMAIL_NOTIFICATIONS,
-      value: JSON.stringify(emails)
-    });
-  }
-  if (upserts.length === 0) {
-    return serviceSuccess(await getSiteSettings(), "No settings to update.");
-  }
-  for (const { key, value } of upserts) {
-    await upsertSettingRecord(key, value);
-  }
-  invalidatePublicDataCache();
-  return serviceSuccess(await getSiteSettings(), "Settings updated successfully.");
 }
 let cachedS3 = null;
 function envValue(name) {
@@ -2787,287 +3840,103 @@ async function migrate() {
     await migrate$3(db, config);
   }
 }
-const CONTENT_TYPE_REGISTRY_PATH = "src/components/web/content-type-templates/registry.json";
-const BUILT_IN_CONTENT_TYPES = [
-  { slug: "post", name: "post" },
-  { slug: "page", name: "page" }
-];
-function getRegistryPath() {
-  const configuredPath = process.env.CONTENT_TYPE_REGISTRY_PATH?.trim() || process.env.BEAVER_CONTENT_TYPE_REGISTRY_PATH?.trim();
-  if (configuredPath) return resolve(process.cwd(), configuredPath);
-  const moduleDir = dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    resolve(process.cwd(), CONTENT_TYPE_REGISTRY_PATH),
-    resolve(moduleDir, "templates/flowstack/src/components/web/content-type-templates/registry.json"),
-    resolve(moduleDir, "../../../templates/flowstack/src/components/web/content-type-templates/registry.json")
-  ];
-  return candidates.find((candidate) => existsSync(candidate));
+const DEFAULT_INTERVAL_SECONDS = 60;
+const MIN_INTERVAL_SECONDS = 1;
+const MAX_INTERVAL_SECONDS = 24 * 60 * 60;
+const DEFAULT_BATCH_SIZE = 100;
+const MAX_BATCH_SIZE = 1e3;
+function boundedInteger(value, fallback, minimum, maximum) {
+  if (value === void 0 || value.trim() === "") return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) return fallback;
+  return parsed;
 }
-function loadRegistryContentTypes() {
-  const filePath = getRegistryPath();
-  if (!filePath || !existsSync(filePath)) return [];
-  const registry = JSON.parse(readFileSync(filePath, "utf8"));
-  if (!Array.isArray(registry.contentTypes)) return [];
-  return registry.contentTypes.flatMap((entry) => {
-    if (!entry || typeof entry !== "object") return [];
-    const record = entry;
-    const slug = typeof record.slug === "string" ? record.slug.trim() : "";
-    if (!slug) return [];
-    const name = typeof record.name === "string" && record.name.trim() ? record.name.trim() : slug;
-    return [{ slug, name }];
+function getSchedulingWorkerIntervalMs() {
+  return boundedInteger(
+    process.env.BEAVER_WORKER_INTERVAL_SECONDS,
+    DEFAULT_INTERVAL_SECONDS,
+    MIN_INTERVAL_SECONDS,
+    MAX_INTERVAL_SECONDS
+  ) * 1e3;
+}
+function getSchedulingWorkerBatchSize() {
+  return boundedInteger(process.env.BEAVER_WORKER_BATCH_SIZE, DEFAULT_BATCH_SIZE, 1, MAX_BATCH_SIZE);
+}
+async function recordScheduledPublication(postId, scheduledAt, publishedAt) {
+  await createActivityLogRecord({
+    action: "publish_scheduled",
+    resource: "post",
+    resourceId: postId,
+    metadata: {
+      scheduledAt,
+      publishedAt,
+      delaySeconds: scheduledAt === null ? null : Math.max(0, Math.floor((publishedAt - scheduledAt) / 1e3))
+    },
+    userAgent: "beaver-scheduling-worker",
+    success: true,
+    statusCode: 200,
+    actorId: null
   });
 }
-function getContentTypes() {
-  const seen = /* @__PURE__ */ new Set();
-  return [...BUILT_IN_CONTENT_TYPES, ...loadRegistryContentTypes()].filter((contentType) => {
-    if (seen.has(contentType.slug)) return false;
-    seen.add(contentType.slug);
-    return true;
-  });
-}
-function contentTypePermissions(contentType) {
-  const { name, slug } = contentType;
-  return [
-    { slug: `content.${slug}.view`, name: `View ${name} content`, group: slug },
-    { slug: `content.${slug}.create`, name: `Create ${name} content`, group: slug },
-    { slug: `content.${slug}.edit`, name: `Edit any ${name} content`, group: slug },
-    { slug: `content.${slug}.edit-own`, name: `Edit own ${name} content`, group: slug },
-    { slug: `content.${slug}.delete`, name: `Delete ${name} content`, group: slug },
-    { slug: `content.${slug}.publish`, name: `Publish ${name} content`, group: slug },
-    { slug: `content.${slug}.unpublish`, name: `Unpublish ${name} content`, group: slug },
-    { slug: `category.${slug}.view`, name: `View ${name} categories`, group: slug },
-    { slug: `category.${slug}.manage`, name: `Manage ${name} categories`, group: slug },
-    { slug: `category.${slug}.publish`, name: `Publish ${name} categories`, group: slug },
-    { slug: `category.${slug}.unpublish`, name: `Unpublish ${name} categories`, group: slug }
-  ];
-}
-function getPermissionDefinitions() {
-  return [
-    ...getContentTypes().flatMap(contentTypePermissions),
-    { slug: "dashboard.view", name: "View dashboard statistics", group: "dashboard" },
-    { slug: "media.view", name: "View media library", group: "media" },
-    { slug: "media.upload", name: "Upload new media", group: "media" },
-    { slug: "media.edit", name: "Edit media metadata", group: "media" },
-    { slug: "media.delete", name: "Delete media files", group: "media" },
-    { slug: "menus.view", name: "View menus", group: "menus" },
-    { slug: "menus.create", name: "Create menus", group: "menus" },
-    { slug: "menus.edit", name: "Edit menus", group: "menus" },
-    { slug: "menus.manage", name: "Manage menus", group: "menus" },
-    { slug: "menus.delete", name: "Delete menus", group: "menus" },
-    { slug: "menus.publish", name: "Publish menus", group: "menus" },
-    { slug: "menus.unpublish", name: "Unpublish menus", group: "menus" },
-    { slug: "users.view", name: "View users list", group: "users" },
-    { slug: "users.create", name: "Create new users", group: "users" },
-    { slug: "users.edit", name: "Edit user profiles", group: "users" },
-    { slug: "users.delete", name: "Delete users", group: "users" },
-    { slug: "users.manage", name: "Manage users and credentials", group: "users" },
-    { slug: "roles.view", name: "View roles and permissions", group: "roles" },
-    { slug: "roles.create", name: "Create roles", group: "roles" },
-    { slug: "roles.edit", name: "Edit roles and assign permissions", group: "roles" },
-    { slug: "roles.delete", name: "Delete roles", group: "roles" },
-    { slug: "roles.manage", name: "Manage roles and permissions", group: "roles" },
-    { slug: "settings.manage", name: "Manage system settings", group: "settings" }
-  ];
-}
-function isContentPermissionSlug(slug) {
-  return slug.startsWith("content.") || slug.startsWith("category.");
-}
-async function syncPermissionRecords(definitions) {
-  const now = getCurrentTimestamp();
-  return await db.transaction(async (tx) => {
-    const existing = await tx.select({ id: permissions.id, slug: permissions.slug }).from(permissions).execute();
-    const existingBySlug = new Map(existing.map((permission) => [permission.slug, permission]));
-    const desiredSlugs = new Set(definitions.map((permission) => permission.slug));
-    const obsolete = existing.filter((permission) => isContentPermissionSlug(permission.slug) && !desiredSlugs.has(permission.slug));
-    for (const permission of obsolete) {
-      await tx.delete(rolePermissions).where(eq(rolePermissions.permissionId, permission.id)).execute();
-      await tx.delete(permissions).where(eq(permissions.id, permission.id)).execute();
+async function runSchedulingWorkerCycle(now = Date.now(), batchSize = getSchedulingWorkerBatchSize()) {
+  const normalized = await normalizeLegacyScheduledPostRecords(now);
+  const duePosts = await listDueScheduledPostRecords(now, batchSize);
+  let published = 0;
+  let activityLogs2 = 0;
+  let activityLogFailures = 0;
+  for (const post of duePosts) {
+    const claimed = await publishScheduledPostRecord(post.id, now);
+    if (!claimed) continue;
+    published += 1;
+    try {
+      await recordScheduledPublication(post.id, post.publishedAt, now);
+      activityLogs2 += 1;
+    } catch (error) {
+      activityLogFailures += 1;
+      console.error(`Activity log failed for scheduled post ${post.id}`, error);
     }
-    let added = 0;
-    let updated = 0;
-    for (const definition of definitions) {
-      const current = existingBySlug.get(definition.slug);
-      if (current) {
-        await tx.update(permissions).set({
-          name: definition.name,
-          group: definition.group,
-          description: definition.name,
-          updatedAt: now
-        }).where(eq(permissions.id, current.id)).execute();
-        updated++;
-        continue;
-      }
-      await tx.insert(permissions).values({
-        id: generateId(),
-        name: definition.name,
-        slug: definition.slug,
-        group: definition.group,
-        description: definition.name,
-        createdAt: now,
-        updatedAt: now
-      }).execute();
-      added++;
-    }
-    return { added, updated, removed: obsolete.length, total: definitions.length };
-  });
-}
-const DEFAULT_ROLES = [
-  {
-    name: "Super Admin",
-    slug: "super-admin",
-    description: "Full system access. Cannot be deleted or modified.",
-    isSystem: 1
-  },
-  {
-    name: "Editor",
-    slug: "editor",
-    description: "Can manage all content, media, categories, and menus.",
-    isSystem: 0
-  },
-  {
-    name: "Author",
-    slug: "author",
-    description: "Can create and edit own posts, view and upload media.",
-    isSystem: 0
-  },
-  {
-    name: "Viewer",
-    slug: "viewer",
-    description: "Read-only access to posts, media, and categories.",
-    isSystem: 0
   }
-];
-function getRolePermissionMap(definitions) {
-  return {
-    "super-admin": definitions.map((permission) => permission.slug),
-    editor: [
-      ...definitions.filter((permission) => isContentPermissionSlug(permission.slug)).map((permission) => permission.slug),
-      "dashboard.view",
-      "media.view",
-      "media.upload",
-      "media.edit",
-      "media.delete",
-      "menus.view",
-      "menus.create",
-      "menus.edit",
-      "menus.delete",
-      "menus.publish",
-      "menus.unpublish"
-    ],
-    author: [
-      "content.post.view",
-      "content.post.create",
-      "content.post.edit-own",
-      "media.view",
-      "media.upload"
-    ],
-    viewer: [
-      "content.post.view",
-      "media.view",
-      "category.post.view"
-    ]
-  };
+  if (published > 0) invalidatePublicDataCache();
+  const purged = await purgeExpiredActivityLogs();
+  return { normalized, published, activityLogs: activityLogs2, activityLogFailures, purged };
 }
-async function seed() {
-  console.log("🌱 Seeding database...");
-  const permissionDefinitions = getPermissionDefinitions();
-  const rolePermissionMap = getRolePermissionMap(permissionDefinitions);
-  const now = getCurrentTimestamp();
-  console.log("  → Inserting permissions...");
-  const permissionSync = await syncPermissionRecords(permissionDefinitions);
-  console.log(`  ✓ ${permissionSync.total} permissions ready`);
-  await db.transaction(async (tx) => {
-    const existingPermissions = await tx.select({ id: permissions.id, slug: permissions.slug }).from(permissions).execute();
-    const permissionSlugToId = new Map(
-      existingPermissions.map((p) => [p.slug, p.id])
-    );
-    console.log("  → Inserting roles...");
-    for (const role of DEFAULT_ROLES) {
-      const insert = tx.insert(roles).values({
-        id: generateId(),
-        name: role.name,
-        slug: role.slug,
-        description: role.description,
-        isSystem: role.isSystem,
-        createdAt: now,
-        updatedAt: now
-      });
-      if (databaseConfig.connection === "mysql") {
-        await insert.onDuplicateKeyUpdate({ set: { slug: role.slug } }).execute();
-      } else {
-        await insert.onConflictDoNothing({ target: roles.slug }).execute();
-      }
+function waitForNextCycle(intervalMs, signal) {
+  return new Promise((resolve2) => {
+    if (signal?.aborted) {
+      resolve2();
+      return;
     }
-    const existingRoles = await tx.select({ id: roles.id, slug: roles.slug }).from(roles).execute();
-    const roleSlugToId = new Map(
-      existingRoles.map((r) => [r.slug, r.id])
-    );
-    console.log(`  ✓ ${existingRoles.length} roles ready`);
-    console.log("  → Assigning permissions to roles...");
-    for (const role of DEFAULT_ROLES) {
-      const roleId = roleSlugToId.get(role.slug);
-      if (roleId) {
-        await tx.delete(rolePermissions).where(eq(rolePermissions.roleId, roleId)).execute();
-      }
-    }
-    let assignmentCount = 0;
-    for (const [roleSlug, permSlugs] of Object.entries(rolePermissionMap)) {
-      const roleId = roleSlugToId.get(roleSlug);
-      if (!roleId) {
-        console.warn(`  ⚠ Role "${roleSlug}" not found, skipping assignments`);
-        continue;
-      }
-      for (const permSlug of permSlugs) {
-        const permissionId = permissionSlugToId.get(permSlug);
-        if (!permissionId) {
-          console.warn(`  ⚠ Permission "${permSlug}" not found, skipping`);
-          continue;
-        }
-        await tx.insert(rolePermissions).values({
-          id: generateId(),
-          roleId,
-          permissionId,
-          createdAt: now
-        }).execute();
-        assignmentCount++;
-      }
-    }
-    console.log(`  ✓ ${assignmentCount} role-permission assignments created`);
-    console.log("  → Creating super-admin user...");
-    const admin = getSeedAdminCredentials();
-    const resolvedAdminEmail = admin.email;
-    const resolvedAdminPassword = admin.password;
-    const resolvedAdminName = admin.name;
-    const hashedPassword = bcrypt.hashSync(resolvedAdminPassword, 12);
-    const superAdminRoleId = roleSlugToId.get("super-admin");
-    if (!superAdminRoleId) {
-      console.warn("  ⚠ Super Admin role not found, skipping user creation");
-    } else {
-      const insert = tx.insert(users).values({
-        id: generateId(),
-        name: resolvedAdminName,
-        email: resolvedAdminEmail,
-        password: hashedPassword,
-        roleId: superAdminRoleId,
-        emailVerified: 1,
-        createdAt: now,
-        updatedAt: now
-      });
-      if (databaseConfig.connection === "mysql") {
-        await insert.onDuplicateKeyUpdate({ set: { email: resolvedAdminEmail } }).execute();
-      } else {
-        await insert.onConflictDoNothing({ target: users.email }).execute();
-      }
-      console.log(`  ✓ Super-admin user ready (${resolvedAdminEmail})`);
-    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve2();
+    }, intervalMs);
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      resolve2();
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
-  console.log("✅ Seed complete!");
 }
-if (import.meta.url === `file://${process.argv[1]}`) {
-  seed().catch((error) => {
-    console.error("❌ Seed failed:", error);
-    process.exitCode = 1;
-  });
+async function runSchedulingWorker(options = {}) {
+  const intervalMs = options.intervalMs ?? getSchedulingWorkerIntervalMs();
+  const batchSize = options.batchSize ?? getSchedulingWorkerBatchSize();
+  if (!Number.isInteger(intervalMs) || intervalMs < MIN_INTERVAL_SECONDS * 1e3) {
+    throw new Error("Scheduling worker interval must be at least one second.");
+  }
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > MAX_BATCH_SIZE) {
+    throw new Error(`Scheduling worker batch size must be between 1 and ${MAX_BATCH_SIZE}.`);
+  }
+  while (!options.signal?.aborted) {
+    try {
+      const result = await runSchedulingWorkerCycle(Date.now(), batchSize);
+      await options.onCycle?.(result);
+    } catch (error) {
+      console.error("Scheduling worker cycle failed", error);
+    }
+    if (options.signal?.aborted) break;
+    await waitForNextCycle(intervalMs, options.signal);
+  }
 }
 const createCategorySchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters"),
@@ -3317,28 +4186,8 @@ function assertRegularFile(filePath) {
     throw seedError(`Seed path must be a regular file: ${filePath}`);
   }
 }
-function packagedTemplateSeedPath(name) {
-  if (!/^[a-z0-9-]+$/.test(name)) throw seedError("Invalid template name.");
-  const moduleDir = dirname(fileURLToPath(import.meta.url));
-  const packaged = resolve(moduleDir, "templates", name, "data", "seed.json");
-  const source = resolve(moduleDir, "..", "..", "..", "templates", name, "data", "seed.json");
-  const filePath = existsSync(packaged) ? packaged : source;
-  assertRegularFile(filePath);
-  return filePath;
-}
 function resolveSeedPath(options) {
-  if (options.filePath && options.template) {
-    throw seedError("Choose either a seed file or a template, not both.");
-  }
-  if (!options.filePath && !options.template) {
-    throw seedError("A seed file or template is required.");
-  }
-  if (options.template) {
-    return {
-      filePath: packagedTemplateSeedPath(options.template),
-      source: `template:${options.template}`
-    };
-  }
+  if (!options.filePath) throw seedError("A seed file is required.");
   const filePath = isAbsolute(options.filePath) ? options.filePath : resolve(process.cwd(), options.filePath);
   assertRegularFile(filePath);
   return { filePath, source: filePath };
@@ -3453,7 +4302,9 @@ async function resolveCategoryIds(tx, slugs, categoryIds, contentLabel) {
   return resolved;
 }
 function buildContentFields(item, type, now, existingPublishedAt) {
-  const status2 = item.status ?? "published";
+  const requestedStatus = item.status ?? "published";
+  const publishedAt = requestedStatus === "published" ? item.publishedAt ?? existingPublishedAt ?? now : null;
+  const status2 = requestedStatus === "published" && publishedAt !== null && publishedAt > now ? "scheduled" : requestedStatus;
   return {
     title: sanitizeText(item.title),
     slug: contentSlug(item),
@@ -3468,7 +4319,7 @@ function buildContentFields(item, type, now, existingPublishedAt) {
     metaDescription: item.metaDescription ?? null,
     featuredImage: item.featuredImage ?? null,
     gallery: jsonOrNull(item.gallery),
-    publishedAt: status2 === "published" ? item.publishedAt ?? existingPublishedAt ?? now : null
+    publishedAt
   };
 }
 async function syncContentCategories(tx, postId, categoryIds, now) {
@@ -3636,7 +4487,7 @@ function plannedSummary(data, source) {
   return result;
 }
 function formatSeedDataSummary(result) {
-  const prefix = result.dryRun ? "Seed data dry-run" : "Seed data migration";
+  const prefix = result.dryRun ? "Seed data dry-run" : "Seed data import";
   const lines = [
     `${prefix} complete: ${result.source}`,
     `  settings: ${result.settings.created} created, ${result.settings.updated} updated, ${result.settings.skipped} skipped`,
@@ -3647,21 +4498,20 @@ function formatSeedDataSummary(result) {
   ];
   return lines.join("\n");
 }
-async function migrateData(options) {
+async function seedData(options) {
   const { data, source } = await loadSeedData(options);
   const dryRun = options.dryRun === true;
   if (dryRun) return plannedSummary(data, source);
   const userRows = await db.select({ id: users.id }).from(users).limit(1).execute();
-  const author = userRows[0];
-  if (!author) throw seedError("Run the base seed before importing content data.");
+  const authorId = userRows[0]?.id ?? SUPER_ADMIN_USER_ID;
   const result = emptySummary(source, false);
   const overwrite = options.overwrite === true;
   const now = getCurrentTimestamp();
   await db.transaction(async (tx) => {
     await importSettings(tx, data.settings, result.settings, overwrite, now);
     const categoryIds = await importCategories(tx, data.categories, result.categories, overwrite, now);
-    await importContent(tx, data.posts, "post", author.id, categoryIds, result.posts, overwrite, now);
-    await importContent(tx, data.pages, "page", author.id, categoryIds, result.pages, overwrite, now);
+    await importContent(tx, data.posts, "post", authorId, categoryIds, result.posts, overwrite, now);
+    await importContent(tx, data.pages, "page", authorId, categoryIds, result.pages, overwrite, now);
     await importMenus(tx, data.menus, result.menus, overwrite, now);
   });
   const changed = Object.values(result).some((value) => {
@@ -3672,171 +4522,68 @@ async function migrateData(options) {
   if (changed) invalidatePublicDataCache();
   return result;
 }
-async function seedTemplate(name) {
-  const result = await migrateData({ template: name });
-  console.log(formatSeedDataSummary(result));
+async function seed(options) {
+  if (options && (options.filePath || options.dryRun || options.overwrite)) {
+    return seedData(options);
+  }
+  const admin = getAdminCredentials();
+  console.log(`✅ System seed complete (environment-managed Super Admin: ${admin.email})`);
+}
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seed().catch((error) => {
+    console.error("❌ Seed failed:", error);
+    process.exitCode = 1;
+  });
 }
 async function resetSuperAdminPassword() {
-  assertSecureSeedEnvironment();
-  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  const password = process.env.ADMIN_PASSWORD;
-  if (!email || !password || password.length < 12 || password.length > 128) {
-    throw new Error("ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters are required.");
-  }
-  const superAdminRows = await db.select({ id: roles.id }).from(roles).where(eq(roles.slug, "super-admin")).limit(1).execute();
-  const superAdmin = superAdminRows[0];
-  if (!superAdmin) throw new Error("The super-admin role does not exist. Run beaver seed first.");
-  const userRows = await db.select({ id: users.id }).from(users).where(and(eq(users.email, email), eq(users.roleId, superAdmin.id))).limit(1).execute();
-  const user = userRows[0];
-  if (!user) throw new Error(`No super-admin user found for ${email}.`);
-  const passwordHash = bcrypt.hashSync(password, 12);
-  const now = getCurrentTimestamp();
-  await db.transaction(async (tx) => {
-    await tx.update(users).set({ password: passwordHash, updatedAt: now }).where(eq(users.id, user.id)).execute();
-    await tx.delete(adminRefreshSessions).where(eq(adminRefreshSessions.userId, user.id)).execute();
+  const admin = getAdminCredentials();
+  return { email: admin.email };
+}
+const TWO_FACTOR_ISSUER = "Beaver";
+function getSuperAdminTwoFactorUri(secret) {
+  const credentials = getAdminCredentials();
+  return generateURI({
+    issuer: TWO_FACTOR_ISSUER,
+    label: credentials.email,
+    secret
   });
-  return { email };
 }
-const BCRYPT_COST = 12;
-async function hashPassword(password) {
-  return bcrypt.hash(password, BCRYPT_COST);
-}
-async function verifyPassword(password, hash) {
-  return bcrypt.compare(password, hash);
-}
-const MAX_ROLE_ROWS = 1e3;
-async function findRoleByIdRecord(id2) {
-  const rows = await db.select().from(roles).where(eq(roles.id, id2)).limit(1).execute();
-  return rows[0];
-}
-async function findRoleBySlugRecord(slug) {
-  const rows = await db.select().from(roles).where(eq(roles.slug, slug)).limit(1).execute();
-  return rows[0];
-}
-async function listRolesWithUserCountRecords(filters) {
-  const conditions = [];
-  const search2 = filters?.search?.slice(0, 100);
-  if (search2) {
-    conditions.push(or(
-      like(roles.name, `%${search2}%`),
-      like(roles.slug, `%${search2}%`)
-    ));
+function generateSuperAdminTwoFactorSetup(force = false) {
+  const current = getSuperAdminTwoFactorConfig();
+  if (current.enabled && !force) {
+    throw new Error("Super Admin 2FA is already enabled. Use --force to rotate the secret.");
   }
-  let orderColumn = asc(roles.name);
-  if (filters?.sortBy) {
-    const column = filters.sortBy === "name" ? roles.name : filters.sortBy === "createdAt" ? roles.createdAt : null;
-    if (column) {
-      orderColumn = filters.sortOrder === "asc" ? asc(column) : desc(column);
-    }
-  }
-  const baseQuery = db.select().from(roles).orderBy(orderColumn);
-  const roleRows = conditions.length > 0 ? await baseQuery.where(and(...conditions)).limit(MAX_ROLE_ROWS).execute() : await baseQuery.limit(MAX_ROLE_ROWS).execute();
-  return await Promise.all(roleRows.map(async (role) => {
-    const countRows = await db.select({ value: count() }).from(users).where(eq(users.roleId, role.id)).limit(1).execute();
-    return { ...role, userCount: countRows[0]?.value ?? 0 };
-  }));
-}
-async function getRoleNameRecord(roleId) {
-  const rows = await db.select({ name: roles.name }).from(roles).where(eq(roles.id, roleId)).limit(1).execute();
-  return rows[0]?.name ?? null;
-}
-async function listAllPermissionRecords() {
-  return await db.select().from(permissions).execute();
-}
-async function createRoleRecord(input) {
-  await db.insert(roles).values({
-    id: input.id,
-    name: sanitizeText(input.name),
-    slug: input.slug.toLowerCase(),
-    description: input.description ? sanitizeText(input.description) : null,
-    isSystem: 0,
-    createdAt: input.createdAt,
-    updatedAt: input.updatedAt
-  }).execute();
-  for (const permissionId of input.permissionIds) {
-    await db.insert(rolePermissions).values({
-      id: generateId(),
-      roleId: input.id,
-      permissionId,
-      createdAt: input.createdAt
-    }).execute();
-  }
-  return await findRoleByIdRecord(input.id);
-}
-async function updateRoleRecord(id2, input) {
-  const updates = { updatedAt: input.updatedAt };
-  if (input.name !== void 0) updates.name = sanitizeText(input.name);
-  if (input.slug !== void 0) updates.slug = input.slug.toLowerCase();
-  if (input.description !== void 0) updates.description = input.description ? sanitizeText(input.description) : null;
-  await db.update(roles).set(updates).where(eq(roles.id, id2)).execute();
-  if (input.permissionIds !== void 0) {
-    await db.delete(rolePermissions).where(eq(rolePermissions.roleId, id2)).execute();
-    for (const permissionId of input.permissionIds) {
-      await db.insert(rolePermissions).values({
-        id: generateId(),
-        roleId: id2,
-        permissionId,
-        createdAt: input.updatedAt
-      }).execute();
-    }
-  }
-  return await findRoleByIdRecord(id2) ?? null;
-}
-async function deleteRoleRecord(id2) {
-  await db.delete(rolePermissions).where(eq(rolePermissions.roleId, id2)).execute();
-  const result = await db.delete(roles).where(eq(roles.id, id2)).execute();
-  return affectedRows(result) > 0;
-}
-async function getRolePermissionIdsRecord(roleId) {
-  const rows = await db.select({ permissionId: rolePermissions.permissionId }).from(rolePermissions).where(eq(rolePermissions.roleId, roleId)).execute();
-  return rows.map((row) => row.permissionId);
-}
-async function getRolePermissionSlugsRecord(roleId) {
-  const rows = await db.select({ slug: permissions.slug }).from(rolePermissions).innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id)).where(eq(rolePermissions.roleId, roleId)).execute();
-  return rows.map((row) => row.slug);
-}
-async function getPermissionSlugsRecord(permissionIds) {
-  if (permissionIds.length === 0) return [];
-  return await db.select({ id: permissions.id, slug: permissions.slug }).from(permissions).where(inArray(permissions.id, [...new Set(permissionIds)])).execute();
+  const secret = generateSecret();
+  return {
+    enabled: true,
+    secret,
+    otpauthUrl: getSuperAdminTwoFactorUri(secret)
+  };
 }
 async function loadAdminActor(userId) {
   const user = await findUserByIdRecord(userId);
   if (!user) return null;
-  const role = user.roleId ? await findRoleByIdRecord(user.roleId) : void 0;
+  const role = isStaticRole(user.role) ? user.role : null;
   return {
     id: user.id,
-    roleId: user.roleId,
-    isSystemRole: role?.isSystem === 1,
+    role,
+    isSuperAdmin: role === "super-admin",
     permissions: new Set(await getUserPermissions(user.id))
   };
 }
 function hasAdminPermission(actor, permission) {
-  return actor.isSystemRole || actor.permissions.has(permission);
+  return actor.isSuperAdmin || actor.permissions.has(permission);
 }
-function hasAnyAdminPermission(actor, permissions2) {
-  return actor.isSystemRole || permissions2.some((permission) => actor.permissions.has(permission));
+function hasAnyAdminPermission(actor, permissions) {
+  return actor.isSuperAdmin || permissions.some((permission) => actor.permissions.has(permission));
 }
-function permissionsWithinActor(actor, permissionSlugs) {
-  return actor.isSystemRole || permissionSlugs.every((permission) => actor.permissions.has(permission));
-}
-async function canAssignRole(actor, roleId) {
-  if (roleId === void 0 || roleId === null) return true;
-  const role = await findRoleByIdRecord(roleId);
-  if (!role) return false;
-  if (role.isSystem === 1) return actor.isSystemRole;
-  return permissionsWithinActor(actor, await getRolePermissionSlugsRecord(role.id));
-}
-async function canManageExistingRole(actor, roleId) {
-  const role = await findRoleByIdRecord(roleId);
-  if (!role || role.isSystem === 1) return false;
-  if (actor.isSystemRole) return true;
-  return permissionsWithinActor(actor, await getRolePermissionSlugsRecord(role.id));
-}
-async function canAssignPermissionIds(actor, permissionIds) {
-  const uniqueIds = [...new Set(permissionIds)];
-  const rows = await getPermissionSlugsRecord(uniqueIds);
-  if (rows.length !== uniqueIds.length) return false;
-  return permissionsWithinActor(actor, rows.map((row) => row.slug));
+async function canAssignRole(actor, role) {
+  if (role === void 0) return true;
+  if (role === null || !isStaticRole(role)) return false;
+  if (role === "super-admin") return false;
+  if (actor.isSuperAdmin) return true;
+  if (!actor.role) return false;
+  return getStaticRoleRank(role) <= getStaticRoleRank(actor.role);
 }
 function canManageSensitiveUserFields(actor, targetUserId) {
   return actor.id === targetUserId || hasAdminPermission(actor, "users.manage");
@@ -3844,7 +4591,28 @@ function canManageSensitiveUserFields(actor, targetUserId) {
 async function getUser(id2) {
   const user = await findSafeUserByIdRecord(id2);
   if (!user) return serviceNotFound("User");
-  return serviceSuccess(user, "OK");
+  return serviceSuccess({ ...user, twoFactorEnabled: await isTwoFactorEnabled(id2) }, "OK");
+}
+async function disableUserTwoFactor(id2, currentUserId) {
+  const actor = await loadAdminActor(currentUserId);
+  if (!actor || !hasAdminPermission(actor, "users.manage")) {
+    return serviceForbidden("Insufficient permissions.");
+  }
+  if (isSuperAdminUserId(id2)) {
+    return serviceForbidden("Super Admin two-factor authentication is managed by ADMIN_2FA_ENABLED and ADMIN_2FA_SECRET.");
+  }
+  if (id2 === currentUserId) {
+    return serviceForbidden("Use your profile page to disable your own two-factor authentication.");
+  }
+  const existing = await findUserByIdRecord(id2);
+  if (!existing) return serviceNotFound("User");
+  const record = await findTwoFactorRecord(id2);
+  if (!record || record.enabled !== 1) {
+    return serviceValidation("Two-factor authentication is not enabled.");
+  }
+  await deleteTwoFactorRecord(id2);
+  await deleteRefreshSessionsForUser(id2);
+  return serviceSuccess({ enabled: false }, "Two-factor authentication disabled.");
 }
 async function getUserByEmail(email) {
   const user = await findUserByEmailRecord(email);
@@ -3858,7 +4626,7 @@ async function listUsersPaginated(filters = {}) {
 async function createUser(data, actorId) {
   const actor = await loadAdminActor(actorId);
   if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.");
-  if (!await canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.");
+  if (!await canAssignRole(actor, data.role)) return serviceForbidden("You cannot assign this role.");
   const existing = await findUserByEmailRecord(data.email);
   if (existing) return serviceConflict("email", "A user with this email already exists.");
   const id2 = generateId();
@@ -3869,21 +4637,24 @@ async function createUser(data, actorId) {
     name: data.name,
     email: data.email,
     passwordHash,
-    roleId: data.roleId ?? null,
+    role: data.role,
     createdAt: now,
     updatedAt: now
   });
   return serviceSuccess(created, "User created.");
 }
 async function updateUser(id2, data, currentUserId) {
+  if (isSuperAdminUserId(id2)) {
+    return serviceForbidden("Super Admin is managed by ADMIN_* environment variables.");
+  }
   const actor = await loadAdminActor(currentUserId);
   if (!actor || !hasAnyAdminPermission(actor, ["users.edit", "users.manage"])) return serviceForbidden("Insufficient permissions.");
   const existing = await findUserByIdRecord(id2);
   if (!existing) return serviceNotFound("User");
   const isSelf = id2 === currentUserId;
-  const changesSensitiveFields = data.email !== void 0 || data.password !== void 0 || data.roleId !== void 0;
+  const changesSensitiveFields = data.email !== void 0 || data.password !== void 0 || data.role !== void 0;
   if (!isSelf && changesSensitiveFields) {
-    if (!canManageSensitiveUserFields(actor, id2) || !await canAssignRole(actor, existing.roleId)) {
+    if (!canManageSensitiveUserFields(actor, id2) || !await canAssignRole(actor, existing.role)) {
       return serviceForbidden("You cannot manage this user.");
     }
   }
@@ -3891,39 +4662,46 @@ async function updateUser(id2, data, currentUserId) {
     const conflict = await findUserByEmailRecord(data.email);
     if (conflict) return serviceConflict("email", "A user with this email already exists.");
   }
-  if (data.roleId !== void 0) {
+  if (data.role !== void 0) {
     if (isSelf) return serviceForbidden("You cannot change your own role.");
-    if (!await canAssignRole(actor, data.roleId)) return serviceForbidden("You cannot assign this role.");
+    if (!await canAssignRole(actor, data.role)) return serviceForbidden("You cannot assign this role.");
   }
   const now = getCurrentTimestamp();
   const updateData = { updatedAt: now };
   if (data.name !== void 0) updateData.name = data.name;
   if (data.email !== void 0) updateData.email = data.email;
   if (data.password !== void 0) updateData.passwordHash = await hashPassword(data.password);
-  if (data.roleId !== void 0) updateData.roleId = data.roleId;
+  if (data.role !== void 0) updateData.role = data.role;
   const updated = await updateUserRecord(id2, updateData);
   if (!updated) return serviceNotFound("User");
-  if (data.email !== void 0 || data.password !== void 0 || data.roleId !== void 0) {
+  if (data.email !== void 0 || data.password !== void 0 || data.role !== void 0) {
     await deleteRefreshSessionsForUser(id2);
   }
   return serviceSuccess(updated, "User updated.");
 }
 async function deleteUser(id2, currentUserId) {
+  if (isSuperAdminUserId(id2)) {
+    return serviceForbidden("Super Admin is managed by ADMIN_* environment variables.");
+  }
   const actor = await loadAdminActor(currentUserId);
   if (!actor || !hasAnyAdminPermission(actor, ["users.delete", "users.manage"])) return serviceForbidden("Insufficient permissions.");
   const existing = await findUserByIdRecord(id2);
   if (!existing) return serviceNotFound("User");
   if (id2 === currentUserId) return serviceForbidden("You cannot delete your own account.");
-  if (!await canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot manage this user.");
+  if (!await canAssignRole(actor, existing.role)) return serviceForbidden("You cannot manage this user.");
   await deleteUserRecord(id2);
+  await deleteTwoFactorRecord(id2);
   return serviceSuccess(null, "User deleted.");
 }
 async function duplicateUser(id2, currentUserId) {
+  if (isSuperAdminUserId(id2)) {
+    return serviceForbidden("Super Admin is managed by ADMIN_* environment variables.");
+  }
   const actor = await loadAdminActor(currentUserId);
   if (!actor || !hasAnyAdminPermission(actor, ["users.create", "users.manage"])) return serviceForbidden("Insufficient permissions.");
   const existing = await findUserByIdRecord(id2);
   if (!existing) return serviceNotFound("User");
-  if (!await canAssignRole(actor, existing.roleId)) return serviceForbidden("You cannot assign this role.");
+  if (!await canAssignRole(actor, existing.role)) return serviceForbidden("You cannot assign this role.");
   const newId = generateId();
   const now = getCurrentTimestamp();
   let newEmail = `duplicated_${existing.email}`;
@@ -3938,7 +4716,7 @@ async function duplicateUser(id2, currentUserId) {
       email: newEmail,
       passwordHash: existing.password,
       // duplicate password hash
-      roleId: existing.roleId,
+      role: existing.role,
       createdAt: now,
       updatedAt: now
     });
@@ -3971,8 +4749,45 @@ const loginSchema = z.object({
   email: z.string().max(254, "Email is too long").email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password is too long")
 });
+const twoFactorCodeSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, "Authenticator code must be 6 digits.")
+});
+const disableTwoFactorSchema = twoFactorCodeSchema.extend({
+  password: z.string().min(1, "Current password is required.").max(128, "Password is too long.")
+});
 const DUMMY_PASSWORD_HASH = "$2b$12$o0uJ9XsFOcfthEY.ALXOH.hYe9WJIhl6AFPTnQ5gOOJ5OMaarBZN2";
-async function handlePasswordLogin(body) {
+const LOGIN_GLOBAL_LIMIT = 100;
+const LOGIN_EMAIL_LIMIT = 5;
+const LOGIN_IP_LIMIT = 10;
+const LOGIN_WINDOW_MS = 15 * 60 * 1e3;
+function loginRateLimits(email, clientKey) {
+  return [
+    { key: "login:failed:global", limit: LOGIN_GLOBAL_LIMIT },
+    { key: `login:failed:email:${email}`, limit: LOGIN_EMAIL_LIMIT },
+    { key: `login:failed:ip:${clientKey}`, limit: LOGIN_IP_LIMIT }
+  ];
+}
+function failedLogin(rateLimits) {
+  if (rateLimits.some(({ key, limit }) => !isRateLimitAvailable(key, limit))) {
+    return {
+      success: false,
+      status: 429,
+      message: "Too many requests. Please try again later."
+    };
+  }
+  for (const { key, limit } of rateLimits) {
+    isWithinRateLimit(key, limit, LOGIN_WINDOW_MS);
+  }
+  return {
+    success: false,
+    status: 401,
+    message: "Invalid credentials."
+  };
+}
+function clearLoginFailures(rateLimits) {
+  for (const { key } of rateLimits) resetRateLimit(key);
+}
+async function handlePasswordLogin(body, clientKey = "unknown") {
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) {
     return {
@@ -3983,36 +4798,35 @@ async function handlePasswordLogin(body) {
   }
   const { email, password } = parsed.data;
   const normalizedEmail = email.trim().toLowerCase();
-  if (!isWithinRateLimit("login:global", 100, 15 * 60 * 1e3)) {
+  const rateLimits = loginRateLimits(normalizedEmail, clientKey);
+  if (isConfiguredSuperAdminEmail(normalizedEmail)) {
+    const superAdmin = await authenticateSuperAdmin(normalizedEmail, password);
+    if (!superAdmin) {
+      return failedLogin(rateLimits);
+    }
+    clearLoginFailures(rateLimits);
     return {
-      success: false,
-      status: 429,
-      message: "Too many requests. Please try again later."
-    };
-  }
-  if (!isWithinRateLimit(`login:email:${normalizedEmail}`, 5, 15 * 60 * 1e3)) {
-    return {
-      success: false,
-      status: 429,
-      message: "Too many requests. Please try again later."
+      success: true,
+      status: 200,
+      message: "Login successful.",
+      user: superAdmin,
+      requiresTwoFactor: await isTwoFactorEnabled(superAdmin.id)
     };
   }
   const userResult = await getUserByEmail(email);
   const isValid = await verifyPassword(password, userResult.success ? userResult.data.password : DUMMY_PASSWORD_HASH);
   if (!userResult.success || !isValid) {
-    return {
-      success: false,
-      status: 401,
-      message: "Invalid credentials."
-    };
+    return failedLogin(rateLimits);
   }
   const safeUser = { ...userResult.data };
   Reflect.deleteProperty(safeUser, "password");
+  clearLoginFailures(rateLimits);
   return {
     success: true,
     status: 200,
     message: "Login successful.",
-    user: safeUser
+    user: safeUser,
+    requiresTwoFactor: await isTwoFactorEnabled(safeUser.id)
   };
 }
 function adminSuccess(data, message = "OK") {
@@ -4035,9 +4849,9 @@ async function requirePermission(session2, permission) {
   const authorised = await can(session2.user.id, permission);
   return authorised ? null : adminError("Insufficient permissions.", 403);
 }
-async function requireAnyPermission(session2, permissions2) {
+async function requireAnyPermission(session2, permissions) {
   if (!session2?.user) return adminUnauthorized();
-  const authorised = await canAny(session2.user.id, permissions2);
+  const authorised = await canAny(session2.user.id, permissions);
   return authorised ? null : adminError("Insufficient permissions.", 403);
 }
 const CODE_STATUS = {
@@ -4092,87 +4906,32 @@ function parseBulkIds(input) {
   }
   return { success: true, ids };
 }
-const MAX_CATEGORY_ROWS = 5e3;
-async function findCategoryByIdRecord(id2) {
-  const rows = await db.select({
-    id: categories.id,
-    name: categories.name,
-    slug: categories.slug,
-    type: categories.type,
-    description: categories.description,
-    image: categories.image,
-    status: categories.status,
-    createdAt: categories.createdAt,
-    updatedAt: categories.updatedAt
-  }).from(categories).where(eq(categories.id, id2)).limit(1).execute();
-  return rows[0];
+async function handleTwoFactorStatus(session2) {
+  const unauth = requireAuth(session2);
+  if (unauth) return unauth;
+  return adminSuccess(await getTwoFactorStatus(session2.user.id), "OK");
 }
-async function listCategoryRecords(filters) {
-  const conditions = [];
-  const type = filters?.type?.slice(0, 64);
-  const search2 = filters?.search?.slice(0, 100);
-  if (type) {
-    conditions.push(eq(categories.type, type));
-  }
-  if (search2) {
-    conditions.push(like(categories.name, `%${search2}%`));
-  }
-  let orderColumn = desc(categories.updatedAt);
-  if (filters?.sortBy) {
-    const column = filters.sortBy === "name" ? categories.name : filters.sortBy === "createdAt" ? categories.createdAt : null;
-    if (column) {
-      orderColumn = filters.sortOrder === "asc" ? asc(column) : desc(column);
-    }
-  }
-  const query = db.select({
-    id: categories.id,
-    name: categories.name,
-    slug: categories.slug,
-    type: categories.type,
-    description: categories.description,
-    image: categories.image,
-    status: categories.status,
-    createdAt: categories.createdAt,
-    updatedAt: categories.updatedAt
-  }).from(categories).orderBy(orderColumn);
-  return await (conditions.length > 0 ? query.where(and(...conditions)) : query).limit(MAX_CATEGORY_ROWS).execute();
+async function handleTwoFactorSetup(session2) {
+  const unauth = requireAuth(session2);
+  if (unauth) return unauth;
+  const result = await beginTwoFactorSetup(session2.user.id);
+  return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
-async function categorySlugExistsRecord(slug, excludeId) {
-  const rows = await db.select({ id: categories.id }).from(categories).where(eq(categories.slug, slug)).limit(1).execute();
-  return excludeId ? rows.some((row) => row.id !== excludeId) : rows.length > 0;
+async function handleTwoFactorEnable(session2, body) {
+  const unauth = requireAuth(session2);
+  if (unauth) return unauth;
+  const parsed = parseWithSchema(twoFactorCodeSchema, body);
+  if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
+  const result = await confirmTwoFactorSetup(session2.user.id, parsed.data.code);
+  return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
-async function createCategoryRecord(input) {
-  await db.insert(categories).values({
-    ...input,
-    name: sanitizeText(input.name),
-    description: input.description ? sanitizeText(input.description) : null
-  }).execute();
-  return {
-    id: input.id,
-    name: sanitizeText(input.name),
-    slug: input.slug,
-    type: input.type,
-    description: input.description ? sanitizeText(input.description) : null,
-    image: input.image,
-    status: input.status,
-    createdAt: input.createdAt,
-    updatedAt: input.updatedAt
-  };
-}
-async function updateCategoryRecord(id2, input) {
-  const updates = { updatedAt: input.updatedAt };
-  if (input.name !== void 0) updates.name = sanitizeText(input.name);
-  if (input.slug !== void 0) updates.slug = input.slug;
-  if (input.type !== void 0) updates.type = input.type;
-  if (input.description !== void 0) updates.description = input.description ? sanitizeText(input.description) : null;
-  if (input.image !== void 0) updates.image = input.image;
-  if (input.status !== void 0) updates.status = input.status;
-  await db.update(categories).set(updates).where(eq(categories.id, id2)).execute();
-  return await findCategoryByIdRecord(id2) ?? null;
-}
-async function deleteCategoryRecord(id2) {
-  const result = await db.delete(categories).where(eq(categories.id, id2)).execute();
-  return affectedRows(result) > 0;
+async function handleTwoFactorDisable(session2, body) {
+  const unauth = requireAuth(session2);
+  if (unauth) return unauth;
+  const parsed = parseWithSchema(disableTwoFactorSchema, body);
+  if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
+  const result = await disableTwoFactor(session2.user.id, parsed.data.password, parsed.data.code);
+  return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
 async function generateUniqueSlug(name, excludeId) {
   let slug = slugify(name);
@@ -4299,6 +5058,14 @@ const builtInContentTypes = ["post", "page"];
 function isKnownContentType(type) {
   return builtInContentTypes.includes(type) || getServerContentTypeRegistry().contentTypes.some((contentType) => contentType.slug === type);
 }
+function getKnownContentTypes() {
+  const seen = /* @__PURE__ */ new Set();
+  return [...builtInContentTypes, ...getServerContentTypeRegistry().contentTypes.map((contentType) => contentType.slug)].filter((type) => {
+    if (seen.has(type)) return false;
+    seen.add(type);
+    return true;
+  });
+}
 function contentPermission(type, action) {
   return `content.${type}.${action}`;
 }
@@ -4408,6 +5175,16 @@ const INSUFFICIENT = "Insufficient permissions.";
 async function canPost(userId, type, action) {
   return isKnownContentType(type) && can(userId, contentPermission(type, action));
 }
+async function canManageContent(userId, type) {
+  return canPost(userId, type, "delete") || canPost(userId, type, "delete-own");
+}
+function ownPostAction(action) {
+  return `${action}-own`;
+}
+async function canManagePost(userId, post, action) {
+  if (await canPost(userId, post.type, action)) return true;
+  return post.authorId === userId && await canPost(userId, post.type, ownPostAction(action));
+}
 async function canEditPost(userId, id2) {
   const result = await getPost(id2);
   if (!result.success) return false;
@@ -4428,7 +5205,20 @@ async function guardBulkPost(session2, ids, action) {
   const allowed = await Promise.all(
     parsedIds.ids.map(async (id2) => {
       const post = await getPost(id2);
-      return post.success && canPost(session2.user.id, post.data.type, action);
+      return post.success && canManagePost(session2.user.id, post.data, action);
+    })
+  );
+  return allowed.every(Boolean) ? null : adminError(INSUFFICIENT, 403);
+}
+async function guardBulkTrashedPost(session2, ids) {
+  const unauth = requireAuth(session2);
+  if (unauth) return unauth;
+  const parsedIds = parseBulkIds(ids);
+  if (!parsedIds.success) return adminError(parsedIds.message, 400);
+  const allowed = await Promise.all(
+    parsedIds.ids.map(async (id2) => {
+      const post = await getTrashedPost(id2);
+      return post.success && await canManagePost(session2.user.id, post.data, "delete");
     })
   );
   return allowed.every(Boolean) ? null : adminError(INSUFFICIENT, 403);
@@ -4436,9 +5226,25 @@ async function guardBulkPost(session2, ids, action) {
 async function handleListPosts(session2, filters) {
   const unauth = requireAuth(session2);
   if (unauth) return unauth;
-  const type = filters.type ?? "post";
-  if (!await canPost(session2.user.id, type, "view")) return adminError(INSUFFICIENT, 403);
-  const result = await listPosts({ ...filters, type });
+  const isTrash = filters.trash === true;
+  const type = filters.type ?? (isTrash ? void 0 : "post");
+  let allowedTypes;
+  if (type) {
+    const allowed = isTrash ? await canManageContent(session2.user.id, type) : await canPost(session2.user.id, type, "view");
+    if (!allowed) return adminError(INSUFFICIENT, 403);
+  } else if (isTrash) {
+    const knownTypes = getKnownContentTypes();
+    allowedTypes = [];
+    for (const knownType of knownTypes) {
+      if (await canManageContent(session2.user.id, knownType)) allowedTypes.push(knownType);
+    }
+    if (allowedTypes.length === 0) return adminError(INSUFFICIENT, 403);
+  } else {
+    return adminError(INSUFFICIENT, 403);
+  }
+  const user = await findUserByIdRecord(session2.user.id);
+  const scopedFilters = user?.role === "author" ? { ...filters, ...type ? { type } : {}, ...allowedTypes ? { types: allowedTypes } : {}, authorId: session2.user.id } : { ...filters, ...type ? { type } : {}, ...allowedTypes ? { types: allowedTypes } : {} };
+  const result = await listPosts(scopedFilters);
   return result.success ? adminSuccess(result.data) : mapServiceError(result);
 }
 async function handleCreatePost(session2, body) {
@@ -4446,6 +5252,9 @@ async function handleCreatePost(session2, body) {
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
   const perm = await guardPost(session2, parsed.data.type, "create");
   if (perm) return perm;
+  if (parsed.data.status === "published" && !await canPost(session2.user.id, parsed.data.type, "publish") && !await canPost(session2.user.id, parsed.data.type, "publish-own")) {
+    return adminError(INSUFFICIENT, 403);
+  }
   const result = await createPost(parsed.data, session2.user.id);
   return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
 }
@@ -4455,6 +5264,10 @@ async function handleGetPost(session2, id2) {
   const result = await getPost(id2);
   if (!result.success) return adminError(result.error.message, 404);
   if (!await canPost(session2.user.id, result.data.type, "view")) return adminError(INSUFFICIENT, 403);
+  const user = await findUserByIdRecord(session2.user.id);
+  if (user?.role === "author" && result.data.authorId !== session2.user.id) {
+    return adminError(INSUFFICIENT, 403);
+  }
   return adminSuccess(result.data);
 }
 async function handleUpdatePost(session2, id2, body) {
@@ -4465,9 +5278,9 @@ async function handleUpdatePost(session2, id2, body) {
   if (!existing.success) return adminError(existing.error.message, 404);
   if (parsed.data.type !== void 0 && parsed.data.type !== existing.data.type)
     return adminError("Content type cannot be changed.", 422);
-  if (parsed.data.status === "published" && existing.data.status !== "published" && !await canPost(session2.user.id, existing.data.type, "publish"))
+  if (parsed.data.status === "published" && existing.data.status !== "published" && !await canManagePost(session2.user.id, existing.data, "publish"))
     return adminError(INSUFFICIENT, 403);
-  if (parsed.data.status === "draft" && existing.data.status === "published" && !await canPost(session2.user.id, existing.data.type, "unpublish"))
+  if (parsed.data.status === "draft" && (existing.data.status === "published" || existing.data.status === "scheduled") && !await canManagePost(session2.user.id, existing.data, "unpublish"))
     return adminError(INSUFFICIENT, 403);
   const result = await updatePost(id2, parsed.data);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
@@ -4487,14 +5300,48 @@ async function handleDeletePost(session2, id2) {
   if (unauth) return unauth;
   const existing = await getPost(id2);
   if (!existing.success) return adminError(existing.error.message, 404);
-  if (!await canPost(session2.user.id, existing.data.type, "delete")) return adminError(INSUFFICIENT, 403);
+  if (!await canManagePost(session2.user.id, existing.data, "delete")) return adminError(INSUFFICIENT, 403);
   const result = await deletePost(id2);
+  return result.success ? adminSuccess(null, result.message) : mapServiceError(result);
+}
+async function handleRestorePost(session2, id2) {
+  const unauth = requireAuth(session2);
+  if (unauth) return unauth;
+  const existing = await getTrashedPost(id2);
+  if (!existing.success) return adminError(existing.error.message, 404);
+  if (!await canManagePost(session2.user.id, existing.data, "delete")) return adminError(INSUFFICIENT, 403);
+  const result = await restorePost(id2);
+  return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
+}
+async function handlePermanentlyDeletePost(session2, id2) {
+  const unauth = requireAuth(session2);
+  if (unauth) return unauth;
+  const existing = await getTrashedPost(id2);
+  if (!existing.success) return adminError(existing.error.message, 404);
+  if (!await canManagePost(session2.user.id, existing.data, "delete")) return adminError(INSUFFICIENT, 403);
+  const result = await permanentlyDeletePost(id2);
   return result.success ? adminSuccess(null, result.message) : mapServiceError(result);
 }
 async function handleBulkDeletePosts(session2, ids) {
   const perm = await guardBulkPost(session2, ids, "delete");
   if (perm) return perm;
   const result = await bulkDeletePosts(ids);
+  return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
+}
+async function handleBulkRestorePosts(session2, ids) {
+  const perm = await guardBulkTrashedPost(session2, ids);
+  if (perm) return perm;
+  const parsedIds = parseBulkIds(ids);
+  if (!parsedIds.success) return adminError(parsedIds.message, 400);
+  const result = await bulkRestorePosts(parsedIds.ids);
+  return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
+}
+async function handleBulkPermanentlyDeletePosts(session2, ids) {
+  const perm = await guardBulkTrashedPost(session2, ids);
+  if (perm) return perm;
+  const parsedIds = parseBulkIds(ids);
+  if (!parsedIds.success) return adminError(parsedIds.message, 400);
+  const result = await bulkPermanentlyDeletePosts(parsedIds.ids);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 async function handleBulkPublishPosts(session2, ids) {
@@ -4524,17 +5371,18 @@ async function handleBulkDuplicatePosts(session2, ids) {
   const result = await bulkDuplicatePosts(parsedIds.ids, session2.user.id);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
+const roleSchema = z.enum(["admin", "editor", "author"], { error: "Invalid role." });
 const createUserSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters"),
   email: z.string().max(254, "Email is too long").email("Invalid email address"),
   password: z.string().min(12, "Password must be at least 12 characters").max(128, "Password must be at most 128 characters"),
-  roleId: z.string().regex(ulidRegex, "Invalid role ID format").optional()
+  role: roleSchema.default("author")
 });
 const updateUserSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters").optional(),
   email: z.string().max(254, "Email is too long").email("Invalid email address").optional(),
   password: z.string().min(12, "Password must be at least 12 characters").max(128, "Password must be at most 128 characters").optional(),
-  roleId: z.string().regex(ulidRegex, "Invalid role ID format").nullable().optional()
+  role: roleSchema.optional()
 });
 const USER_CREATE_PERMS = ["users.create", "users.manage"];
 const USER_EDIT_PERMS = ["users.edit", "users.manage"];
@@ -4578,6 +5426,12 @@ async function handleDeleteUser(session2, id2) {
   const result = await deleteUser(id2, session2.user.id);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
+async function handleDisableUserTwoFactor(session2, id2) {
+  const perm = await requirePermission(session2, "users.manage");
+  if (perm) return perm;
+  const result = await disableUserTwoFactor(id2, session2.user.id);
+  return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
+}
 async function handleBulkDeleteUsers(session2, ids) {
   const perm = await requireAnyPermission(session2, ["users.delete", "users.manage"]);
   if (perm) return perm;
@@ -4592,223 +5446,6 @@ async function handleBulkDuplicateUsers(session2, ids) {
   const parsedIds = parseBulkIds(ids);
   if (!parsedIds.success) return adminError(parsedIds.message, 400);
   const result = await bulkDuplicateUsers(parsedIds.ids, session2.user.id);
-  return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
-}
-function generateRoleSlug(name) {
-  return slugify(name) || "role";
-}
-async function listRolesService(filters) {
-  const rolesWithCount = await listRolesWithUserCountRecords(filters);
-  const enriched = await Promise.all(rolesWithCount.map(async (role) => ({
-    ...role,
-    permissionIds: await getRolePermissionIdsRecord(role.id)
-  })));
-  return serviceSuccess(enriched, "Roles retrieved.");
-}
-async function getRole(id2) {
-  const role = await findRoleByIdRecord(id2);
-  if (!role) return serviceNotFound("Role");
-  return serviceSuccess({ ...role, permissionIds: await getRolePermissionIdsRecord(id2) }, "Role retrieved.");
-}
-async function syncPermissions$1(actorId) {
-  const actor = await loadAdminActor(actorId);
-  if (!actor || !hasAnyAdminPermission(actor, ["roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  const result = await syncPermissionRecords(getPermissionDefinitions());
-  return serviceSuccess(result, "Permissions synced.");
-}
-async function createRole(data, actorId) {
-  const actor = await loadAdminActor(actorId);
-  if (!actor || !hasAnyAdminPermission(actor, ["roles.create", "roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  if (!await canAssignPermissionIds(actor, data.permissionIds)) return serviceForbidden("You cannot assign these permissions.");
-  const slug = data.slug ?? generateRoleSlug(data.name);
-  const existing = await findRoleBySlugRecord(slug);
-  if (existing) return serviceConflict("slug", "A role with this slug already exists.");
-  const id2 = generateId();
-  const now = getCurrentTimestamp();
-  const created = await createRoleRecord({
-    id: id2,
-    name: data.name,
-    slug,
-    description: data.description ?? null,
-    permissionIds: [...new Set(data.permissionIds)],
-    createdAt: now,
-    updatedAt: now
-  });
-  return serviceSuccess(created, "Role created.");
-}
-async function updateRole(id2, data, actorId) {
-  const actor = await loadAdminActor(actorId);
-  if (!actor || !hasAnyAdminPermission(actor, ["roles.edit", "roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  const existing = await findRoleByIdRecord(id2);
-  if (!existing) return serviceNotFound("Role");
-  if (existing.isSystem === 1) return serviceForbidden("System roles cannot be modified.");
-  if (!await canManageExistingRole(actor, id2)) return serviceForbidden("You cannot manage this role.");
-  if (data.permissionIds !== void 0 && !await canAssignPermissionIds(actor, data.permissionIds)) {
-    return serviceForbidden("You cannot assign these permissions.");
-  }
-  if (data.name !== void 0) {
-    const newSlug = generateRoleSlug(data.name);
-    const conflict = await findRoleBySlugRecord(newSlug);
-    if (conflict && conflict.id !== id2) return serviceConflict("slug", "A role with this slug already exists.");
-  }
-  const now = getCurrentTimestamp();
-  const updateData = { updatedAt: now };
-  if (data.name !== void 0) {
-    updateData.name = data.name;
-    updateData.slug = generateRoleSlug(data.name);
-  }
-  if (data.description !== void 0) updateData.description = data.description;
-  if (data.permissionIds !== void 0) updateData.permissionIds = [...new Set(data.permissionIds)];
-  const updated = await updateRoleRecord(id2, updateData);
-  if (!updated) return serviceNotFound("Role");
-  await deleteRefreshSessionsForRole(id2);
-  return serviceSuccess(updated, "Role updated.");
-}
-async function deleteRole(id2, actorId) {
-  const actor = await loadAdminActor(actorId);
-  if (!actor || !hasAnyAdminPermission(actor, ["roles.delete", "roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  const existing = await findRoleByIdRecord(id2);
-  if (!existing) return serviceNotFound("Role");
-  if (existing.isSystem === 1) return serviceForbidden("System roles cannot be deleted.");
-  if (actor.roleId === id2) return serviceForbidden("You cannot delete your own role.");
-  if (!await canManageExistingRole(actor, id2)) return serviceForbidden("You cannot manage this role.");
-  await deleteRefreshSessionsForRole(id2);
-  await deleteRoleRecord(id2);
-  return serviceSuccess(null, "Role deleted.");
-}
-async function duplicateRole(id2, actorId) {
-  const actor = await loadAdminActor(actorId);
-  if (!actor || !hasAnyAdminPermission(actor, ["roles.create", "roles.manage"])) return serviceForbidden("Insufficient permissions.");
-  const existing = await findRoleByIdRecord(id2);
-  if (!existing) return serviceNotFound("Role");
-  if (!await canManageExistingRole(actor, id2)) return serviceForbidden("You cannot duplicate this role.");
-  const newId = generateId();
-  const now = getCurrentTimestamp();
-  let newSlug = `${existing.slug}-copy`;
-  let counter = 1;
-  while (await findRoleBySlugRecord(newSlug)) {
-    newSlug = `${existing.slug}-copy-${counter}`;
-    counter++;
-  }
-  try {
-    const created = await createRoleRecord({
-      id: newId,
-      name: `${existing.name} (Copy)`,
-      slug: newSlug,
-      description: existing.description ? `${existing.description} (Copy)` : null,
-      permissionIds: await getRolePermissionIdsRecord(existing.id),
-      createdAt: now,
-      updatedAt: now
-    });
-    return serviceSuccess(created, "Role duplicated.");
-  } catch {
-    return { success: false, error: { code: "db_error", message: "Failed to duplicate role." } };
-  }
-}
-async function bulkDeleteRoles(ids, actorId) {
-  const results = [];
-  for (const id2 of ids) {
-    const result = await deleteRole(id2, actorId);
-    results.push({ id: id2, success: result.success, error: !result.success ? result.error.message : void 0 });
-  }
-  return serviceSuccess(results, "Bulk delete completed.");
-}
-async function bulkDuplicateRoles(ids, actorId) {
-  const results = [];
-  for (const id2 of ids) {
-    const result = await duplicateRole(id2, actorId);
-    if (result.success) {
-      results.push({ id: id2, success: true, newId: result.data.id });
-    } else {
-      results.push({ id: id2, success: false });
-    }
-  }
-  return serviceSuccess(results, "Bulk duplicate completed.");
-}
-const createRoleSchema = z.object({
-  // Required: non-empty, max 100 characters
-  name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters"),
-  // Optional: auto-generated from name if not provided; lowercase alphanumeric + hyphens
-  slug: z.string().regex(slugRegex, "Slug must contain only lowercase alphanumeric characters and hyphens").optional(),
-  // Optional: empty → null transform (Req 9.9)
-  description: emptyToNull,
-  // Required: array of ULID strings (permission IDs)
-  permissionIds: z.array(z.string().regex(ulidRegex, "Invalid permission ID format")).max(100, "Too many permissions").min(1, "At least one permission is required")
-});
-const updateRoleSchema = z.object({
-  // Optional: non-empty if provided, max 100 characters
-  name: z.string().min(1, "Name is required").max(100, "Name must be at most 100 characters").optional(),
-  // Optional: empty → null transform (Req 9.9)
-  description: emptyToNull,
-  // Optional: array of ULID strings (permission IDs)
-  permissionIds: z.array(z.string().regex(ulidRegex, "Invalid permission ID format")).max(100, "Too many permissions").optional()
-});
-const ROLE_EDIT_PERMS = ["roles.edit", "roles.manage"];
-async function handleListRoles(session2, filters) {
-  const perm = await requirePermission(session2, "roles.view");
-  if (perm) return perm;
-  const rolesResult = await listRolesService(filters);
-  const permissions2 = await listAllPermissionRecords();
-  return adminSuccess({
-    roles: rolesResult.success ? rolesResult.data : [],
-    permissions: permissions2
-  });
-}
-async function handleSyncPermissions(session2) {
-  const perm = await requirePermission(session2, "roles.manage");
-  if (perm) return perm;
-  const result = await syncPermissions$1(session2.user.id);
-  return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
-}
-async function handleCreateRole(session2, body) {
-  const perm = await requireAnyPermission(session2, ["roles.create", "roles.manage"]);
-  if (perm) return perm;
-  const parsed = parseWithSchema(createRoleSchema, body);
-  if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const result = await createRole(parsed.data, session2.user.id);
-  return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
-}
-async function handleGetRole(session2, id2) {
-  const perm = await requirePermission(session2, "roles.view");
-  if (perm) return perm;
-  const result = await getRole(id2);
-  if (!result.success) return adminError(result.error.message, 404);
-  return adminSuccess({ role: result.data, permissions: await listAllPermissionRecords() });
-}
-async function handleUpdateRole(session2, id2, body) {
-  const perm = await requireAnyPermission(session2, ROLE_EDIT_PERMS);
-  if (perm) return perm;
-  const parsed = parseWithSchema(updateRoleSchema, body);
-  if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
-  const result = await updateRole(id2, parsed.data, session2.user.id);
-  return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
-}
-async function handleDuplicateRole(session2, id2) {
-  const perm = await requireAnyPermission(session2, ["roles.create", "roles.manage"]);
-  if (perm) return perm;
-  const result = await duplicateRole(id2, session2.user.id);
-  return result.success ? adminCreated(result.data, result.message) : mapServiceError(result);
-}
-async function handleDeleteRole(session2, id2) {
-  const perm = await requireAnyPermission(session2, ["roles.delete", "roles.manage"]);
-  if (perm) return perm;
-  const result = await deleteRole(id2, session2.user.id);
-  return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
-}
-async function handleBulkDeleteRoles(session2, ids) {
-  const perm = await requireAnyPermission(session2, ["roles.delete", "roles.manage"]);
-  if (perm) return perm;
-  const parsedIds = parseBulkIds(ids);
-  if (!parsedIds.success) return adminError(parsedIds.message, 400);
-  const result = await bulkDeleteRoles(parsedIds.ids, session2.user.id);
-  return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
-}
-async function handleBulkDuplicateRoles(session2, ids) {
-  const perm = await requireAnyPermission(session2, ["roles.create", "roles.manage"]);
-  if (perm) return perm;
-  const parsedIds = parseBulkIds(ids);
-  if (!parsedIds.success) return adminError(parsedIds.message, 400);
-  const result = await bulkDuplicateRoles(parsedIds.ids, session2.user.id);
   return result.success ? adminSuccess(result.data, result.message) : adminError(result.error.message, 500);
 }
 const imageSettingSchema = z.string().trim().max(2048, "Image URL must be at most 2048 characters").refine(
@@ -4858,6 +5495,9 @@ async function handleUpdateSettings(session2, body) {
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
 }
 async function updateProfile(userId, data) {
+  if (isSuperAdminUserId(userId)) {
+    return serviceForbidden("Super Admin profile is managed by ADMIN_* environment variables.");
+  }
   const existing = await findUserByIdRecord(userId);
   if (!existing) return serviceNotFound("User");
   if (data.email !== void 0 && data.email !== existing.email) {
@@ -4939,60 +5579,6 @@ async function handleReorderMenus(session2, body) {
   if (!parsed.success) return adminError(parsed.message, 422, parsed.fieldErrors);
   const result = await reorderMenus(parsed.data);
   return result.success ? adminSuccess(result.data, result.message) : mapServiceError(result);
-}
-const MAX_FILTER_TEXT_LENGTH = 100;
-async function findMediaByIdRecord(id2) {
-  const rows = await db.select().from(media).where(eq(media.id, id2)).limit(1).execute();
-  return rows[0];
-}
-async function listMediaRecords(filters) {
-  const { page, perPage, offset } = clampPagination(filters);
-  const conditions = [];
-  const search2 = filters.search?.slice(0, MAX_FILTER_TEXT_LENGTH);
-  const folder = filters.folder === null ? null : filters.folder?.slice(0, 255);
-  const mimeType = filters.mimeType?.slice(0, 100);
-  if (search2) {
-    conditions.push(like(media.name, `%${search2}%`));
-  }
-  if (filters.folder !== void 0) {
-    if (folder === null) conditions.push(eq(media.folder, null));
-    else if (folder !== void 0) conditions.push(eq(media.folder, folder));
-  }
-  if (mimeType && mimeType !== "all") {
-    conditions.push(
-      mimeType.endsWith("/*") ? like(media.mimeType, `${mimeType.slice(0, -1)}%`) : eq(media.mimeType, mimeType)
-    );
-  }
-  const whereClause = conditions.length > 0 ? and(...conditions) : void 0;
-  let query = db.select().from(media);
-  if (whereClause) query = query.where(whereClause);
-  const totalQuery = db.select({ value: count() }).from(media);
-  const totalRows = whereClause ? await totalQuery.where(whereClause).execute() : await totalQuery.execute();
-  const total = totalRows[0]?.value ?? 0;
-  const data = await query.orderBy(desc(media.createdAt)).limit(perPage).offset(offset).execute();
-  return {
-    data,
-    meta: {
-      currentPage: page,
-      perPage,
-      total,
-      lastPage: Math.max(1, Math.ceil(total / perPage)),
-      from: total === 0 ? 0 : offset + 1,
-      to: Math.min(offset + perPage, total)
-    }
-  };
-}
-async function createMediaRecord$1(input) {
-  await db.insert(media).values(input).execute();
-  return await findMediaByIdRecord(input.id);
-}
-async function updateMediaRecord(id2, input) {
-  await db.update(media).set(input).where(eq(media.id, id2)).execute();
-  return await findMediaByIdRecord(id2) ?? null;
-}
-async function deleteMediaRecord(id2) {
-  const result = await db.delete(media).where(eq(media.id, id2)).execute();
-  return affectedRows(result) > 0;
 }
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_IMAGE_PIXELS = 4e7;
@@ -5285,42 +5871,177 @@ async function handleUploadMedia(session2, formData) {
   const result = await uploadMediaForUser(formData, session2.user.id, parsed.data);
   return result.success ? adminSuccess(result.data, "Media uploaded.") : mapServiceError(result);
 }
+async function handleListActivityLogs(session2, filters = {}) {
+  const permission = await requirePermission(session2, "activity-log.view");
+  if (permission) return permission;
+  try {
+    return adminSuccess(await listActivityLogs(filters));
+  } catch (error) {
+    console.error("Activity log list failed", error);
+    return adminError("Activity log could not be loaded.", 500);
+  }
+}
+function positiveInteger(value) {
+  if (!value || !/^\d+$/.test(value)) return void 0;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : void 0;
+}
+function dateBoundary(value, endOfDay = false) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return void 0;
+  const date = /* @__PURE__ */ new Date(`${value}T${endOfDay ? "23:59:59" : "00:00:00"}.000Z`);
+  const timestamp2 = Math.floor(date.getTime() / 1e3);
+  return Number.isFinite(timestamp2) ? timestamp2 : void 0;
+}
+const GET$g = async ({ request, locals }) => {
+  const url = new URL(request.url);
+  const filters = {
+    page: positiveInteger(url.searchParams.get("page")),
+    perPage: positiveInteger(url.searchParams.get("perPage")),
+    search: url.searchParams.get("search")?.slice(0, 100) || void 0,
+    action: url.searchParams.get("action")?.slice(0, 64) || void 0,
+    resource: url.searchParams.get("resource")?.slice(0, 64) || void 0,
+    from: dateBoundary(url.searchParams.get("from")),
+    to: dateBoundary(url.searchParams.get("to"), true)
+  };
+  const success = url.searchParams.get("success");
+  if (success === "true" || success === "false") filters.success = success === "true";
+  return handleListActivityLogs(locals.session, filters);
+};
+const activityLogs = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  GET: GET$g
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$v = async ({ request, cookies, locals }) => {
+  const response = await handleTwoFactorDisable(
+    locals.session,
+    await request.json()
+  );
+  if (response.ok) {
+    clearAdminSessionCookies(cookies);
+    clearAdminTwoFactorChallengeCookie(cookies);
+  }
+  return response;
+};
+const disable$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$v
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$u = async ({ request, cookies, locals }) => {
+  const response = await handleTwoFactorEnable(
+    locals.session,
+    await request.json()
+  );
+  if (response.ok) {
+    clearAdminSessionCookies(cookies);
+    clearAdminTwoFactorChallengeCookie(cookies);
+  }
+  return response;
+};
+const enable = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$u
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$t = async ({ locals }) => {
+  return handleTwoFactorSetup(locals.session);
+};
+const setup = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$t
+}, Symbol.toStringTag, { value: "Module" }));
+const GET$f = async ({ locals }) => {
+  return handleTwoFactorStatus(locals.session);
+};
+const status$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  GET: GET$f
+}, Symbol.toStringTag, { value: "Module" }));
+async function establishAdminSession(user, cookies, options = {}) {
+  const permissions = await getUserPermissions(user.id);
+  const sessionId = generateId();
+  const twoFactorVerified = options.twoFactorVerified === true;
+  const accessToken = await signAccessToken({
+    sub: user.id,
+    sessionId,
+    email: user.email,
+    role: user.role,
+    permissions,
+    twoFactorVerified
+  });
+  const refreshToken = await signRefreshToken({
+    sub: user.id,
+    sessionId,
+    email: user.email,
+    twoFactorVerified
+  });
+  if (!isSuperAdminUserId(user.id)) {
+    await saveRefreshSession(sessionId, user.id, getRefreshSessionExpiry());
+  }
+  cookies.set(ADMIN_ACCESS_COOKIE, accessToken, buildAdminAccessCookieOptions());
+  cookies.set(ADMIN_REFRESH_COOKIE, refreshToken, buildAdminRefreshCookieOptions());
+  return { user, permissions, twoFactorEnabled: await isTwoFactorEnabled(user.id) };
+}
 const POST$s = async ({ request, cookies }) => {
+  const parsed = twoFactorCodeSchema.safeParse(await request.json());
+  if (!parsed.success) return adminError("Authenticator code must be 6 digits.", 422);
+  const challenge = readAdminTwoFactorChallenge(cookies);
+  if (!challenge) return adminError("Two-factor login has expired. Please sign in again.", 401);
+  try {
+    const payload = await verifyTwoFactorChallengeToken(challenge);
+    if (typeof payload.sub !== "string" || typeof payload.email !== "string") {
+      return adminError("Invalid two-factor login.", 401);
+    }
+    if (!isWithinRateLimit(`login:2fa:${payload.sub}`, 5, 15 * 60 * 1e3)) {
+      return adminError("Too many requests. Please try again later.", 429);
+    }
+    const user = await findSafeUserByIdRecord(payload.sub);
+    if (!user || user.email !== payload.email || !await verifyTwoFactorCode(user.id, parsed.data.code)) {
+      return adminError("Invalid authenticator code.", 401);
+    }
+    const session2 = await establishAdminSession(user, cookies, { twoFactorVerified: true });
+    clearAdminTwoFactorChallengeCookie(cookies);
+    return Response.json({ success: true, message: "Login successful.", data: session2 });
+  } catch {
+    clearAdminSessionCookies(cookies);
+    clearAdminTwoFactorChallengeCookie(cookies);
+    return adminError("Two-factor login has expired. Please sign in again.", 401);
+  }
+};
+const verify = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$s
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$r = async ({ request, cookies }) => {
   const body = await request.json();
-  const result = await handlePasswordLogin(body);
+  const result = await handlePasswordLogin(body, clientAddress(request));
   if (!result.success || !result.user) {
     return Response.json({ success: false, message: result.message }, { status: result.status });
   }
-  const permissions2 = await getUserPermissions(result.user.id);
-  const sessionId = generateId();
-  const accessToken = await signAccessToken({
-    sub: result.user.id,
-    sessionId,
-    email: result.user.email,
-    roleId: result.user.roleId,
-    permissions: permissions2
-  });
-  const refreshToken = await signRefreshToken({
-    sub: result.user.id,
-    sessionId
-  });
-  await saveRefreshSession(sessionId, result.user.id, getRefreshSessionExpiry());
-  cookies.set(ADMIN_ACCESS_COOKIE, accessToken, buildAdminAccessCookieOptions());
-  cookies.set(ADMIN_REFRESH_COOKIE, refreshToken, buildAdminRefreshCookieOptions());
+  if (result.requiresTwoFactor) {
+    const challenge = await signTwoFactorChallengeToken({
+      sub: result.user.id,
+      email: result.user.email
+    });
+    clearAdminSessionCookies(cookies);
+    cookies.set(ADMIN_2FA_CHALLENGE_COOKIE, challenge, buildAdminTwoFactorChallengeCookieOptions());
+    return Response.json({
+      success: true,
+      message: "Authenticator code required.",
+      data: { requiresTwoFactor: true }
+    }, { status: 202 });
+  }
+  clearAdminTwoFactorChallengeCookie(cookies);
+  const session2 = await establishAdminSession(result.user, cookies);
   return Response.json({
     success: true,
     message: "Login successful.",
-    data: {
-      user: result.user,
-      permissions: permissions2
-    }
+    data: session2
   });
 };
 const login = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  POST: POST$s
+  POST: POST$r
 }, Symbol.toStringTag, { value: "Module" }));
-const POST$r = async ({ cookies }) => {
+const POST$q = async ({ cookies }) => {
   const refresh2 = readAdminRefreshToken(cookies);
   if (refresh2) {
     try {
@@ -5331,21 +6052,22 @@ const POST$r = async ({ cookies }) => {
   }
   cookies.set(ADMIN_ACCESS_COOKIE, "", { ...buildAdminAccessCookieOptions(), maxAge: 0 });
   cookies.set(ADMIN_REFRESH_COOKIE, "", { ...buildAdminRefreshCookieOptions(), maxAge: 0 });
+  clearAdminTwoFactorChallengeCookie(cookies);
   return Response.json({ success: true, message: "Logged out." });
 };
 const logout = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  POST: POST$r
+  POST: POST$q
 }, Symbol.toStringTag, { value: "Module" }));
-const PUT$7 = async ({ request, locals }) => {
+const PUT$6 = async ({ request, locals }) => {
   const body = await request.json();
   return handleUpdateProfile(locals.session, body);
 };
 const profile = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  PUT: PUT$7
+  PUT: PUT$6
 }, Symbol.toStringTag, { value: "Module" }));
-const POST$q = async ({ cookies }) => {
+const POST$p = async ({ cookies }) => {
   const session2 = await refreshAdminSession(cookies);
   if (!session2) {
     return Response.json({ success: false, message: "Unauthorized." }, { status: 401 });
@@ -5354,9 +6076,9 @@ const POST$q = async ({ cookies }) => {
 };
 const refresh = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  POST: POST$q
+  POST: POST$p
 }, Symbol.toStringTag, { value: "Module" }));
-const GET$g = async ({ cookies }) => {
+const GET$e = async ({ cookies }) => {
   let session2 = await getAdminSession(cookies);
   if (!session2) {
     session2 = await refreshAdminSession(cookies);
@@ -5364,25 +6086,26 @@ const GET$g = async ({ cookies }) => {
   if (!session2) {
     return Response.json({ success: false, message: "Unauthorized." }, { status: 401 });
   }
-  const roleName = session2.user.roleId ? await getRoleNameRecord(session2.user.roleId) : null;
+  const roleName = getStaticRoleName(session2.user.role);
   return Response.json({
     success: true,
     data: {
       user: session2.user,
       permissions: session2.permissions,
-      roleName
+      roleName,
+      twoFactorEnabled: session2.twoFactorEnabled
     }
   });
 };
 const session = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  GET: GET$g
+  GET: GET$e
 }, Symbol.toStringTag, { value: "Module" }));
-const GET$f = async ({ params, locals }) => {
+const GET$d = async ({ params, locals }) => {
   if (!params.id) return adminError("Category id is required.", 400);
   return handleGetCategory(locals.session, params.id);
 };
-const PUT$6 = async ({ params, request, locals }) => {
+const PUT$5 = async ({ params, request, locals }) => {
   if (!params.id) return adminError("Category id is required.", 400);
   const body = await request.json();
   return handleUpdateCategory(locals.session, params.id, body);
@@ -5391,41 +6114,41 @@ const DELETE$5 = async ({ params, locals }) => {
   if (!params.id) return adminError("Category id is required.", 400);
   return handleDeleteCategory(locals.session, params.id);
 };
-const _id_$5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _id_$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   DELETE: DELETE$5,
-  GET: GET$f,
-  PUT: PUT$6
+  GET: GET$d,
+  PUT: PUT$5
 }, Symbol.toStringTag, { value: "Module" }));
-const POST$p = async ({ params, locals }) => {
+const POST$o = async ({ params, locals }) => {
   if (!params.id) {
     return new Response(JSON.stringify({ success: false, message: "Category id is required." }), { status: 400 });
   }
   return handleDuplicateCategory(locals.session, params.id);
 };
-const duplicate$7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  POST: POST$p
-}, Symbol.toStringTag, { value: "Module" }));
-const POST$o = async ({ request, locals }) => {
-  const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
-  return await handleBulkDeleteCategories(locals.session, ids);
-};
-const _delete$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const duplicate$5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   POST: POST$o
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$n = async ({ request, locals }) => {
   const body = await request.json();
   const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
-  return await handleBulkDuplicateCategories(locals.session, ids);
+  return await handleBulkDeleteCategories(locals.session, ids);
 };
-const duplicate$6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _delete$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   POST: POST$n
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$m = async ({ request, locals }) => {
+  const body = await request.json();
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
+  return await handleBulkDuplicateCategories(locals.session, ids);
+};
+const duplicate$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$m
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$l = async ({ request, locals }) => {
   const body = await request.json();
   const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   const status2 = body?.status === "published" || body?.status === "draft" ? body.status : null;
@@ -5434,67 +6157,71 @@ const POST$m = async ({ request, locals }) => {
 };
 const status = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  POST: POST$m
+  POST: POST$l
 }, Symbol.toStringTag, { value: "Module" }));
-const VALID_SORT_BY$4 = /* @__PURE__ */ new Set(["name", "createdAt"]);
-const VALID_SORT_ORDER$4 = /* @__PURE__ */ new Set(["asc", "desc"]);
-const GET$e = async ({ request, locals }) => {
+const VALID_SORT_BY$3 = /* @__PURE__ */ new Set(["name", "createdAt"]);
+const VALID_SORT_ORDER$3 = /* @__PURE__ */ new Set(["asc", "desc"]);
+const GET$c = async ({ request, locals }) => {
   const url = new URL(request.url);
   const type = url.searchParams.get("type") || void 0;
   const search2 = url.searchParams.get("search") || void 0;
+  const statusParam = url.searchParams.get("status");
   const sortBy = url.searchParams.get("sortBy");
   const sortOrder = url.searchParams.get("sortOrder");
-  const sortByValid = sortBy && VALID_SORT_BY$4.has(sortBy) ? sortBy : void 0;
-  const sortOrderValid = sortOrder && VALID_SORT_ORDER$4.has(sortOrder) ? sortOrder : void 0;
-  return handleListCategories(locals.session, { type, search: search2, sortBy: sortByValid, sortOrder: sortOrderValid });
+  const sortByValid = sortBy && VALID_SORT_BY$3.has(sortBy) ? sortBy : void 0;
+  const sortOrderValid = sortOrder && VALID_SORT_ORDER$3.has(sortOrder) ? sortOrder : void 0;
+  const status2 = statusParam === "draft" || statusParam === "published" ? statusParam : void 0;
+  return handleListCategories(locals.session, { type, search: search2, status: status2, sortBy: sortByValid, sortOrder: sortOrderValid });
 };
-const POST$l = async ({ request, locals }) => {
+const POST$k = async ({ request, locals }) => {
   const body = await request.json();
   return handleCreateCategory(locals.session, body);
 };
-const index$5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const index$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  GET: GET$e,
-  POST: POST$l
+  GET: GET$c,
+  POST: POST$k
 }, Symbol.toStringTag, { value: "Module" }));
-const GET$d = async ({ locals }) => {
-  const permission = await requirePermission(locals.session, "dashboard.view");
+const GET$b = async ({ locals }) => {
+  const session2 = locals.session;
+  const permission = await requirePermission(session2, "dashboard.view");
   if (permission) return permission;
-  const stats = await getDashboardStatsRecord();
+  const user = await findUserByIdRecord(session2.user.id);
+  const stats = await getDashboardStatsRecord(user?.role === "author" ? user.id : void 0);
   return adminSuccess(stats);
 };
 const dashboard = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  GET: GET$d
+  GET: GET$b
 }, Symbol.toStringTag, { value: "Module" }));
-const GET$c = async ({ params, locals }) => {
+const GET$a = async ({ params, locals }) => {
   return handleGetMedia(locals.session, params.id);
 };
-const PUT$5 = async ({ params, request, locals }) => {
+const PUT$4 = async ({ params, request, locals }) => {
   const body = await request.json();
   return handleUpdateMedia(locals.session, params.id, body);
 };
 const DELETE$4 = async ({ params, locals }) => {
   return handleDeleteMedia(locals.session, params.id);
 };
-const _id_$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _id_$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   DELETE: DELETE$4,
-  GET: GET$c,
-  PUT: PUT$5
+  GET: GET$a,
+  PUT: PUT$4
 }, Symbol.toStringTag, { value: "Module" }));
-const POST$k = async ({ request, locals }) => {
+const POST$j = async ({ request, locals }) => {
   const body = await request.json();
   const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return handleBulkDeleteMedia(locals.session, ids);
 };
-const _delete$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _delete$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  POST: POST$k
+  POST: POST$j
 }, Symbol.toStringTag, { value: "Module" }));
-const VALID_SORT_BY$3 = /* @__PURE__ */ new Set(["name", "createdAt", "size"]);
-const VALID_SORT_ORDER$3 = /* @__PURE__ */ new Set(["asc", "desc"]);
-const GET$b = async ({ request, locals }) => {
+const VALID_SORT_BY$2 = /* @__PURE__ */ new Set(["name", "createdAt", "size"]);
+const VALID_SORT_ORDER$2 = /* @__PURE__ */ new Set(["asc", "desc"]);
+const GET$9 = async ({ request, locals }) => {
   const url = new URL(request.url);
   const filters = {};
   const page = url.searchParams.get("page");
@@ -5510,20 +6237,20 @@ const GET$b = async ({ request, locals }) => {
   if (folder === "") filters.folder = null;
   else if (folder) filters.folder = folder;
   if (mimeType) filters.mimeType = mimeType;
-  if (sortBy && VALID_SORT_BY$3.has(sortBy)) filters.sortBy = sortBy;
-  if (sortOrder && VALID_SORT_ORDER$3.has(sortOrder)) filters.sortOrder = sortOrder;
+  if (sortBy && VALID_SORT_BY$2.has(sortBy)) filters.sortBy = sortBy;
+  if (sortOrder && VALID_SORT_ORDER$2.has(sortOrder)) filters.sortOrder = sortOrder;
   return handleListMedia(locals.session, filters);
 };
-const POST$j = async ({ request, locals }) => {
+const POST$i = async ({ request, locals }) => {
   const formData = await request.formData();
   return handleUploadMedia(locals.session, formData);
 };
-const index$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const index$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  GET: GET$b,
-  POST: POST$j
+  GET: GET$9,
+  POST: POST$i
 }, Symbol.toStringTag, { value: "Module" }));
-const POST$i = async ({ request, locals }) => {
+const POST$h = async ({ request, locals }) => {
   try {
     const formData = await request.formData();
     return handleUploadMedia(locals.session, formData);
@@ -5533,13 +6260,13 @@ const POST$i = async ({ request, locals }) => {
 };
 const upload = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  POST: POST$i
+  POST: POST$h
 }, Symbol.toStringTag, { value: "Module" }));
-const GET$a = async ({ params, locals }) => {
+const GET$8 = async ({ params, locals }) => {
   if (!params.id) return adminError("Menu id is required.", 400);
   return handleGetMenu(locals.session, params.id);
 };
-const PUT$4 = async ({ params, request, locals }) => {
+const PUT$3 = async ({ params, request, locals }) => {
   if (!params.id) return adminError("Menu id is required.", 400);
   const body = await request.json();
   return handleUpdateMenu(locals.session, params.id, body);
@@ -5548,94 +6275,126 @@ const DELETE$3 = async ({ params, locals }) => {
   if (!params.id) return adminError("Menu id is required.", 400);
   return handleDeleteMenu(locals.session, params.id);
 };
-const _id_$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _id_$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   DELETE: DELETE$3,
-  GET: GET$a,
-  PUT: PUT$4
+  GET: GET$8,
+  PUT: PUT$3
 }, Symbol.toStringTag, { value: "Module" }));
-const GET$9 = async ({ locals }) => {
+const GET$7 = async ({ locals }) => {
   return handleListMenus(locals.session);
 };
-const POST$h = async ({ request, locals }) => {
+const POST$g = async ({ request, locals }) => {
   const body = await request.json();
   return handleCreateMenu(locals.session, body);
 };
-const index$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const index$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  GET: GET$9,
-  POST: POST$h
+  GET: GET$7,
+  POST: POST$g
 }, Symbol.toStringTag, { value: "Module" }));
-const POST$g = async ({ request, locals }) => {
+const POST$f = async ({ request, locals }) => {
   const body = await request.json();
   return handleReorderMenus(locals.session, body);
 };
 const reorder = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  POST: POST$g
+  POST: POST$f
 }, Symbol.toStringTag, { value: "Module" }));
-const GET$8 = async ({ params, locals }) => {
+const GET$6 = async ({ params, locals }) => {
   return handleGetPost(locals.session, params.id);
 };
-const PUT$3 = async ({ params, request, locals }) => {
+const PUT$2 = async ({ params, request, locals }) => {
   const body = await request.json();
   return await handleUpdatePost(locals.session, params.id, body);
 };
 const DELETE$2 = async ({ params, locals }) => {
   return await handleDeletePost(locals.session, params.id);
 };
-const _id_$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _id_$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   DELETE: DELETE$2,
-  GET: GET$8,
-  PUT: PUT$3
+  GET: GET$6,
+  PUT: PUT$2
 }, Symbol.toStringTag, { value: "Module" }));
-const POST$f = async ({ params, locals }) => {
+const POST$e = async ({ params, locals }) => {
   return await handleDuplicatePost(locals.session, params.id);
 };
-const duplicate$5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  POST: POST$f
-}, Symbol.toStringTag, { value: "Module" }));
-const POST$e = async ({ request, locals }) => {
-  const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
-  return await handleBulkDeletePosts(locals.session, ids);
-};
-const _delete$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const duplicate$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   POST: POST$e
 }, Symbol.toStringTag, { value: "Module" }));
-const POST$d = async ({ request, locals }) => {
-  const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
-  return await handleBulkDuplicatePosts(locals.session, ids);
+const DELETE$1 = async ({ params, locals }) => {
+  return handlePermanentlyDeletePost(locals.session, params.id);
 };
-const duplicate$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const permanentDelete$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  DELETE: DELETE$1
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$d = async ({ params, locals }) => {
+  return handleRestorePost(locals.session, params.id);
+};
+const restore$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   POST: POST$d
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$c = async ({ request, locals }) => {
   const body = await request.json();
   const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
-  return await handleBulkPublishPosts(locals.session, ids);
+  return await handleBulkDeletePosts(locals.session, ids);
 };
-const publish = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _delete$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   POST: POST$c
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$b = async ({ request, locals }) => {
   const body = await request.json();
   const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
+  return await handleBulkDuplicatePosts(locals.session, ids);
+};
+const duplicate$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$b
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$a = async ({ request, locals }) => {
+  const body = await request.json();
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
+  return handleBulkPermanentlyDeletePosts(locals.session, ids);
+};
+const permanentDelete = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$a
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$9 = async ({ request, locals }) => {
+  const body = await request.json();
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
+  return await handleBulkPublishPosts(locals.session, ids);
+};
+const publish = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$9
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$8 = async ({ request, locals }) => {
+  const body = await request.json();
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
+  return handleBulkRestorePosts(locals.session, ids);
+};
+const restore = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$8
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$7 = async ({ request, locals }) => {
+  const body = await request.json();
+  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
   return await handleBulkUnpublishPosts(locals.session, ids);
 };
 const unpublish = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  POST: POST$b
+  POST: POST$7
 }, Symbol.toStringTag, { value: "Module" }));
-const VALID_SORT_BY$2 = /* @__PURE__ */ new Set(["title", "updatedAt"]);
-const VALID_SORT_ORDER$2 = /* @__PURE__ */ new Set(["asc", "desc"]);
-const GET$7 = async ({ request, locals }) => {
+const VALID_SORT_BY$1 = /* @__PURE__ */ new Set(["title", "updatedAt"]);
+const VALID_SORT_ORDER$1 = /* @__PURE__ */ new Set(["asc", "desc"]);
+const GET$5 = async ({ request, locals }) => {
   const url = new URL(request.url);
   const filters = {};
   const search2 = url.searchParams.get("search");
@@ -5643,95 +6402,23 @@ const GET$7 = async ({ request, locals }) => {
   const type = url.searchParams.get("type");
   const sortBy = url.searchParams.get("sortBy");
   const sortOrder = url.searchParams.get("sortOrder");
+  const trash = url.searchParams.get("trash");
   if (search2) filters.search = search2;
   if (status2) filters.status = status2;
   if (type) filters.type = type;
-  if (sortBy && VALID_SORT_BY$2.has(sortBy)) filters.sortBy = sortBy;
-  if (sortOrder && VALID_SORT_ORDER$2.has(sortOrder)) filters.sortOrder = sortOrder;
+  if (sortBy && VALID_SORT_BY$1.has(sortBy)) filters.sortBy = sortBy;
+  if (sortOrder && VALID_SORT_ORDER$1.has(sortOrder)) filters.sortOrder = sortOrder;
+  if (trash === "1" || trash === "true") filters.trash = true;
   return handleListPosts(locals.session, filters);
-};
-const POST$a = async ({ request, locals }) => {
-  const body = await request.json();
-  return await handleCreatePost(locals.session, body);
-};
-const index$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  GET: GET$7,
-  POST: POST$a
-}, Symbol.toStringTag, { value: "Module" }));
-const GET$6 = async ({ params, locals }) => {
-  if (!params.id) return adminError("Role id is required.", 400);
-  return handleGetRole(locals.session, params.id);
-};
-const PUT$2 = async ({ params, request, locals }) => {
-  if (!params.id) return adminError("Role id is required.", 400);
-  const body = await request.json();
-  return handleUpdateRole(locals.session, params.id, body);
-};
-const DELETE$1 = async ({ params, locals }) => {
-  if (!params.id) return adminError("Role id is required.", 400);
-  return handleDeleteRole(locals.session, params.id);
-};
-const _id_$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  DELETE: DELETE$1,
-  GET: GET$6,
-  PUT: PUT$2
-}, Symbol.toStringTag, { value: "Module" }));
-const POST$9 = async ({ params, locals }) => {
-  if (!params.id) {
-    return new Response(JSON.stringify({ success: false, message: "Role id is required." }), { status: 400 });
-  }
-  return handleDuplicateRole(locals.session, params.id);
-};
-const duplicate$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  POST: POST$9
-}, Symbol.toStringTag, { value: "Module" }));
-const POST$8 = async ({ request, locals }) => {
-  const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
-  return await handleBulkDeleteRoles(locals.session, ids);
-};
-const _delete$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  POST: POST$8
-}, Symbol.toStringTag, { value: "Module" }));
-const POST$7 = async ({ request, locals }) => {
-  const body = await request.json();
-  const ids = Array.isArray(body?.ids) ? body.ids.filter((id2) => typeof id2 === "string") : [];
-  return await handleBulkDuplicateRoles(locals.session, ids);
-};
-const duplicate$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  POST: POST$7
-}, Symbol.toStringTag, { value: "Module" }));
-const VALID_SORT_BY$1 = /* @__PURE__ */ new Set(["name", "createdAt"]);
-const VALID_SORT_ORDER$1 = /* @__PURE__ */ new Set(["asc", "desc"]);
-const GET$5 = async ({ request, locals }) => {
-  const url = new URL(request.url);
-  const search2 = url.searchParams.get("search") || void 0;
-  const sortBy = url.searchParams.get("sortBy");
-  const sortOrder = url.searchParams.get("sortOrder");
-  const sortByValid = sortBy && VALID_SORT_BY$1.has(sortBy) ? sortBy : void 0;
-  const sortOrderValid = sortOrder && VALID_SORT_ORDER$1.has(sortOrder) ? sortOrder : void 0;
-  return handleListRoles(locals.session, { search: search2, sortBy: sortByValid, sortOrder: sortOrderValid });
 };
 const POST$6 = async ({ request, locals }) => {
   const body = await request.json();
-  return handleCreateRole(locals.session, body);
+  return await handleCreatePost(locals.session, body);
 };
 const index$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   GET: GET$5,
   POST: POST$6
-}, Symbol.toStringTag, { value: "Module" }));
-const POST$5 = async ({ locals }) => {
-  return handleSyncPermissions(locals.session);
-};
-const syncPermissions = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  POST: POST$5
 }, Symbol.toStringTag, { value: "Module" }));
 const GET$4 = async ({ locals }) => {
   return handleGetSettings(locals.session);
@@ -5763,6 +6450,14 @@ const _id_ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty
   DELETE,
   GET: GET$3,
   PUT
+}, Symbol.toStringTag, { value: "Module" }));
+const POST$5 = async ({ params, locals }) => {
+  if (!params.id) return adminError("User id is required.", 400);
+  return handleDisableUserTwoFactor(locals.session, params.id);
+};
+const disable = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  POST: POST$5
 }, Symbol.toStringTag, { value: "Module" }));
 const POST$4 = async ({ params, locals }) => {
   if (!params.id) {
@@ -5797,12 +6492,13 @@ const VALID_SORT_ORDER = /* @__PURE__ */ new Set(["asc", "desc"]);
 const GET$2 = async ({ request, locals }) => {
   const url = new URL(request.url);
   const search2 = url.searchParams.get("search") || void 0;
-  const roleId = url.searchParams.get("roleId") || void 0;
+  const roleValue = url.searchParams.get("role");
+  const role = isStaticRole(roleValue) ? roleValue : void 0;
   const sortBy = url.searchParams.get("sortBy");
   const sortOrder = url.searchParams.get("sortOrder");
   const sortByValid = sortBy && VALID_SORT_BY.has(sortBy) ? sortBy : void 0;
   const sortOrderValid = sortOrder && VALID_SORT_ORDER.has(sortOrder) ? sortOrder : void 0;
-  return handleListUsers(locals.session, { search: search2, roleId, sortBy: sortByValid, sortOrder: sortOrderValid });
+  return handleListUsers(locals.session, { search: search2, role, sortBy: sortByValid, sortOrder: sortOrderValid });
 };
 const POST$1 = async ({ request, locals }) => {
   const body = await request.json();
@@ -5822,7 +6518,7 @@ const GET$1 = async ({ params, request }) => {
   const url = new URL(request.url);
   const requestedPage = Number(url.searchParams.get("page") ?? 1);
   const page = Number.isInteger(requestedPage) ? Math.max(1, requestedPage) : 1;
-  const result = await listPublishedPostsByType(type, page, 24, {
+  const result = await listPublishedPostsByType(type, page, 10, {
     search: url.searchParams.get("search") ?? void 0,
     category: url.searchParams.get("category") ?? void 0,
     tag: url.searchParams.get("tag") ?? void 0,
@@ -5916,7 +6612,7 @@ const contact = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.definePrope
 const GET = async ({ request }) => {
   const query = new URL(request.url).searchParams.get("q")?.trim().slice(0, 100) ?? "";
   if (query.length < 2) return Response.json({ data: [] });
-  const result = await searchPublishedPosts(query, 1, 6);
+  const result = await searchPublishedPosts(query, 1, 10);
   return Response.json({ data: result.success ? result.data.data : [] });
 };
 const search = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -5924,16 +6620,17 @@ const search = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   GET
 }, Symbol.toStringTag, { value: "Module" }));
 export {
-  ADMIN_PATH,
+  activityLogs$1 as activityLogs,
   adminRefreshSessions,
+  adminTwoFactor,
   apiApp,
   categories,
   categoriesRelations,
   closeDatabase,
   databaseDialect,
-  beaver as default,
   deleteStorageFile,
   formatSeedDataSummary,
+  generateSuperAdminTwoFactorSetup,
   getMenuTree,
   getPublicCustomFieldFiltersFromSearchParams,
   getPublishedArchiveFilterOptions,
@@ -5948,27 +6645,22 @@ export {
   menus,
   menusRelations,
   migrate,
-  migrateData,
   parseSeedData,
   passwordResetTokens,
-  permissions,
-  permissionsRelations,
   postCategories,
   postCategoriesRelations,
   posts,
   postsRelations,
+  purgeExpiredActivityLogs,
   readStorageFile,
   resetDatabase,
   resetSuperAdminPassword,
-  rolePermissions,
-  rolePermissionsRelations,
-  roles,
-  rolesRelations,
+  runSchedulingWorker,
+  runSchedulingWorkerCycle,
   sanitizeHtml,
   schema,
   searchPublishedPosts,
   seed,
-  seedTemplate,
   settings$1 as settings,
   users,
   usersRelations,
