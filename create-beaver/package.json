@@ -24,6 +24,7 @@
   "files": [
     "bin/create-beaver.mjs",
     "bin/installer.mjs",
+    "config",
     "templates",
     "README.md",
     "LICENSE"

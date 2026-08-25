@@ -7,6 +7,7 @@ import test from "node:test"
 import {
   detectPackageManager,
   listTemplates,
+  resolveBeaverConfigDirectory,
   parseArgs,
   resolveBeaverTemplatesDirectory,
   sanitizePackageName,
@@ -59,6 +60,12 @@ test("resolveBeaverTemplatesDirectory finds the checkout template source", async
   const directory = await resolveBeaverTemplatesDirectory()
   assert.equal(directory.endsWith("templates"), true)
   assert.equal(existsSync(resolve(directory, "flowstack", "data", "seed.json")), true)
+})
+
+test("resolveBeaverConfigDirectory finds the checkout config source", async () => {
+  const directory = await resolveBeaverConfigDirectory()
+  assert.equal(directory.endsWith("templates/config"), true)
+  assert.equal(existsSync(resolve(directory, ".env")), true)
 })
 
 test("templateSeedPath resolves a template seed file", () => {

@@ -5,14 +5,24 @@ import { fileURLToPath } from "node:url"
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const sourceDirectory = resolve(packageDirectory, "..", "templates")
+const sourceConfigDirectory = resolve(sourceDirectory, "config")
 const destinationDirectory = resolve(packageDirectory, "templates")
+const destinationConfigDirectory = resolve(packageDirectory, "config")
 const buildArtifacts = new Set(["node_modules", ".astro", ".vite"])
 const copyFilter = (source) => !source.split(sep).some((segment) => buildArtifacts.has(segment))
+const templateFilter = (source) => {
+  if (source === sourceConfigDirectory || source.startsWith(`${sourceConfigDirectory}${sep}`)) return false
+  return copyFilter(source)
+}
 
 if (process.argv.includes("--clean")) {
   await rm(destinationDirectory, { recursive: true, force: true })
+  await rm(destinationConfigDirectory, { recursive: true, force: true })
 } else {
   if (!existsSync(sourceDirectory)) throw new Error(`Template source was not found: ${sourceDirectory}`)
+  if (!existsSync(sourceConfigDirectory)) throw new Error(`Template config source was not found: ${sourceConfigDirectory}`)
   await rm(destinationDirectory, { recursive: true, force: true })
-  await cp(sourceDirectory, destinationDirectory, { recursive: true, filter: copyFilter })
+  await rm(destinationConfigDirectory, { recursive: true, force: true })
+  await cp(sourceDirectory, destinationDirectory, { recursive: true, filter: templateFilter })
+  await cp(sourceConfigDirectory, destinationConfigDirectory, { recursive: true, filter: copyFilter })
 }

@@ -503,6 +503,15 @@ export async function resolveBeaverTemplatesDirectory() {
   return resolve(packageDirectory, "..", "templates")
 }
 
+export async function resolveBeaverConfigDirectory() {
+  const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..")
+  const packagedConfig = resolve(packageDirectory, "config")
+  if (existsSync(packagedConfig)) return packagedConfig
+
+  const templatesDirectory = await resolveBeaverTemplatesDirectory()
+  return resolve(templatesDirectory, "config")
+}
+
 export async function main(argv = process.argv.slice(2)) {
   let options
   try {
@@ -534,7 +543,7 @@ export async function main(argv = process.argv.slice(2)) {
       console.log(colorize("yellow", "\nExisting files will be preserved; missing Beaver files will be added."))
     }
 
-    const configDirectory = resolve(templatesDirectory, "config")
+    const configDirectory = await resolveBeaverConfigDirectory()
     const templateDirectory = templateSource(templatesDirectory, answers.templateName)
     const templateSeedFile = templateSeedPath(templatesDirectory, answers.templateName)
     ensureProjectPackage(projectDirectory, answers.projectName)

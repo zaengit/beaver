@@ -10,4 +10,5 @@ db/
 
 dist/
 .cache/
+create-beaver/config/
 create-beaver/templates/

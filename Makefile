@@ -38,7 +38,7 @@ pack: build
 
 check: test build
 	npm pack --dry-run
-	npm --prefix create-beaver pack --dry-run
+	(cd create-beaver && npm pack --dry-run)
 
 clean:
 	rm -rf dist *.tgz
