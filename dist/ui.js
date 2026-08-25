@@ -826,7 +826,7 @@ function Kt() {
   const t = globalThis.__CMS_CONTENT_TYPE_REGISTRY__;
   return Ci(t) ? t : wi;
 }
-const ki = "0.2", Si = {
+const ki = "0.2.0", Si = {
   version: ki
 }, wn = {
   FileText: Lt,

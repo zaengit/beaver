@@ -1,6 +1,6 @@
 {
   "name": "@zbeaver/beaver",
-  "version": "0.2",
+  "version": "0.2.0",
   "description": "Framework-neutral CMS server, API, and React admin UI.",
   "license": "MIT",
   "keywords": [
