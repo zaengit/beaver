@@ -1,0 +1,65 @@
+---
+import { sanitizeHtml } from "@zbeaver/beaver/server"
+import ResponsiveImage from "@/components/responsive-image.astro"
+import type { DetailProps, DetailTemplateVariant } from "../types"
+
+interface Props {
+  post: DetailProps["post"]
+  gallery: string[]
+  variant: DetailTemplateVariant
+}
+
+const { post, gallery, variant } = Astro.props
+const styles = {
+  default: {
+    featuredWrapper: "mt-8 overflow-hidden border border-[var(--line-strong)] bg-[var(--paper)]",
+    featuredImage: "max-h-[32rem] w-full object-cover",
+    description: "prose prose-slate mt-8 max-w-none border border-[var(--line)] bg-[var(--paper)] p-6 prose-headings:font-black prose-a:text-[var(--ink)] prose-a:underline sm:p-8",
+    gallery: "mt-8 grid gap-4 border-t border-[var(--line-strong)] pt-8 sm:grid-cols-2",
+    galleryItem: "overflow-hidden border border-[var(--line-strong)] bg-[var(--paper)]",
+    galleryImage: "w-full object-cover",
+    gallerySizes: "(min-width: 640px) 50vw, 100vw",
+  },
+  "post-reader": {
+    featuredWrapper: "mx-auto mt-14 max-w-5xl overflow-hidden rounded-2xl bg-slate-100 sm:mt-16",
+    featuredImage: "max-h-[42rem] w-full object-cover",
+    description: "prose prose-slate prose-lg mx-auto mt-14 max-w-[680px] prose-headings:font-semibold prose-headings:tracking-[-0.03em] prose-headings:text-slate-950 prose-p:leading-[1.85] prose-p:text-slate-700 prose-a:font-semibold prose-a:text-indigo-700 prose-a:underline prose-blockquote:border-indigo-200 prose-blockquote:text-slate-600 prose-strong:text-slate-950 sm:mt-16",
+    gallery: "mx-auto mt-14 grid max-w-5xl gap-4 border-t border-slate-200 pt-10 sm:mt-16 sm:grid-cols-2",
+    galleryItem: "overflow-hidden rounded-xl bg-slate-100",
+    galleryImage: "w-full object-cover",
+    gallerySizes: undefined,
+  },
+} as const
+const style = styles[variant]
+---
+
+{post.featuredImage && (
+  <div class={style.featuredWrapper}>
+    <ResponsiveImage
+      src={post.featuredImage}
+      alt={post.title}
+      class={style.featuredImage}
+      priority
+    />
+  </div>
+)}
+
+{post.description && (
+  <div id="details" class={style.description} set:html={sanitizeHtml(post.description)} />
+)}
+
+{gallery.length > 0 && (
+  <div class={style.gallery}>
+    {gallery.map((image) => (
+      <div class={style.galleryItem}>
+        <ResponsiveImage
+          src={image}
+          alt=""
+          class={style.galleryImage}
+          sizes={style.gallerySizes}
+          loading="lazy"
+        />
+      </div>
+    ))}
+  </div>
+)}

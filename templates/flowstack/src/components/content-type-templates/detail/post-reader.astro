@@ -1,0 +1,61 @@
+---
+import { parseGallery, type DetailProps } from "../types"
+import TagLinks from "@/components/tag-links.astro"
+import PostContent from "./post-content.astro"
+const { contentType, post } = Astro.props as DetailProps
+const gallery = parseGallery(post.gallery)
+const authorName = post.authorName || "Flowstack team"
+const authorInitials = authorName
+  .split(/\s+/)
+  .filter(Boolean)
+  .map((part) => part[0])
+  .join("")
+  .slice(0, 2)
+  .toUpperCase()
+const publishedDate = post.publishedAt
+  ? new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(post.publishedAt))
+  : null
+const wordCount = (post.description || "")
+  .replace(/<[^>]*>/g, " ")
+  .trim()
+  .split(/\s+/)
+  .filter(Boolean).length
+const readingTime = Math.max(1, Math.ceil(wordCount / 220))
+---
+
+<main class="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14 lg:px-10">
+  <article>
+    <header class="mx-auto max-w-[760px]">
+      <div class="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">
+        <span class="h-2 w-2 rounded-full bg-indigo-600" aria-hidden="true"></span>
+        <span>{contentType.label}</span>
+      </div>
+      <h1 class="mt-6 text-4xl font-semibold leading-[1.06] tracking-[-0.055em] text-slate-950 sm:text-6xl lg:text-[4.25rem]">
+          {post.title}
+      </h1>
+      {post.excerpt && <p class="mt-7 max-w-2xl text-xl leading-8 text-slate-500 sm:text-2xl sm:leading-9">{post.excerpt}</p>}
+
+      <div class="mt-9 flex items-center gap-3 border-y border-slate-200 py-5">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-indigo-100 text-xs font-black text-indigo-700" aria-hidden="true">
+          {authorInitials || "F"}
+        </span>
+        <div>
+          <p class="text-sm font-semibold text-slate-900">By {authorName}</p>
+          <p class="mt-0.5 text-sm text-slate-500">
+            {publishedDate || "Published"} <span class="px-1 text-slate-300" aria-hidden="true">·</span> {readingTime} min read
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <PostContent {post} {gallery} variant="post-reader" />
+
+    <div class="mx-auto max-w-[680px]">
+      <TagLinks tags={post.tags} />
+    </div>
+  </article>
+</main>

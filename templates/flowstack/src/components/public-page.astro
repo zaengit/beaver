@@ -1,0 +1,11 @@
+---
+import type { Post } from "@/shared/types/posts"
+import PageSections from "@/components/page-sections.astro"
+
+interface Props { page: Pick<Post, "sections"> }
+const { page } = Astro.props
+---
+
+<main>
+  <PageSections sections={page.sections} />
+</main>

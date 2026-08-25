@@ -1,10 +1,10 @@
 ---
-import ContentTypeArchive from "@/components/web/content-type-archive.astro"
-import PublicPage from "@/components/web/public-page.astro"
-import PublicLayout from "@/layouts/PublicLayout.astro"
-import registry from "@content-type-registry"
+import ContentTypeArchive from "@/components/content-type-archive.astro"
+import PublicPage from "@/components/public-page.astro"
+import PublicLayout from "@/layouts/public-layout.astro"
+import { contentTypeRegistry as registry } from "@/shared/registry"
 import { getPublishedArchiveFilterOptions, getPublishedPostByType, listPublishedPostsByType } from "@zbeaver/beaver/server"
-import { parseArchiveSort } from "@/components/web/content-type-templates/archive/archive-sort"
+import { parseArchiveSort } from "@/components/content-type-templates/archive/archive-sort"
 
 const { type } = Astro.params
 const contentType = type ? registry.contentTypes.find((candidate) => candidate.slug === type) ?? null : null
@@ -25,10 +25,10 @@ if (!contentType && !page) {
 const requestedPage = Number(Astro.url.searchParams.get("page") ?? 1)
 const currentPage = Number.isInteger(requestedPage) ? Math.max(1, requestedPage) : 1
 const postsResult = contentType
-  ? await listPublishedPostsByType(contentType.slug, currentPage, 24, filters)
+  ? await listPublishedPostsByType(contentType.slug, currentPage, 10, filters)
   : null
 const posts = postsResult?.success ? postsResult.data.data : []
-const pagination = postsResult?.success ? postsResult.data.meta : { currentPage: 1, perPage: 24, total: 0, lastPage: 1, from: 0, to: 0 }
+const pagination = postsResult?.success ? postsResult.data.meta : { currentPage: 1, perPage: 10, total: 0, lastPage: 1, from: 0, to: 0 }
 const filterOptionsResult = contentType ? await getPublishedArchiveFilterOptions(contentType.slug) : null
 const filterOptions = filterOptionsResult?.success ? filterOptionsResult.data : { categories: [], tags: [], customFields: [] }
 ---

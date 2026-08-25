@@ -1,10 +1,10 @@
 ---
-import PublicLayout from "@/layouts/PublicLayout.astro"
-import PublicPostList from "@/components/web/public-post-list.astro"
+import PublicLayout from "@/layouts/public-layout.astro"
+import PublicPostList from "@/components/public-post-list.astro"
 import { searchPublishedPosts } from "@zbeaver/beaver/server"
 
 const query = (Astro.url.searchParams.get("q") ?? "").trim().slice(0, 100)
-const result = query ? await searchPublishedPosts(query, 1, 24) : null
+const result = query ? await searchPublishedPosts(query, 1, 10) : null
 const posts = result?.success ? result.data.data : []
 ---
 

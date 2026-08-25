@@ -1,0 +1,26 @@
+---
+import type { Post } from "@/shared/types/posts"
+import PageSections from "@/components/page-sections.astro"
+import ContentTypeCustomFields from "@/components/content-type-custom-fields.astro"
+import { parseJsonObject } from "@/components/parse-json"
+import { getDetailTemplateComponent, getTemplate } from "@/components/content-type-templates/component-resolver"
+
+interface Props {
+  contentType: { label: string; slug: string; detailTemplate: string }
+  post: Post & { authorName: string | null }
+}
+
+const { contentType, post } = Astro.props
+const Template = getDetailTemplateComponent(contentType.detailTemplate)
+const customFieldValues = parseJsonObject(post.customFieldValues)
+
+const detailTemplate = getTemplate(contentType.detailTemplate, "detail")
+const renderedCustomFields = (detailTemplate?.fieldSlots ?? []).slice(0, 50).flatMap((field) => {
+  const value = customFieldValues[field.key]
+  return value !== undefined && value !== null && value !== "" ? [{ label: field.label, type: field.type, value: typeof value === "string" ? value.slice(0, 10_000) : value }] : []
+})
+---
+
+<Template {contentType} {post} />
+<ContentTypeCustomFields fields={renderedCustomFields} />
+{detailTemplate?.sectionsEnabled === true && <PageSections sections={post.sections} />}

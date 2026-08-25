@@ -1,0 +1,70 @@
+---
+import { toVideoEmbedUrl, type Section } from "./sections/shared/types"
+import ContactSection from "./sections/contact"
+import { sectionRegistry as sectionTemplates } from "@/shared/registry"
+import { listPublishedPostsByType } from "@zbeaver/beaver/server"
+import { isRecord, parseJsonArray } from "./parse-json"
+import { createComponentMap } from "./component-map"
+
+interface Props { sections: string | null }
+
+const { sections } = Astro.props
+const MAX_SECTIONS = 50
+const MAX_SECTION_ITEMS = 100
+const MAX_SECTIONS_JSON_LENGTH = 1_000_000
+
+function normalizeSection(value: unknown): Section | null {
+  if (!isRecord(value) || typeof value.type !== "string") return null
+  const items = Array.isArray(value.item)
+    ? value.item.slice(0, MAX_SECTION_ITEMS).filter(isRecord)
+    : []
+  return {
+    ...value,
+    type: value.type.slice(0, 64),
+    category: typeof value.category === "string" ? value.category.slice(0, 128) : null,
+    limit: typeof value.limit === "number" && Number.isFinite(value.limit) ? Math.min(100, Math.max(0, Math.trunc(value.limit))) : null,
+    item: items as Section["item"],
+  } as Section
+}
+
+const sectionComponents = createComponentMap(
+  import.meta.glob("./sections/*.astro", { eager: true }),
+  "./sections/",
+)
+
+const parsedSections = parseJsonArray(sections, MAX_SECTIONS_JSON_LENGTH)
+  .slice(0, MAX_SECTIONS)
+  .map(normalizeSection)
+  .filter((section): section is Section => section !== null)
+
+const renderedSections = (await Promise.all(parsedSections.map(async (section) => {
+  const template = sectionTemplates.find((candidate) => candidate.type === section.type)
+  if (!template) return []
+  const contentItemsResult = template.contentType
+    ? await listPublishedPostsByType(template.contentType, 1, section.limit && section.limit > 0 ? Math.min(section.limit, 10) : 10, { category: section.category || undefined, sortBy: section.sort_by === "title" ? "title" : "created_at", sortOrder: section.sort_order === "asc" ? "asc" : "desc" })
+    : null
+  const firstItem = section.item?.[0]
+  return [{
+    section,
+    template,
+    contentItems: contentItemsResult?.success ? contentItemsResult.data.data : [],
+    videoEmbedUrl: toVideoEmbedUrl(firstItem?.video),
+    mapCoordinate: typeof firstItem?.map === "string" ? firstItem.map.trim() : null,
+    hasInquiryForm: section.type === "contact"
+      ? (section.item?.length ? section.item.some((item) => item.form_inquiry !== false) : true)
+      : (section.item?.some((item) => item.form_inquiry === true) ?? false),
+  }]
+}))).flat()
+---
+
+{renderedSections.map(({ section, template, contentItems, videoEmbedUrl, mapCoordinate, hasInquiryForm }) => {
+  if (section.type === "contact") {
+    return <ContactSection client:visible {section} {hasInquiryForm} />
+  }
+
+  const SectionComponent = sectionComponents[template.type]
+
+  if (!SectionComponent) return null
+
+  return <SectionComponent {section} {contentItems} {videoEmbedUrl} {mapCoordinate} {hasInquiryForm} />
+})}

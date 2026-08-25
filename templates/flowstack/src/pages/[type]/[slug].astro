@@ -1,7 +1,7 @@
 ---
-import ContentTypeDetail from "@/components/web/content-type-detail.astro"
-import PublicLayout from "@/layouts/PublicLayout.astro"
-import registry from "@content-type-registry"
+import ContentTypeDetail from "@/components/content-type-detail.astro"
+import PublicLayout from "@/layouts/public-layout.astro"
+import { contentTypeRegistry as registry } from "@/shared/registry"
 import { getPublishedPostByType } from "@zbeaver/beaver/server"
 
 const { type, slug } = Astro.params

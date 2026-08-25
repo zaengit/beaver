@@ -20,8 +20,14 @@ function secureResponse(response: Response, pathname: string) {
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  const pathname = context.url.pathname
   if (context.request.url.length > 8192) {
-    return secureResponse(new Response("Request URL is too long.", { status: 414 }), context.url.pathname)
+    return secureResponse(new Response("Request URL is too long.", { status: 414 }), pathname)
   }
-  return secureResponse(await next(), context.url.pathname)
+
+  if (pathname.startsWith("/__cms/")) {
+    return secureResponse(new Response("Not Found", { status: 404 }), pathname)
+  }
+
+  return secureResponse(await next(), pathname)
 })

@@ -1,6 +1,6 @@
 ---
-import PublicLayout from "@/layouts/PublicLayout.astro"
-import PublicPostList from "@/components/web/public-post-list.astro"
+import PublicLayout from "@/layouts/public-layout.astro"
+import PublicPostList from "@/components/public-post-list.astro"
 import { listPublishedPostsByTag } from "@zbeaver/beaver/server"
 
 const encodedTag = Astro.params.tag ?? ""
@@ -14,7 +14,7 @@ try {
 
 if (!tag) return new Response("Tag not found", { status: 404 })
 
-const result = await listPublishedPostsByTag(tag, 1, 24)
+const result = await listPublishedPostsByTag(tag, 1, 10)
 const posts = result.success ? result.data.data : []
 ---
 

@@ -1,6 +1,6 @@
 ---
-import PublicLayout from "@/layouts/PublicLayout.astro"
-import PublicPage from "@/components/web/public-page.astro"
+import PublicLayout from "@/layouts/public-layout.astro"
+import PublicPage from "@/components/public-page.astro"
 import { getPublishedPostByType } from "@zbeaver/beaver/server"
 
 const homeResult = await getPublishedPostByType("page", "home")
