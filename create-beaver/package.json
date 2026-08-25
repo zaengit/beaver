@@ -1,6 +1,6 @@
 {
   "name": "@zbeaver/create-beaver",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Interactive project initializer for Beaver CMS",
   "license": "MIT",
   "type": "module",
@@ -30,7 +30,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@zbeaver/beaver": "^0.2.0"
+    "@zbeaver/beaver": "^0.2.1"
   },
   "scripts": {
     "test": "node --test bin/installer.test.mjs",
