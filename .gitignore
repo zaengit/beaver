@@ -6,6 +6,7 @@ node_modules/
 
 # tests
 *.test.ts
+db/
 
 dist/
 .cache/
