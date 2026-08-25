@@ -1,1 +1,1 @@
-export { AdminApp } from "./ui/admin/core/admin-app"
+export { AdminApp } from "./ui/core/app"
